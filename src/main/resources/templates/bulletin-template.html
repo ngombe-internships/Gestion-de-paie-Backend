@@ -1,0 +1,1038 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <title>Bulletin de Paie</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 2cm;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            font-size: 12px;
+            line-height: 1.4;
+            color: #333;
+            background: white;
+        }
+
+        .container {
+            max-width: 21cm;
+            margin: 0 auto;
+            background: white;
+        }
+
+        .header {
+            text-align: center;
+            border-bottom: 2px solid #2c3e50;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .header .subtitle {
+            font-size: 14px;
+            color: #7f8c8d;
+        }
+
+        .info-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+            margin-bottom: 30px;
+        }
+
+        .info-box {
+            border: 1px solid #bdc3c7;
+            padding: 20px;
+            background: #f8f9fa;
+        }
+
+        .info-box h2 {
+            font-size: 14px;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+            border-bottom: 1px solid #bdc3c7;
+            padding-bottom: 5px;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            padding: 2px 0;
+        }
+
+        .info-label {
+            font-weight: 500;
+            color: #555;
+        }
+
+        .info-value {
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        .payroll-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            border: 1px solid #bdc3c7;
+        }
+
+        .payroll-table th {
+            background-color: #34495e;
+            color: white;
+            padding: 12px 8px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 11px;
+            text-transform: uppercase;
+            border: 1px solid #2c3e50;
+        }
+
+        .payroll-table td {
+            padding: 10px 8px;
+            border: 1px solid #bdc3c7;
+            text-align: center;
+            font-size: 11px;
+        }
+
+        .payroll-table .text-left {
+            text-align: left;
+            padding-left: 12px;
+        }
+
+        .payroll-table .text-right {
+            text-align: right;
+            padding-right: 12px;
+        }
+
+        .payroll-table tbody tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+
+        .payroll-table .total-row {
+            background-color: #ecf0f1;
+            font-weight: bold;
+        }
+
+        .payroll-table .total-row td {
+            border-top: 2px solid #34495e;
+        }
+
+        .summary-section {
+            margin-top: 40px;
+            border: 2px solid #2c3e50;
+        }
+
+        .summary-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .summary-table th {
+            background-color: #2c3e50;
+            color: white;
+            padding: 15px 10px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 10px;
+            text-transform: uppercase;
+            border: 1px solid #2c3e50;
+        }
+
+        .summary-table td {
+            padding: 15px 10px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 12px;
+            border: 1px solid #bdc3c7;
+            background-color: #f8f9fa;
+        }
+
+        .summary-table .net-pay {
+            background-color: #27ae60;
+            color: white;
+            font-size: 14px;
+        }
+
+        .amount {
+            font-family: 'Arial', monospace;
+            font-weight: bold;
+        }
+
+        .footer {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #bdc3c7;
+            text-align: center;
+            font-size: 10px;
+            color: #7f8c8d;
+        }
+
+        .no-border {
+            border: none !important;
+            background: transparent !important;
+        }
+
+        .section-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: #2c3e50;
+            margin: 30px 0 15px 0;
+            text-transform: uppercase;
+            border-bottom: 1px solid #bdc3c7;
+            padding-bottom: 5px;
+        }
+
+        @media print {
+            body {
+                font-size: 10px;
+            }
+
+            .container {
+                max-width: none;
+            }
+
+            .payroll-table th,
+            .payroll-table td {
+                font-size: 9px;
+                padding: 6px 4px;
+            }
+
+            .summary-table th,
+            .summary-table td {
+                font-size: 10px;
+                padding: 10px 6px;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <header class="header">
+        <h1>Bulletin de Paie</h1>
+        <p class="subtitle">Fiche de rémunération</p>
+    </header>
+
+    <div class="info-section">
+        <div class="info-box">
+            <h2>Informations Employé</h2>
+            <div class="info-row">
+                <span class="info-label">Nom et Prénom :</span>
+                <span class="info-value" th:text="${bulletin.employe.nom} + ' ' + ${bulletin.employe.prenom}">[Nom Prénom]</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Matricule :</span>
+                <span class="info-value" th:text="${bulletin.employe.matricule}">[Matricule]</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Poste :</span>
+                <span class="info-value" th:text="${bulletin.employe.poste}">[Poste]</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Service :</span>
+                <span class="info-value" th:text="${bulletin.employe.service}">[Service]</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Date d'embauche :</span>
+                <span class="info-value" th:text="${#temporals.format(bulletin.employe.dateEmbauche, 'dd/MM/yyyy')}">[Date]</span>
+            </div>
+        </div>
+
+        <div class="info-box">
+            <h2>Période de Paie</h2>
+            <div class="info-row">
+                <span class="info-label">Heures normales :</span>
+                <span class="info-value" th:text="${#numbers.formatDecimal(bulletin.heuresNormal, 1, 2)}">[Heures]</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Taux horaire :</span>
+                <span class="info-value" th:text="${#numbers.formatDecimal(bulletin.tauxHoraire, 1, 2)} + ' FCFA'">[Taux]</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Base CNPS :</span>
+                <span class="info-value" th:text="${#numbers.formatDecimal(bulletin.baseCnps, 1, 2)} + ' FCFA'">[Base]</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Salaire imposable :</span>
+                <span class="info-value" th:text="${#numbers.formatDecimal(bulletin.salaireImposable, 1, 2)} + ' FCFA'">[Imposable]</span>
+            </div>
+        </div>
+    </div>
+
+    <h3 class="section-title">Détail des Éléments de Paie</h3>
+
+    <table class="payroll-table">
+        <thead>
+        <tr>
+            <th>Code</th>
+            <th>Désignation</th>
+            <th>Nombre</th>
+            <th>Base</th>
+            <th>Taux</th>
+            <th>Gain</th>
+            <th>Retenue</th>
+            <th>Charges Patronales</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr>
+            <td>100</td>
+            <td class="text-left">Salaire de base</td>
+            <td th:text="${#numbers.formatDecimal(bulletin.heuresNormal, 1, 2)}">0,00</td>
+            <td th:text="${#numbers.formatDecimal(bulletin.tauxHoraire, 1, 2)}">0,00</td>
+            <td>100%</td>
+            <td class="text-right amount" th:text="${#numbers.formatDecimal(bulletin.salaireBase, 1, 2)}">0,00</td>
+            <td class="no-border"></td>
+            <td class="no-border"></td>
+        </tr>
+        <tr>
+            <td>107</td>
+            <td class="text-left">Prime de transport</td>
+            <td class="no-border"></td>
+            <td class="no-border"></td>
+            <td class="no-border"></td>
+            <td class="text-right amount" th:text="${#numbers.formatDecimal(bulletin.primeTransport, 1, 2)}">0,00</td>
+            <td class="no-border"></td>
+            <td class="no-border"></td>
+        </tr>
+        <tr>
+            <td>115</td>
+            <td class="text-left">Prime de ponctualité</td>
+            <td class="no-border"></td>
+            <td class="no-border"></td>
+            <td class="no-border"></td>
+            <td class="text-right amount" th:text="${#numbers.formatDecimal(bulletin.primePonctualite, 1, 2)}">0,00</td>
+            <td class="no-border"></td>
+            <td class="no-border"></td>
+        </tr>
+        <tr>
+            <td>117</td>
+            <td class="text-left">Prime de technicité</td>
+            <td class="no-border"></td>
+            <td class="no-border"></td>
+            <td class="no-border"></td>
+            <td class="text-right amount" th:text="${#numbers.formatDecimal(bulletin.primeTechnicite, 1, 2)}">0,00</td>
+            <td class="no-border"></td>
+            <td class="no-border"></td>
+        </tr>
+        <tr>
+            <td>118</td>
+            <td class="text-left">Prime d'ancienneté</td>
+            <td class="no-border"></td>
+            <td class="no-border"></td>
+            <td class="no-border"></td>
+            <td class="text-right amount" th:text="${#numbers.formatDecimal(bulletin.primeAnciennete, 1, 2)}">0,00</td>
+            <td class="no-border"></td>
+            <td class="no-border"></td>
+        </tr>
+        <tr>
+            <td>119</td>
+            <td class="text-left">Prime de rendement</td>
+            <td class="no-border"></td>
+            <td class="no-border"></td>
+            <td class="no-border"></td>
+            <td class="text-right amount" th:text="${#numbers.formatDecimal(bulletin.primeRendement, 1, 2)}">0,00</td>
+            <td class="no-border"></td>
+            <td class="no-border"></td>
+        </tr>
+
+        <tr class="total-row">
+            <td colspan="5"><strong>Salaire Brut</strong></td>
+            <td class="text-right amount" th:text="${#numbers.formatDecimal(bulletin.salaireBrut, 1, 2)}">0,00</td>
+            <td class="no-border"></td>
+            <td class="no-border"></td>
+        </tr>
+
+        <tr>
+            <td>200</td>
+            <td class="text-left">IRPP</td>
+            <td class="no-border"></td>
+            <td class="text-right" th:text="${#numbers.formatDecimal(bulletin.salaireImposable, 1, 2)}">0,00</td>
+            <td>Barème</td>
+            <td class="no-border"></td>
+            <td class="text-right amount" th:text="${#numbers.formatDecimal(bulletin.irpp, 1, 2)}">0,00</td>
+            <td class="no-border"></td>
+        </tr>
+
+        <tr>
+            <td>201</td>
+            <td class="text-left">Centimes additionnels (CAC)</td>
+            <td class="no-border"></td>
+            <td class="text-right" th:text="${#numbers.formatDecimal(bulletin.irpp, 1, 2)}">0,00</td>
+            <td>10%</td>
+            <td class="no-border"></td>
+            <td class="text-right amount" th:text="${#numbers.formatDecimal(bulletin.cac, 1, 2)}">0,00</td>
+            <td class="no-border"></td>
+        </tr>
+
+        <tr>
+            <td>202</td>
+            <td class="text-left">Taxe Communale</td>
+            <td class="no-border"></td>
+            <td class="text-right" th:text="${#numbers.formatDecimal(bulletin.salaireBase, 1, 2)}">0,00</td>
+            <td>Barème</td>
+            <td class="no-border"></td>
+            <td class="text-right amount" th:text="${#numbers.formatDecimal(bulletin.taxeCommunale, 1, 2)}">0,00</td>
+            <td class="no-border"></td>
+        </tr>
+
+        <tr>
+            <td>203</td>
+            <td class="text-left">Redevance audiovisuelle</td>
+            <td class="no-border"></td>
+            <td class="text-right" th:text="${#numbers.formatDecimal(bulletin.salaireImposable, 1, 2)}">0,00</td>
+            <td>Barème</td>
+            <td class="no-border"></td>
+            <td class="text-right amount" th:text="${#numbers.formatDecimal(bulletin.redevanceAudioVisuelle, 1, 2)}">0,00</td>
+            <td class="no-border"></td>
+        </tr>
+
+        <tr>
+            <td>204</td>
+            <td class="text-left">Crédit foncier salarié</td>
+            <td class="no-border"></td>
+            <td class="text-right" th:text="${#numbers.formatDecimal(bulletin.salaireImposable, 1, 2)}">0,00</td>
+            <td>1%</td>
+            <td class="no-border"></td>
+            <td class="text-right amount" th:text="${#numbers.formatDecimal(bulletin.creditFoncierSalarie, 1, 2)}">0,00</td>
+            <td class="no-border"></td>
+        </tr>
+
+        <tr>
+            <td>205</td>
+            <td class="text-left">Crédit foncier patronal</td>
+            <td class="no-border"></td>
+            <td class="text-right" th:text="${#numbers.formatDecimal(bulletin.salaireImposable, 1, 2)}">0,00</td>
+            <td>1.5%</td>
+            <td class="no-border"></td>
+            <td class="no-border"></td>
+            <td class="text-right amount" th:text="${#numbers.formatDecimal(bulletin.creditFoncierPatronal, 1, 2)}">0,00</td>
+        </tr>
+
+        <tr>
+            <td>206</td>
+            <td class="text-left">Fond national de l'emploi</td>
+            <td class="no-border"></td>
+            <td class="text-right" th:text="${#numbers.formatDecimal(bulletin.salaireImposable, 1, 2)}">0,00</td>
+            <td>1%</td>
+            <td class="no-border"></td>
+            <td class="no-border"></td>
+            <td class="text-right amount" th:text="${#numbers.formatDecimal(bulletin.fnePatronal, 1, 2)}">0,00</td>
+        </tr>
+
+        <tr>
+            <td>207</td>
+            <td class="text-left">Pension vieillesse CNPS</td>
+            <td class="no-border"></td>
+            <td class="text-right" th:text="${#numbers.formatDecimal(bulletin.baseCnps, 1, 2)}">0,00</td>
+            <td>4,20%</td>
+            <td class="no-border"></td>
+            <td class="text-right amount" th:text="${#numbers.formatDecimal(bulletin.cnpsVieillesseSalarie, 1, 2)}">0,00</td>
+            <td class="text-right amount" th:text="${#numbers.formatDecimal(bulletin.cnpsVieillesseEmployeur, 1, 2)}">0,00</td>
+        </tr>
+
+        <tr>
+            <td>208</td>
+            <td class="text-left">Allocation familiale CNPS</td>
+            <td class="no-border"></td>
+            <td class="text-right" th:text="${#numbers.formatDecimal(bulletin.baseCnps, 1, 2)}">0,00</td>
+            <td>3,70%</td>
+            <td class="no-border"></td>
+            <td class="no-border"></td>
+            <td class="text-right amount" th:text="${#numbers.formatDecimal(bulletin.cnpsAllocationsFamiliales, 1, 2)}">0,00</td>
+        </tr>
+
+        <tr>
+            <td>209</td>
+            <td class="text-left">Accident de travail CNPS</td>
+            <td class="no-border"></td>
+            <td class="text-right" th:text="${#numbers.formatDecimal(bulletin.baseCnps, 1, 2)}">0,00</td>
+            <td>2,50%</td>
+            <td class="no-border"></td>
+            <td class="no-border"></td>
+            <td class="text-right amount" th:text="${#numbers.formatDecimal(bulletin.cnpsAccidentsTravail, 1, 2)}">0,00</td>
+        </tr>
+        </tbody>
+        <tfoot>
+        <tr class="total-row">
+            <td colspan="5"><strong>TOTAUX</strong></td>
+            <td class="text-right amount" th:text="${#numbers.formatDecimal(bulletin.salaireBrut, 1, 2)}">0,00</td>
+            <td class="text-right amount" th:text="${#numbers.formatDecimal(bulletin.totalRetenues, 1, 2)}">0,00</td>
+            <td class="text-right amount" th:text="${#numbers.formatDecimal(bulletin.totalChargesPatronales, 1, 2)}">0,00</td>
+        </tr>
+        </tfoot>
+    </table>
+
+    <div class="summary-section">
+        <table class="summary-table">
+            <thead>
+            <tr>
+                <th>Brut Imposable</th>
+                <th>Retenues Salarié</th>
+                <th>Cotisation CNPS</th>
+                <th>Charges Patronales</th>
+                <th>Salaire Brut</th>
+                <th>Coût Total Employeur</th>
+                <th>Net à Payer</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr>
+                <td class="amount" th:text="${#numbers.formatDecimal(bulletin.salaireImposable, 1, 2)}">0,00</td>
+                <td class="amount" th:text="${#numbers.formatDecimal(bulletin.totalRetenues, 1, 2)}">0,00</td>
+                <td class="amount" th:text="${#numbers.formatDecimal(bulletin.cotisationCnps, 1, 2)}">0,00</td>
+                <td class="amount" th:text="${#numbers.formatDecimal(bulletin.totalChargesPatronales, 1, 2)}">0,00</td>
+                <td class="amount" th:text="${#numbers.formatDecimal(bulletin.salaireBrut, 1, 2)}">0,00</td>
+                <td class="amount" th:text="${#numbers.formatDecimal(bulletin.coutTotalEmployeur, 1, 2)}">0,00</td>
+                <td class="net-pay amount" th:text="${#numbers.formatDecimal(bulletin.salaireNet, 1, 2)}">0,00</td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <footer class="footer">
+        <p>Document officiel à conserver - Émis le <span th:text="${#temporals.format(#temporals.createNow(), 'dd/MM/yyyy')}"></span></p>
+    </footer>
+</div>
+</body>
+</html>
+
+
+<!--<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <title>Bulletin de Paie</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 2cm;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            font-size: 12px;
+            line-height: 1.4;
+            color: #333;
+            background: white;
+        }
+
+        .container {
+            max-width: 21cm;
+            margin: 0 auto;
+            background: white;
+        }
+
+        .header {
+            text-align: center;
+            border-bottom: 2px solid #2c3e50;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .header .subtitle {
+            font-size: 14px;
+            color: #7f8c8d;
+        }
+
+        .info-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+            margin-bottom: 30px;
+        }
+
+        .info-box {
+            border: 1px solid #bdc3c7;
+            padding: 20px;
+            background: #f8f9fa;
+        }
+
+        .info-box h2 {
+            font-size: 14px;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+            border-bottom: 1px solid #bdc3c7;
+            padding-bottom: 5px;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            padding: 2px 0;
+        }
+
+        .info-label {
+            font-weight: 500;
+            color: #555;
+        }
+
+        .info-value {
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        .payroll-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            border: 1px solid #bdc3c7;
+        }
+
+        .payroll-table th {
+            background-color: #34495e;
+            color: white;
+            padding: 12px 8px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 11px;
+            text-transform: uppercase;
+            border: 1px solid #2c3e50;
+        }
+
+        .payroll-table td {
+            padding: 10px 8px;
+            border: 1px solid #bdc3c7;
+            text-align: center;
+            font-size: 11px;
+        }
+
+        .payroll-table .text-left {
+            text-align: left;
+            padding-left: 12px;
+        }
+
+        .payroll-table .text-right {
+            text-align: right;
+            padding-right: 12px;
+        }
+
+        .payroll-table tbody tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+
+        .payroll-table .total-row {
+            background-color: #ecf0f1;
+            font-weight: bold;
+        }
+
+        .payroll-table .total-row td {
+            border-top: 2px solid #34495e;
+        }
+
+        .summary-section {
+            margin-top: 40px;
+            border: 2px solid #2c3e50;
+        }
+
+        .summary-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .summary-table th {
+            background-color: #2c3e50;
+            color: white;
+            padding: 15px 10px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 10px;
+            text-transform: uppercase;
+            border: 1px solid #2c3e50;
+        }
+
+        .summary-table td {
+            padding: 15px 10px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 12px;
+            border: 1px solid #bdc3c7;
+            background-color: #f8f9fa;
+        }
+
+        .summary-table .net-pay {
+            background-color: #27ae60;
+            color: white;
+            font-size: 14px;
+        }
+
+        .amount {
+            font-family: 'Arial', monospace;
+            font-weight: bold;
+        }
+
+        .footer {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #bdc3c7;
+            text-align: center;
+            font-size: 10px;
+            color: #7f8c8d;
+        }
+
+        .no-border {
+            border: none !important;
+            background: transparent !important;
+        }
+
+        .section-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: #2c3e50;
+            margin: 30px 0 15px 0;
+            text-transform: uppercase;
+            border-bottom: 1px solid #bdc3c7;
+            padding-bottom: 5px;
+        }
+
+        @media print {
+            body {
+                font-size: 10px;
+            }
+
+            .container {
+                max-width: none;
+            }
+
+            .payroll-table th,
+            .payroll-table td {
+                font-size: 9px;
+                padding: 6px 4px;
+            }
+
+            .summary-table th,
+            .summary-table td {
+                font-size: 10px;
+                padding: 10px 6px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>Bulletin de Paie</h1>
+            <p class="subtitle">Fiche de rémunération</p>
+        </header>
+
+        <div class="info-section">
+            <div class="info-box">
+                <h2>Informations Employé</h2>
+                <div class="info-row">
+                    <span class="info-label">Nom et Prénom :</span>
+                    <span class="info-value" th:text="${bulletin.employe.nom} + ' ' + ${bulletin.employe.prenom}">[Nom Prénom]</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Matricule :</span>
+                    <span class="info-value" th:text="${bulletin.employe.matricule}">[Matricule]</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Poste :</span>
+                    <span class="info-value" th:text="${bulletin.employe.poste}">[Poste]</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Service :</span>
+                    <span class="info-value" th:text="${bulletin.employe.service}">[Service]</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Date d'embauche :</span>
+                    <span class="info-value" th:text="${#temporals.format(bulletin.employe.dateEmbauche, 'dd/MM/yyyy')}">[Date]</span>
+                </div>
+            </div>
+
+            <div class="info-box">
+                <h2>Période de Paie</h2>
+                <div class="info-row">
+                    <span class="info-label">Heures normales :</span>
+                    <span class="info-value" th:text="${#numbers.formatDecimal(bulletin.heuresNormal, 1, 2)}">[Heures]</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Taux horaire :</span>
+                    <span class="info-value" th:text="${#numbers.formatDecimal(bulletin.tauxHoraire, 1, 2)} + ' FCFA'">[Taux]</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Base CNPS :</span>
+                    <span class="info-value" th:text="${#numbers.formatDecimal(bulletin.baseCnps, 1, 2)} + ' FCFA'">[Base]</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Salaire imposable :</span>
+                    <span class="info-value" th:text="${#numbers.formatDecimal(bulletin.salaireImposable, 1, 2)} + ' FCFA'">[Imposable]</span>
+                </div>
+            </div>
+        </div>
+
+        <h3 class="section-title">Détail des Éléments de Paie</h3>
+
+        <table class="payroll-table">
+            <thead>
+                <tr>
+                    <th>Code</th>
+                    <th>Désignation</th>
+                    <th>Nombre</th>
+                    <th>Base</th>
+                    <th>Taux</th>
+                    <th>Gain</th>
+                    <th>Retenue</th>
+                    <th>Charges Patronales</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>100</td>
+                    <td class="text-left">Salaire de base</td>
+                    <td th:text="${#numbers.formatDecimal(bulletin.heuresNormal, 1, 2)}">0,00</td>
+                    <td th:text="${#numbers.formatDecimal(bulletin.tauxHoraire, 1, 2)}">0,00</td>
+                    <td>100%</td>
+                    <td class="text-right amount" th:text="${#numbers.formatDecimal(bulletin.salaireBase, 1, 2)}">0,00</td>
+                    <td class="no-border"></td>
+                    <td class="no-border"></td>
+                </tr>
+                <tr>
+                    <td>107</td>
+                    <td class="text-left">Prime de transport</td>
+                    <td class="no-border"></td>
+                    <td class="no-border"></td>
+                    <td class="no-border"></td>
+                    <td class="text-right amount" th:text="${#numbers.formatDecimal(bulletin.primeTransport, 1, 2)}">0,00</td>
+                    <td class="no-border"></td>
+                    <td class="no-border"></td>
+                </tr>
+                <tr>
+                    <td>115</td>
+                    <td class="text-left">Prime de ponctualité</td>
+                    <td class="no-border"></td>
+                    <td class="no-border"></td>
+                    <td class="no-border"></td>
+                    <td class="text-right amount" th:text="${#numbers.formatDecimal(bulletin.primePonctualite, 1, 2)}">0,00</td>
+                    <td class="no-border"></td>
+                    <td class="no-border"></td>
+                </tr>
+                <tr>
+                    <td>117</td>
+                    <td class="text-left">Prime de technicité</td>
+                    <td class="no-border"></td>
+                    <td class="no-border"></td>
+                    <td class="no-border"></td>
+                    <td class="text-right amount" th:text="${#numbers.formatDecimal(bulletin.primeTechnicite, 1, 2)}">0,00</td>
+                    <td class="no-border"></td>
+                    <td class="no-border"></td>
+                </tr>
+                <tr>
+                    <td>118</td>
+                    <td class="text-left">Prime d'ancienneté</td>
+                    <td class="no-border"></td>
+                    <td class="no-border"></td>
+                    <td class="no-border"></td>
+                    <td class="text-right amount" th:text="${#numbers.formatDecimal(bulletin.primeAnciennete, 1, 2)}">0,00</td>
+                    <td class="no-border"></td>
+                    <td class="no-border"></td>
+                </tr>
+                <tr>
+                    <td>119</td>
+                    <td class="text-left">Prime de rendement</td>
+                    <td class="no-border"></td>
+                    <td class="no-border"></td>
+                    <td class="no-border"></td>
+                    <td class="text-right amount" th:text="${#numbers.formatDecimal(bulletin.primeRendement, 1, 2)}">0,00</td>
+                    <td class="no-border"></td>
+                    <td class="no-border"></td>
+                </tr>
+
+                <tr class="total-row">
+                    <td colspan="5"><strong>Salaire Brut</strong></td>
+                    <td class="text-right amount" th:text="${#numbers.formatDecimal(bulletin.salaireBrut, 1, 2)}">0,00</td>
+                    <td class="no-border"></td>
+                    <td class="no-border"></td>
+                </tr>
+
+                <tr>
+                    <td>200</td>
+                    <td class="text-left">IRPP</td>
+                    <td class="no-border"></td>
+                    <td class="text-right" th:text="${#numbers.formatDecimal(bulletin.salaireImposable, 1, 2)}">0,00</td>
+                    <td>Barème</td>
+                    <td class="no-border"></td>
+                    <td class="text-right amount" th:text="${#numbers.formatDecimal(bulletin.irpp, 1, 2)}">0,00</td>
+                    <td class="no-border"></td>
+                </tr>
+
+                <tr>
+                    <td>201</td>
+                    <td class="text-left">Centimes additionnels (CAC)</td>
+                    <td class="no-border"></td>
+                    <td class="text-right" th:text="${#numbers.formatDecimal(bulletin.irpp, 1, 2)}">0,00</td>
+                    <td>10%</td>
+                    <td class="no-border"></td>
+                    <td class="text-right amount" th:text="${#numbers.formatDecimal(bulletin.cac, 1, 2)}">0,00</td>
+                    <td class="no-border"></td>
+                </tr>
+
+                <tr>
+                    <td>202</td>
+                    <td class="text-left">Taxe Communale</td>
+                    <td class="no-border"></td>
+                    <td class="text-right" th:text="${#numbers.formatDecimal(bulletin.salaireBase, 1, 2)}">0,00</td>
+                    <td>Barème</td>
+                    <td class="no-border"></td>
+                    <td class="text-right amount" th:text="${#numbers.formatDecimal(bulletin.taxeCommunale, 1, 2)}">0,00</td>
+                    <td class="no-border"></td>
+                </tr>
+
+                <tr>
+                    <td>203</td>
+                    <td class="text-left">Redevance audiovisuelle</td>
+                    <td class="no-border"></td>
+                    <td class="text-right" th:text="${#numbers.formatDecimal(bulletin.salaireImposable, 1, 2)}">0,00</td>
+                    <td>Barème</td>
+                    <td class="no-border"></td>
+                    <td class="text-right amount" th:text="${#numbers.formatDecimal(bulletin.redevanceAudioVisuelle, 1, 2)}">0,00</td>
+                    <td class="no-border"></td>
+                </tr>
+
+                <tr>
+                    <td>204</td>
+                    <td class="text-left">Crédit foncier salarié</td>
+                    <td class="no-border"></td>
+                    <td class="text-right" th:text="${#numbers.formatDecimal(bulletin.salaireImposable, 1, 2)}">0,00</td>
+                    <td>1%</td>
+                    <td class="no-border"></td>
+                    <td class="text-right amount" th:text="${#numbers.formatDecimal(bulletin.creditFoncierSalarie, 1, 2)}">0,00</td>
+                    <td class="no-border"></td>
+                </tr>
+
+                <tr>
+                    <td>205</td>
+                    <td class="text-left">Crédit foncier patronal</td>
+                    <td class="no-border"></td>
+                    <td class="text-right" th:text="${#numbers.formatDecimal(bulletin.salaireImposable, 1, 2)}">0,00</td>
+                    <td>1.5%</td>
+                    <td class="no-border"></td>
+                    <td class="no-border"></td>
+                    <td class="text-right amount" th:text="${#numbers.formatDecimal(bulletin.creditFoncierPatronal, 1, 2)}">0,00</td>
+                </tr>
+
+                <tr>
+                    <td>206</td>
+                    <td class="text-left">Fond national de l'emploi</td>
+                    <td class="no-border"></td>
+                    <td class="text-right" th:text="${#numbers.formatDecimal(bulletin.salaireImposable, 1, 2)}">0,00</td>
+                    <td>1%</td>
+                    <td class="no-border"></td>
+                    <td class="no-border"></td>
+                    <td class="text-right amount" th:text="${#numbers.formatDecimal(bulletin.fnePatronal, 1, 2)}">0,00</td>
+                </tr>
+
+                <tr>
+                    <td>207</td>
+                    <td class="text-left">Pension vieillesse CNPS</td>
+                    <td class="no-border"></td>
+                    <td class="text-right" th:text="${#numbers.formatDecimal(bulletin.baseCnps, 1, 2)}">0,00</td>
+                    <td>4,20%</td>
+                    <td class="no-border"></td>
+                    <td class="text-right amount" th:text="${#numbers.formatDecimal(bulletin.cnpsVieillesseSalarie, 1, 2)}">0,00</td>
+                    <td class="text-right amount" th:text="${#numbers.formatDecimal(bulletin.cnpsVieillesseEmployeur, 1, 2)}">0,00</td>
+                </tr>
+
+                <tr>
+                    <td>208</td>
+                    <td class="text-left">Allocation familiale CNPS</td>
+                    <td class="no-border"></td>
+                    <td class="text-right" th:text="${#numbers.formatDecimal(bulletin.baseCnps, 1, 2)}">0,00</td>
+                    <td>3,70%</td>
+                    <td class="no-border"></td>
+                    <td class="no-border"></td>
+                    <td class="text-right amount" th:text="${#numbers.formatDecimal(bulletin.cnpsAllocationsFamiliales, 1, 2)}">0,00</td>
+                </tr>
+
+                <tr>
+                    <td>209</td>
+                    <td class="text-left">Accident de travail CNPS</td>
+                    <td class="no-border"></td>
+                    <td class="text-right" th:text="${#numbers.formatDecimal(bulletin.baseCnps, 1, 2)}">0,00</td>
+                    <td>2,50%</td>
+                    <td class="no-border"></td>
+                    <td class="no-border"></td>
+                    <td class="text-right amount" th:text="${#numbers.formatDecimal(bulletin.cnpsAccidentsTravail, 1, 2)}">0,00</td>
+                </tr>
+            </tbody>
+            <tfoot>
+                <tr class="total-row">
+                    <td colspan="5"><strong>TOTAUX</strong></td>
+                    <td class="text-right amount" th:text="${#numbers.formatDecimal(bulletin.salaireBrut, 1, 2)}">0,00</td>
+                    <td class="text-right amount" th:text="${#numbers.formatDecimal(bulletin.totalRetenues, 1, 2)}">0,00</td>
+                    <td class="text-right amount" th:text="${#numbers.formatDecimal(bulletin.totalChargesPatronales, 1, 2)}">0,00</td>
+                </tr>
+            </tfoot>
+        </table>
+
+        <div class="summary-section">
+            <table class="summary-table">
+                <thead>
+                    <tr>
+                        <th>Brut Imposable</th>
+                        <th>Retenues Salarié</th>
+                        <th>Cotisation CNPS</th>
+                        <th>Charges Patronales</th>
+                        <th>Salaire Brut</th>
+                        <th>Coût Total Employeur</th>
+                        <th>Net à Payer</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="amount" th:text="${#numbers.formatDecimal(bulletin.salaireImposable, 1, 2)}">0,00</td>
+                        <td class="amount" th:text="${#numbers.formatDecimal(bulletin.totalRetenues, 1, 2)}">0,00</td>
+                        <td class="amount" th:text="${#numbers.formatDecimal(bulletin.cotisationCnps, 1, 2)}">0,00</td>
+                        <td class="amount" th:text="${#numbers.formatDecimal(bulletin.totalChargesPatronales, 1, 2)}">0,00</td>
+                        <td class="amount" th:text="${#numbers.formatDecimal(bulletin.salaireBrut, 1, 2)}">0,00</td>
+                        <td class="amount" th:text="${#numbers.formatDecimal(bulletin.coutTotalEmployeur, 1, 2)}">0,00</td>
+                        <td class="net-pay amount" th:text="${#numbers.formatDecimal(bulletin.salaireNet, 1, 2)}">0,00</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <footer class="footer">
+            <p>Document officiel à conserver - Émis le <span th:text="${#temporals.format(#temporals.createNow(), 'dd/MM/yyyy')}"></span></p>
+        </footer>
+    </div>
+</body>
+</html>-->
