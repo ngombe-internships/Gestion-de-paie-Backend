@@ -1,5 +1,6 @@
 package com.hades.paie1.repository;
 
+import com.hades.paie1.enum1.Role;
 import com.hades.paie1.model.Employe;
 import com.hades.paie1.model.User;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -12,4 +13,6 @@ public interface UserRepository extends JpaRepository<User, Long> {
     Boolean existsByUsername (String username);
 
     Optional <User> findByEmploye (Employe employe);
+
+    Optional<User> findByRole (Role role);
 }

@@ -1,10 +1,13 @@
 package com.hades.paie1.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.hades.paie1.enum1.StatusBulletin;
 import com.hades.paie1.model.BulletinPaie;
 import lombok.Data;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
+
 @Data
 
 public class BulletinPaieResponseDto {
@@ -12,6 +15,7 @@ public class BulletinPaieResponseDto {
 //    @JsonProperty("fiche_originale")
 //    private BulletinPaie ficheOriginal;
 
+    private Long id;
     //Section Gains
     @JsonProperty("tauxHoraire")
      private BigDecimal tauxHoraire;
@@ -115,8 +119,25 @@ public class BulletinPaieResponseDto {
     @JsonProperty("cotisationCnps")
     private BigDecimal cotisationCnps;
 
+    @JsonProperty("periodePaie")
+    private String periodePaie;
+
+    @JsonProperty("ateCreationBulletin")
+    private LocalDate dateCreationBulletin;
+
+    @JsonProperty("statusBulletin")
+    private StatusBulletin statusBulletin;
+
+    @JsonProperty("datePaiement")
+    private LocalDate datePaiement;
+
+
+    private BigDecimal primeExceptionnellee;
+
+    //entite employe et Entreprise
     @JsonProperty("employe")
     private  EmployeResponseDto employe;
+    private EntrepriseDto entreprise;
 
 
 

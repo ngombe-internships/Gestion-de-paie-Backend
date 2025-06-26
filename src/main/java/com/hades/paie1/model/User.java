@@ -27,11 +27,14 @@ public class User {
     private String password;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(nullable = false, length = 20)
     @ColumnDefault("'EMPLOYE'")
     private Role role;
 
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    private Employe employe;
+
     @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "employe_id", unique = true)
-    private  Employe employe;
+    @JoinColumn(name = "entreprise_id", unique = true, nullable = true)
+    private Entreprise entreprise;
 }

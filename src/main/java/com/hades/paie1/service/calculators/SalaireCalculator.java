@@ -109,7 +109,8 @@ public class SalaireCalculator {
                 fiche.getPrimeTransport(),
                 fiche.getPrimePonctualite(),
                 fiche.getPrimeTechnicite(),
-                fiche.getAutrePrimes()
+                fiche.getAutrePrimes(),
+                fiche.getPrimeExceptionnelle()
         );
     }
 

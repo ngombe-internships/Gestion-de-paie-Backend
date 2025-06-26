@@ -1,6 +1,6 @@
 package com.hades.paie1.model;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.hades.paie1.enum1.StatusBulletin;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -8,7 +8,6 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 
 @Entity
 @Data
@@ -25,6 +24,10 @@ public class BulletinPaie {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "employe_id", nullable = false)
     private Employe employe;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name ="entreprise_id", nullable = false)
+    private  Entreprise entreprise;
 
     // Donne d'entree
     @Column(name= "salaire_base", precision = 15, scale = 2)
@@ -145,16 +148,36 @@ public class BulletinPaie {
 
 
 
+    @Column(name = "totalPrimes")
     private BigDecimal totalPrimes;
+    @Column(name = "totalGains")
     private BigDecimal totalGains;
 
+    @Column(name = "salaireImposable")
     private BigDecimal salaireImposable;
+    @Column(name = "BaseCnps")
     private BigDecimal BaseCnps;
 
 
+    @Column(name = "annee")
+    private Integer annee;
+    @Column(name = "mois")
+    private  String mois;
+
+    @Column(name = "primeExceptionnelle")
+    private BigDecimal primeExceptionnelle;
 
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "statusBulletin")
 
+    private StatusBulletin statusBulletin;
+    @Column(name = "periodePaie")
+    private String periodePaie;
+    @Column(name = "dateCreation")
+    private LocalDate dateCreationBulletin;
+    @Column(name = "datePaiement")
+    private  LocalDate datePaiement;
 
 
 }

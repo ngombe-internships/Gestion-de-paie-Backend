@@ -30,7 +30,7 @@ public class EmployeResponseDto {
     private CategorieEnum categorie;
     private EchelonEnum echelon;
     private TypeContratEnum typeContratEnum;
-    private CiviliteEnum civilite;
+    private CiviliteEnum sexe;
 
 
 }

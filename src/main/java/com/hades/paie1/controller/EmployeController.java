@@ -26,7 +26,7 @@ public class EmployeController {
     }
 
     @PostMapping("")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasRole('EMPLOYEUR')")
     public ResponseEntity<ApiResponse<EmployeResponseDto>> createEmploye(@Valid @RequestBody EmployeCreateDto employeCreateDto) {
 
             EmployeResponseDto createEmploye = employeService.createEmploye(employeCreateDto);
@@ -35,7 +35,7 @@ public class EmployeController {
     }
 
     @GetMapping("/search")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('EMPLOYEUR') or hasRole('EMPLOYE')")
     public  ResponseEntity<ApiResponse<List<EmployeResponseDto>>> searchEmploye(
             @RequestParam (required = false) String searchTerm) {
 
@@ -45,7 +45,7 @@ public class EmployeController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN') or (hasRole('EMPLOYE') and @employeService.isEmployerOfCurrentUser(#id))")
+    @PreAuthorize("hasAnyRole('ADMIN','EMPLOYEUR','EMPLOYE')")
     public ResponseEntity<ApiResponse<EmployeResponseDto>> getEmployeById (@PathVariable Long id){
         Optional<EmployeResponseDto> employe = employeService.getEmployeById(id);
         if(employe.isPresent()){
@@ -69,7 +69,7 @@ public class EmployeController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('EMPLOYEUR')")
     public ResponseEntity<ApiResponse<EmployeResponseDto>> updateEmploye (@PathVariable Long id , @RequestBody EmployeCreateDto employeCreateDto) {
         EmployeResponseDto employe = employeService.updateEmploye( employeCreateDto, id);
 
@@ -83,7 +83,7 @@ public class EmployeController {
 
 
     @GetMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN','EMPLOYEUR') ")
     public ResponseEntity<ApiResponse<List<EmployeResponseDto>>> getAllEmploye(){
 
         List<EmployeResponseDto> employe = employeService.getAllEmploye();
@@ -96,6 +96,17 @@ public class EmployeController {
     }
 
 
+    @GetMapping("/my-profile")
+    @PreAuthorize("hasRole('EMPLOYE')")
+    public ResponseEntity<ApiResponse<EmployeResponseDto>> getMyEmployeProfile(){
+        EmployeResponseDto employeResponseDto = employeService.getEmployeProfilByAuthenticateUser();
+        ApiResponse<EmployeResponseDto> response = new ApiResponse<>(
+                "Profil de l'employe connecte recupere avec succes",
+                employeResponseDto,
+                HttpStatus.OK
+        );
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
 
 
 

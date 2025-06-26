@@ -69,7 +69,7 @@ public class EmployeCreateDto {
 
 
     @Column(name="sexe")
-    private CiviliteEnum civilite;
+    private CiviliteEnum sexe;
 
 
 

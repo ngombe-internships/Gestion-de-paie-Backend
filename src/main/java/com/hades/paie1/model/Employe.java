@@ -5,6 +5,7 @@ import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
@@ -14,7 +15,7 @@ import java.time.LocalDate;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-
+@Builder
 @Table(name = "employes")
 public class Employe {
 
@@ -79,7 +80,16 @@ public class Employe {
     private  LocalDate dateNaissance;
 
     @Column(name="sexe")
-    private CiviliteEnum civilite;
+    private CiviliteEnum sexe;
+
+
+    @OneToOne( fetch = FetchType.LAZY)
+    @JoinColumn (name="user_id", unique = true)
+    private  User user;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name= "entreprise_id", nullable = false)
+    private Entreprise entreprise;
 
 
 
