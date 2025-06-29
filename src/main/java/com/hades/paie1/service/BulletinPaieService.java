@@ -19,6 +19,7 @@ import com.hades.paie1.service.calculators.CotisationCalculator;
 import com.hades.paie1.service.calculators.ImpotCalculator;
 import com.hades.paie1.service.calculators.SalaireCalculator;
 import com.hades.paie1.utils.MathUtils;
+import jakarta.transaction.Transactional;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -252,6 +253,7 @@ public class BulletinPaieService {
     }
 
     //pour gerer afficher en fonction  des roles
+    @Transactional
     public BulletinPaieResponseDto getBulletinById(Long id) {
         BulletinPaie bulletin = bulletinRepo.findById(id)
                 .orElseThrow(() -> new RessourceNotFoundException("Bulletin de paie non trouve avec l'id: " + id));
@@ -280,6 +282,7 @@ public class BulletinPaieService {
 
 
 
+    @Transactional
     public Optional <BulletinPaieResponseDto> getBulletinPaieById (Long id){
         return bulletinRepo.findById(id)
                 .map(this::convertToDto);
@@ -304,6 +307,7 @@ public class BulletinPaieService {
         bulletinRepo.deleteById(id);
     }
 
+    @Transactional
     public boolean isBulletinOfCurrentUser(Long bulletinId) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated()) {
@@ -391,6 +395,7 @@ public class BulletinPaieService {
         return false;
     }
 
+    @Transactional
     public List<BulletinPaieEmployeurDto> getBulletinsForEmployer() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String currentUsername = authentication.getName();
@@ -427,6 +432,7 @@ public class BulletinPaieService {
     }
 
 
+    @Transactional
     public List<BulletinPaieResponseDto> getMyBulletins() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String currentUsername = authentication.getName();
@@ -449,6 +455,7 @@ public class BulletinPaieService {
     }
 
     //methode pour la recherche
+    @Transactional
     public List<BulletinPaieEmployeurDto> searchBulletinsForEmployer(String searchTerm) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String currentUsername = authentication.getName();
