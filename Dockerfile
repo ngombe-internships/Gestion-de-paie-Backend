@@ -24,3 +24,7 @@ ENV JAVA_OPTS="-Xmx512m -Xms256m"
 
 # Commande pour lancer l'application
 ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]
+
+# Commande pour lancer l'application avec le profil de production par défaut
+# Ou en utilisant la variable d'environnement $PORT de Render
+ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -Dspring.profiles.active=${SPRING_PROFILES_ACTIVE:-prod} -jar app.jar --server.port=${PORT:-8080}"]
