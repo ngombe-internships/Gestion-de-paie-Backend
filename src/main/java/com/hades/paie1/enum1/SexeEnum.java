@@ -1,6 +1,6 @@
 package com.hades.paie1.enum1;
 
-public enum CiviliteEnum {
+public enum SexeEnum {
     M,
     F
 }

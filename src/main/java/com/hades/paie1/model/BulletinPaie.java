@@ -1,5 +1,6 @@
 package com.hades.paie1.model;
 
+import com.hades.paie1.enum1.MethodePaiement;
 import com.hades.paie1.enum1.StatusBulletin;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -164,8 +165,7 @@ public class BulletinPaie {
     @Column(name = "mois")
     private  String mois;
 
-    @Column(name = "primeExceptionnelle")
-    private BigDecimal primeExceptionnelle;
+
 
 
     @Enumerated(EnumType.STRING)
@@ -178,6 +178,12 @@ public class BulletinPaie {
     private LocalDate dateCreationBulletin;
     @Column(name = "datePaiement")
     private  LocalDate datePaiement;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name="methodePaiement")
+    private MethodePaiement methodePaiement;
+
+
 
 
 }

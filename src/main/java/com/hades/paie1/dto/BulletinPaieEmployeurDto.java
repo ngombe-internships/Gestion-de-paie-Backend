@@ -59,7 +59,8 @@ public class BulletinPaieEmployeurDto {
     private LocalDate datePaiement;
     private StatusBulletin statusBulletin;
 
-    private BigDecimal primeExceptionnelle;
 
+
+    private String methodePaiement;
 
 }

@@ -147,8 +147,15 @@ public class BulletinPaieController {
 
     @GetMapping("/employeur")
     @PreAuthorize("hasRole('EMPLOYEUR')")
-    public ResponseEntity<ApiResponse<List<BulletinPaieEmployeurDto>>> getBulletinsForEmployeur() {
-        List<BulletinPaieEmployeurDto> bulletins = bulletinPaieService.getBulletinsForEmployer();
+    public ResponseEntity<ApiResponse<List<BulletinPaieEmployeurDto>>> getBulletinsForEmployeur(
+            @RequestParam (required = false) String searchTerm) {
+        List<BulletinPaieEmployeurDto> bulletins;
+
+        if(searchTerm != null && !searchTerm.trim().isEmpty()){
+            bulletins = bulletinPaieService.searchBulletinsForEmployer(searchTerm);
+        } else {
+            bulletins = bulletinPaieService.getBulletinsForEmployer();
+        }
         ApiResponse<List<BulletinPaieEmployeurDto>> response = new ApiResponse<>(
                 "Liste des bulletins de paie de votre entreprise",
                 bulletins,
@@ -243,7 +250,7 @@ public class BulletinPaieController {
     }
 
     @GetMapping("/pdf/{bulletinId}")
-    @PreAuthorize("hasRole('ADMIN') or (hasRole('EMPLOYEUR') and @bulletinPaieService.isBulletinOfCurrentUser(#bulletinId))")
+    @PreAuthorize("hasRole('ADMIN') or (hasRole('EMPLOYEUR') or (hasRole('EMPLOYE') and @bulletinPaieService.isBulletinOfCurrentUser(#bulletinId)))")
     public ResponseEntity<byte[]> generatePdfEmploye(@PathVariable Long bulletinId) {
 
         try {
@@ -277,7 +284,7 @@ public class BulletinPaieController {
 
 
     @GetMapping(value = "/{id}/previews", produces = MediaType.TEXT_HTML_VALUE)
-    @PreAuthorize("hasRole('ADMIN') or (hasRole('EMPLOYEUR') and @bulletinPaieService.isBulletinOfCurrentUser(#id))")
+    @PreAuthorize("hasRole('ADMIN') or (hasRole('EMPLOYEUR') or (hasRole('EMPLOYE') and @bulletinPaieService.isBulletinOfCurrentUser(#id)))")
     public ResponseEntity<String> getBulletinHtml (@PathVariable Long id){
         try {
             BulletinPaieResponseDto bulletinData = bulletinPaieService.getBulletinById(id);
@@ -364,7 +371,6 @@ public class BulletinPaieController {
         dto.setSalaireBrut(bulletinPaieService.calculSalaireBrut(fiche));
         dto.setSalaireImposable(bulletinPaieService.calculSalaireImposable(fiche));
         dto.setBaseCnps(bulletinPaieService.calculBaseCnps(fiche));
-        dto.setPrimeExceptionnellee(fiche.getPrimeExceptionnelle());
 
         // Calculs d'impôts et taxes
         dto.setIrpp(bulletinPaieService.calculIrpp(fiche));

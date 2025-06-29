@@ -2,6 +2,7 @@ package com.hades.paie1.dto;
 
 import com.hades.paie1.enum1.*;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
@@ -10,6 +11,7 @@ import java.time.LocalDate;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
+@Builder
 public class EmployeResponseDto {
 
     private Long id; // Inclure l'ID pour les réponses
@@ -30,7 +32,7 @@ public class EmployeResponseDto {
     private CategorieEnum categorie;
     private EchelonEnum echelon;
     private TypeContratEnum typeContratEnum;
-    private CiviliteEnum sexe;
+    private SexeEnum sexe;
 
 
 }

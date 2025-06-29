@@ -1,6 +1,7 @@
 package com.hades.paie1.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+
 import com.hades.paie1.enum1.StatusBulletin;
 import com.hades.paie1.model.BulletinPaie;
 import lombok.Data;
@@ -122,7 +123,7 @@ public class BulletinPaieResponseDto {
     @JsonProperty("periodePaie")
     private String periodePaie;
 
-    @JsonProperty("ateCreationBulletin")
+    @JsonProperty("dateCreationBulletin")
     private LocalDate dateCreationBulletin;
 
     @JsonProperty("statusBulletin")
@@ -131,8 +132,10 @@ public class BulletinPaieResponseDto {
     @JsonProperty("datePaiement")
     private LocalDate datePaiement;
 
+    @JsonProperty("methodePaiement")
+    private String methodePaiement;
 
-    private BigDecimal primeExceptionnellee;
+
 
     //entite employe et Entreprise
     @JsonProperty("employe")

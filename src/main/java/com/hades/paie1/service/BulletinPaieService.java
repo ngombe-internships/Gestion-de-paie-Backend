@@ -28,9 +28,7 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.format.TextStyle;
-import java.util.List;
-import java.util.Locale;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -116,7 +114,6 @@ public class BulletinPaieService {
         fiche.setPrimeRendement(fiche.getPrimeRendement());
         fiche.setPrimeTechnicite(fiche.getPrimeTechnicite());
         fiche.setTotalPrimes(calculTotalPrimes(fiche));
-        fiche.setPrimeExceptionnelle(fiche.getPrimeExceptionnelle());
         fiche.setSalaireBrut(calculator.calculSalaireBrut(fiche));
         fiche.setSalaireImposable(calculator.calculSalaireImposable(fiche));
         fiche.setBaseCnps(calculator.calculBaseCnps(fiche));
@@ -200,11 +197,16 @@ public class BulletinPaieService {
         dto.setDatePaiement(bulletinPaie.getDatePaiement());
         dto.setStatusBulletin(bulletinPaie.getStatusBulletin());
         dto.setDateCreationBulletin(bulletinPaie.getDateCreationBulletin());
-
-        if (bulletinPaie.getMois() != null && bulletinPaie.getAnnee()!= null) {
+        if (bulletinPaie.getMois() != null && bulletinPaie.getAnnee() != null) {
             dto.setPeriodePaie(bulletinPaie.getMois() + " " + bulletinPaie.getAnnee());
         } else {
-            dto.setPeriodePaie("N/A"); // Ou une autre valeur par défaut
+            dto.setPeriodePaie("N/A"); // Valeur par défaut si les champs sont nuls
+        }
+
+        if(bulletinPaie.getMethodePaiement() != null) {
+            dto.setMethodePaiement(bulletinPaie.getMethodePaiement().getDisplayValue());
+        }else {
+            dto.setMethodePaiement("Non specifiee");
         }
 
 
@@ -404,10 +406,26 @@ public class BulletinPaieService {
             throw new IllegalStateException("Authenticated employer is not associated with an enterprise.");
         }
 
-        return bulletinRepo.findByEntreprise(entreprise).stream()
+        // Récupérez les bulletins de la base de données, triés par date de création
+        List<BulletinPaie> bulletins = bulletinRepo.findByEntrepriseOrderByDateCreationBulletinDesc(entreprise);
+
+        //  Tri avec Map inline
+        Map<StatusBulletin, Integer> statusOrder = Map.of(
+                StatusBulletin.GÉNÉRÉ ,1,
+                StatusBulletin.ENVOYÉ, 2,
+                StatusBulletin.ARCHIVÉ, 3,
+                StatusBulletin.VALIDÉ, 4,
+                StatusBulletin.ANNULÉ, 5
+        );
+
+        bulletins.sort(Comparator.comparing((BulletinPaie b) -> statusOrder.getOrDefault(b.getStatusBulletin(), 6))
+                .thenComparing(BulletinPaie::getDateCreationBulletin, Comparator.reverseOrder()));
+
+        return bulletins.stream()
                 .map(this::convertToEmployeurDto)
                 .collect(Collectors.toList());
     }
+
 
     public List<BulletinPaieResponseDto> getMyBulletins() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -427,6 +445,43 @@ public class BulletinPaieService {
 
         return bulletinRepo.findByEmployeAndStatusBulletinIn(employe, visibleStatuses).stream()
                 .map(this::convertToDto) // Using the existing convertToDto for employee's own bulletins
+                .collect(Collectors.toList());
+    }
+
+    //methode pour la recherche
+    public List<BulletinPaieEmployeurDto> searchBulletinsForEmployer(String searchTerm) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String currentUsername = authentication.getName();
+        User currentUser = userRepository.findByUsername(currentUsername)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found: " + currentUsername));
+
+        if (currentUser.getRole() != Role.EMPLOYEUR) {
+            throw new AccessDeniedException("Only employers can view their company's bulletins.");
+        }
+
+        Entreprise entreprise = currentUser.getEntreprise();
+        if (entreprise == null) {
+            throw new IllegalStateException("Authenticated employer is not associated with an enterprise.");
+        }
+
+        // Récupérez les bulletins en utilisant un mot-clé de recherche
+        List<BulletinPaie> bulletins = bulletinRepo.findByEntrepriseAndEmploye_NomContainingIgnoreCaseOrEmploye_PrenomContainingIgnoreCaseOrEmploye_MatriculeContainingIgnoreCaseOrderByDateCreationBulletinDesc(
+                entreprise, searchTerm, searchTerm, searchTerm);
+
+        // OPTION 1: Tri avec Map inline
+        Map<StatusBulletin, Integer> statusOrder = Map.of(
+                StatusBulletin.VALIDÉ, 1,
+                StatusBulletin.GÉNÉRÉ, 2,
+                StatusBulletin.ENVOYÉ, 3,
+                StatusBulletin.ARCHIVÉ, 4,
+                StatusBulletin.ANNULÉ, 5
+        );
+
+        bulletins.sort(Comparator.comparing((BulletinPaie b) -> statusOrder.getOrDefault(b.getStatusBulletin(), 6))
+                .thenComparing(BulletinPaie::getDateCreationBulletin, Comparator.reverseOrder()));
+
+        return bulletins.stream()
+                .map(this::convertToEmployeurDto)
                 .collect(Collectors.toList());
     }
 
@@ -473,7 +528,7 @@ public class BulletinPaieService {
         }
 
         bulletin.setStatusBulletin(StatusBulletin.ENVOYÉ);
-        bulletin.setDatePaiement(LocalDate.now()); // Définir la date de paiement lors de l'envoi
+//        bulletin.setDatePaiement(LocalDate.now()); // Définir la date de paiement lors de l'envoi
         BulletinPaie savedBulletin = bulletinRepo.save(bulletin);
         return convertToDto(savedBulletin);
     }
@@ -564,7 +619,6 @@ public class BulletinPaieService {
         dto.setPrimeRendement(bulletinPaie.getPrimeRendement());
         dto.setAutrePrimes(bulletinPaie.getAutrePrimes());
         dto.setAvantageNature(bulletinPaie.getAvantageNature());
-        dto.setPrimeExceptionnelle(bulletinPaie.getPrimeExceptionnelle());
         dto.setTotalPrimes(bulletinPaie.getTotalPrimes());
         dto.setSalaireBrut(bulletinPaie.getSalaireBrut());
         dto.setSalaireImposable(bulletinPaie.getSalaireImposable());
@@ -593,10 +647,26 @@ public class BulletinPaieService {
 //        dto.setJourConge(bulletinPaie.getJourConge());
 //        dto.setMois(bulletinPaie.getMois());
 //        dto.setAnnee(bulletinPaie.getAnnee());
-        dto.setPeriodePaie(dto.getPeriodePaie());
-      ;
-        dto.setDateCreation(dto.getDateCreation());
-        dto.setDatePaiement(dto.getDatePaiement());
+//        dto.setPeriodePaie(dto.getPeriodePaie());
+//      ;
+//        dto.setDateCreation(dto.getDateCreation());
+//        dto.setDatePaiement(dto.getDatePaiement());
+
+        dto.setDateCreationBulletin(bulletinPaie.getDateCreationBulletin());
+        dto.setDatePaiement(bulletinPaie.getDatePaiement());
+        dto.setStatusBulletin(bulletinPaie.getStatusBulletin());// Le statut est maintenant renseigné
+        if (bulletinPaie.getMois() != null && bulletinPaie.getAnnee() != null) {
+            dto.setPeriodePaie(bulletinPaie.getMois() + " " + bulletinPaie.getAnnee());
+        } else {
+            dto.setPeriodePaie("N/A"); // Valeur par défaut si les champs sont nuls
+        }
+
+        if(bulletinPaie.getMethodePaiement() != null) {
+            dto.setMethodePaiement(bulletinPaie.getMethodePaiement().getDisplayValue());
+        }else {
+            dto.setMethodePaiement("Non specifiee");
+        }
+
 
         // Convert Employe to EmployeResponseDto
         if (bulletinPaie.getEmploye() != null) {
@@ -608,17 +678,6 @@ public class BulletinPaieService {
             employeDto.setPoste(bulletinPaie.getEmploye().getPoste());
             // Add other necessary employee fields
             dto.setEmploye(employeDto);
-        }
-
-        dto.setDateCreationBulletin(bulletinPaie.getDateCreationBulletin());
-        dto.setDatePaiement(bulletinPaie.getDatePaiement());
-        dto.setStatusBulletin(bulletinPaie.getStatusBulletin());// Le statut est maintenant renseigné
-
-        // Concaténez mois et année pour periodePaie (si votre DTO a ce champ pour l'affichage)
-        if (bulletinPaie.getMois() != null && bulletinPaie.getAnnee()!= null) {
-            dto.setPeriodePaie(bulletinPaie.getMois() + " " + bulletinPaie.getAnnee());
-        } else {
-            dto.setPeriodePaie("N/A"); // Ou une autre valeur par défaut
         }
 
 

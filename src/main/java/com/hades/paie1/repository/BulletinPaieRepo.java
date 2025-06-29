@@ -22,4 +22,10 @@ public interface BulletinPaieRepo extends JpaRepository <BulletinPaie, Long> {
 //    List<BulletinPaie> findByEmployeAndStatusBulletin (Employe employe, List<StatusBulletin> status);
     List<BulletinPaie> findByEmployeAndStatusBulletinIn(Employe employe, List<StatusBulletin> statuses);
 
+    List<BulletinPaie> findByEntrepriseOrderByDateCreationBulletinDesc(Entreprise entreprise);
+
+    List<BulletinPaie> findByEntrepriseAndEmploye_NomContainingIgnoreCaseOrEmploye_PrenomContainingIgnoreCaseOrEmploye_MatriculeContainingIgnoreCaseOrderByDateCreationBulletinDesc(
+            Entreprise entreprise, String nom, String prenom, String matricule);
+
+
 }

@@ -2,6 +2,8 @@ package com.hades.paie1.service.calculators;
 
 import com.hades.paie1.model.BulletinPaie;
 import com.hades.paie1.model.Employe;
+import com.hades.paie1.repository.BulletinPaieRepo;
+import com.hades.paie1.repository.LeaveRequestRepository;
 import com.hades.paie1.service.AncienneteService;
 import com.hades.paie1.utils.MathUtils;
 import com.hades.paie1.utils.PaieConstants;
@@ -17,14 +19,20 @@ public class SalaireCalculator {
     private MathUtils mathUtils;
 
     private AncienneteService ancienneteService;
-
-    public SalaireCalculator(MathUtils mathUtils , AncienneteService ancienneteService) {
+    private LeaveRequestRepository leaveRequestRepository;
+    private BulletinPaieRepo bulletinPaieRepo;
+    public SalaireCalculator(MathUtils mathUtils , AncienneteService ancienneteService, BulletinPaieRepo bulletinPaieRepo ,LeaveRequestRepository leaveRequestRepository) {
         this.mathUtils = mathUtils;
         this.ancienneteService = ancienneteService;
+        this.bulletinPaieRepo = bulletinPaieRepo;
+        this.leaveRequestRepository = leaveRequestRepository;
     }
 
     public BigDecimal calculSalaireBase(BulletinPaie fiche) {
 
+        long jourTravailNormal = fiche.getHeuresNormal().longValue()/8;
+
+        long jourAbsenceNonPayes;
         return mathUtils.safeMultiply(fiche.getTauxHoraire(), fiche.getHeuresNormal());
     }
 
@@ -109,8 +117,7 @@ public class SalaireCalculator {
                 fiche.getPrimeTransport(),
                 fiche.getPrimePonctualite(),
                 fiche.getPrimeTechnicite(),
-                fiche.getAutrePrimes(),
-                fiche.getPrimeExceptionnelle()
+                fiche.getAutrePrimes()
         );
     }
 

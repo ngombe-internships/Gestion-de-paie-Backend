@@ -232,8 +232,7 @@ private BulletinPaieResponseDto cloneBulletinData(BulletinPaieResponseDto origin
         clone.setDateCreationBulletin(original.getDateCreationBulletin());
         clone.setStatusBulletin(original.getStatusBulletin());
         clone.setDatePaiement(original.getDatePaiement());
-        clone.setPrimeExceptionnellee(original.getPrimeExceptionnellee());
-
+        clone.setMethodePaiement(original.getMethodePaiement());
         // Cloner les objets imbriqués
         // Pour EmployeDto, une simple copie de référence peut suffire si l'objet n'est pas modifié.
         if (original.getEmploye() != null) {

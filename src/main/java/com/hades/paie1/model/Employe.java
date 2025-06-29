@@ -80,7 +80,7 @@ public class Employe {
     private  LocalDate dateNaissance;
 
     @Column(name="sexe")
-    private CiviliteEnum sexe;
+    private SexeEnum sexe;
 
 
     @OneToOne( fetch = FetchType.LAZY)

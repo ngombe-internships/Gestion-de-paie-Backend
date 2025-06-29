@@ -50,26 +50,30 @@ public class EmployeService {
 
     //methode pour convertir employeCreateDto en entite Employe
     public Employe convertToEntity(EmployeCreateDto dto) {
-        Employe employe = new Employe();
 
-        employe.setMatricule(dto.getMatricule());
-        employe.setNom(dto.getNom());
-        employe.setPrenom(dto.getPrenom()); // Correction: dto.getPrenom()
-        employe.setNumeroCnps(dto.getNumeroCnps());
-        employe.setNiu(dto.getNiu());
-        employe.setTelephone(dto.getTelephone());
-        employe.setEmail(dto.getEmail());
-        employe.setAdresse(dto.getAdresse());
-        employe.setDateEmbauche(dto.getDateEmbauche());
-        employe.setPoste(dto.getPoste());
-        employe.setService(dto.getService());
-        employe.setClassificationProfessionnelle(dto.getClassificationProfessionnelle());
-        employe.setCategorieEnum(dto.getCategorie());
-        employe.setEchelonEnum(dto.getEchelon());
-        employe.setTypeContratEnum(dto.getTypeContratEnum());
-        employe.setDateNaissance(dto.getDateNaissance());
-        employe.setSexe(dto.getSexe());
-        return employe;
+       return Employe.builder()
+               .matricule(dto.getMatricule())
+               .nom(dto.getNom())
+               .prenom(dto.getPrenom())
+               .numeroCnps(dto.getNumeroCnps())
+               .niu(dto.getNiu())
+               .telephone(dto.getTelephone())
+               .email(dto.getEmail())
+               .adresse(dto.getAdresse())
+               .dateEmbauche(dto.getDateEmbauche())
+               .poste(dto.getPoste())
+               .service(dto.getService())
+               .classificationProfessionnelle(dto.getClassificationProfessionnelle())
+               .categorieEnum(dto.getCategorie())
+               .echelonEnum(dto.getEchelon())
+               .typeContratEnum(dto.getTypeContratEnum())
+               .dateNaissance(dto.getDateNaissance())
+               .sexe(dto.getSexe())
+               .build();
+
+
+
+
     }
 
     // Methode pour convertir Entite Employe en Employe Respose
@@ -77,26 +81,28 @@ public class EmployeService {
         if(employe == null){
             return null;
         }
-        EmployeResponseDto dto = new EmployeResponseDto();
-        dto.setId(employe.getId());
-        dto.setMatricule(employe.getMatricule());
-        dto.setNom(employe.getNom());
-        dto.setPrenom(employe.getPrenom());
-        dto.setNumeroCnps(employe.getNumeroCnps());
-        dto.setNiu(employe.getNiu());
-        dto.setTelephone(employe.getTelephone());
-        dto.setEmail(employe.getEmail());
-        dto.setAdresse(employe.getAdresse());
-        dto.setDateEmbauche(employe.getDateEmbauche());
-        dto.setPoste(employe.getPoste());
-        dto.setService(employe.getService());
-        dto.setClassificationProfessionnelle(employe.getClassificationProfessionnelle());
-        dto.setCategorie(employe.getCategorieEnum());
-        dto.setEchelon(employe.getEchelonEnum());
-        dto.setTypeContratEnum(employe.getTypeContratEnum());
-        dto.setSexe(employe.getSexe());
-        dto.setDateNaissance(employe.getDateNaissance());
-        return dto;
+
+        return EmployeResponseDto.builder()
+                .id(employe.getId())
+                .matricule(employe.getMatricule())
+                .nom(employe.getNom())
+                .prenom(employe.getPrenom())
+                .numeroCnps(employe.getNumeroCnps())
+                .niu(employe.getNiu())
+                .telephone(employe.getTelephone())
+                .email(employe.getEmail())
+                .adresse(employe.getAdresse())
+                .dateEmbauche(employe.getDateEmbauche())
+                .service(employe.getService())
+                .poste(employe.getPoste())
+                .classificationProfessionnelle(employe.getClassificationProfessionnelle())
+                .categorie(employe.getCategorieEnum())
+                .echelon(employe.getEchelonEnum())
+                .typeContratEnum(employe.getTypeContratEnum())
+                .sexe(employe.getSexe())
+                .dateNaissance(employe.getDateNaissance())
+                .build();
+
     }
 
     @Transactional
