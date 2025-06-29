@@ -2,6 +2,7 @@ package com.hades.paie1.controller;
 
 import com.hades.paie1.dto.*;
 import com.hades.paie1.enum1.Role;
+import com.hades.paie1.exception.RessourceNotFoundException;
 import com.hades.paie1.model.Employe;
 import com.hades.paie1.model.Entreprise;
 import com.hades.paie1.model.User;
@@ -9,6 +10,7 @@ import com.hades.paie1.repository.EmployeRepository;
 import com.hades.paie1.repository.EntrepriseRepository;
 import com.hades.paie1.repository.UserRepository;
 import com.hades.paie1.security.JwtTokenProvider;
+import com.hades.paie1.service.AuthService;
 import com.hades.paie1.service.FileStorageService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -38,6 +40,7 @@ public class AuthController {
     private JwtTokenProvider jwtTokenProvider;
     private EntrepriseRepository entrepriseRepository;
     private FileStorageService fileStorageService;
+    private AuthService authService;
 
     public AuthController (
             AuthenticationManager authenticationManager,
@@ -46,7 +49,8 @@ public class AuthController {
             PasswordEncoder passwordEncoder,
             JwtTokenProvider jwtTokenProvider,
             EntrepriseRepository entrepriseRepository,
-            FileStorageService fileStorageService
+            FileStorageService fileStorageService,
+            AuthService authService
             ) {
         this.authenticationManager = authenticationManager;
         this.userRepository = userRepository;
@@ -55,6 +59,7 @@ public class AuthController {
         this.jwtTokenProvider = jwtTokenProvider;
         this.entrepriseRepository = entrepriseRepository;
         this.fileStorageService = fileStorageService;
+        this.authService = authService;
     }
 
     //Endpoint de connexion
@@ -175,36 +180,13 @@ public class AuthController {
 
 
     @PostMapping("/register/employee")
-    @PreAuthorize("hasRole('EMPLOYEUR')") // Seul un EMPLOYEUR peut créer un EMPLOYE
-    public ResponseEntity<ApiResponse<?>> registerEmployee(@RequestBody RegisterDto registerDto) {
-        // Validation : un employeId est obligatoire pour les employés
-        if (registerDto.getEmployeId() == null) {
-            return new ResponseEntity<>(new ApiResponse<>("L'ID de l'employe est obligatoire pour la creation d'un compte employe.", null, HttpStatus.BAD_REQUEST), HttpStatus.BAD_REQUEST);
+    @PreAuthorize("hasRole('EMPLOYEUR')")
+    public ResponseEntity<ApiResponse<Void>> registerEmployee(@RequestBody RegisterDto registerDto) {
+        try {
+            authService.registerEmployeeAccount(registerDto);
+            return new ResponseEntity<>(new ApiResponse<>("Compte employe enregistre avec succes!", null, HttpStatus.CREATED), HttpStatus.CREATED);
+        } catch (IllegalStateException | RessourceNotFoundException e) {
+            return new ResponseEntity<>(new ApiResponse<>(e.getMessage(), null, HttpStatus.BAD_REQUEST), HttpStatus.BAD_REQUEST);
         }
-
-        if (userRepository.existsByUsername(registerDto.getUsername())) {
-            return new ResponseEntity<>(new ApiResponse<>("Nom Utilisateur deja pris!", null, HttpStatus.BAD_REQUEST),HttpStatus.BAD_REQUEST);
-        }
-
-        Optional<Employe> existingEmploye = employeRepository.findById(registerDto.getEmployeId());
-        if (existingEmploye.isEmpty()) {
-            return new ResponseEntity<>(new ApiResponse<>("Employe non trouve avec ID: " + registerDto.getEmployeId(), null, HttpStatus.BAD_REQUEST), HttpStatus.BAD_REQUEST);
-        }
-        Employe employe = existingEmploye.get();
-
-        if (userRepository.findByEmploye(employe).isPresent()) {
-            return new ResponseEntity<>(new ApiResponse<>("Cet employe a deja un compte utilisateur.", null, HttpStatus.BAD_REQUEST), HttpStatus.BAD_REQUEST);
-        }
-
-        User user = User.builder()
-                .username(registerDto.getUsername())
-                .password(passwordEncoder.encode(registerDto.getPassword()))
-                .role(Role.EMPLOYE) // Rôle EMPLOYE défini ici (fixe)
-                .employe(employe) // Obligatoirement lié
-                .build();
-
-        employe.setUser(user);
-        userRepository.save(user);
-        return new ResponseEntity<>(new ApiResponse<>("Compte employe enregistré avec succes!", null, HttpStatus.CREATED), HttpStatus.CREATED);
     }
 }

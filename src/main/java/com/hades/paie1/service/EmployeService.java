@@ -323,6 +323,7 @@ public class EmployeService {
                 .collect(Collectors.toList());
     }
 
+    @Transactional
     public EmployeResponseDto getEmployeProfilByAuthenticateUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String currentUsername = authentication.getName();
