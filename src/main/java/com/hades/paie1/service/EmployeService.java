@@ -200,6 +200,7 @@ public class EmployeService {
 
 
 
+    @Transactional
     public List<EmployeResponseDto> getAllEmploye() { // Cette méthode n'a pas de searchTerm en paramètre
         User currentUser = getAuthenticatedUser();
         List<Employe> employes;
@@ -233,7 +234,7 @@ public class EmployeService {
                 .collect(Collectors.toList());
     }
 
-
+    @Transactional
     public Optional <EmployeResponseDto> getEmployeById(Long id){
         User currentUser = getAuthenticatedUser();
 
@@ -280,6 +281,7 @@ public class EmployeService {
         employeRepo.delete(employeToDelete);
     }
 
+    @Transactional
     public  List<EmployeResponseDto> searchEmployes(String searchTerm) {
         User currentUser = getAuthenticatedUser();
         List<Employe> employes;
