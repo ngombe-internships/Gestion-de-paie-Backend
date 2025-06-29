@@ -238,6 +238,7 @@ public class BulletinPaieService {
     }
 
     //Methode Crud
+    @Transactional
     public BulletinPaieResponseDto saveBulletinPaie (BulletinPaie fiche){
 
         BulletinPaie calculatedAndFilledBulletin = calculBulletin(fiche);
@@ -493,6 +494,7 @@ public class BulletinPaieService {
     }
 
     //Statut
+    @Transactional
     public BulletinPaieResponseDto validerBulletin(Long id) {
         BulletinPaie bulletin = bulletinRepo.findById(id)
                 .orElseThrow(() -> new RessourceNotFoundException("Bulletin de paie non trouve avec l'ID :" +id));
@@ -518,6 +520,7 @@ public class BulletinPaieService {
     }
 
     //enoye bulletin
+    @Transactional
     public BulletinPaieResponseDto envoyerBulletin(Long id) {
         BulletinPaie bulletin = bulletinRepo.findById(id)
                 .orElseThrow(() -> new RessourceNotFoundException("Bulletin de paie non trouvé avec l'ID : " + id));
@@ -540,6 +543,7 @@ public class BulletinPaieService {
         return convertToDto(savedBulletin);
     }
 
+    @Transactional
     public BulletinPaieResponseDto archiverBulletin(Long id) {
         BulletinPaie bulletin = bulletinRepo.findById(id)
                 .orElseThrow(() -> new RessourceNotFoundException("Bulletin de paie non trouvé avec l'ID : " + id));
@@ -563,6 +567,7 @@ public class BulletinPaieService {
         return convertToDto(savedBulletin);
     }
 
+    @Transactional
     public BulletinPaieResponseDto annulerBulletin(Long id) {
         BulletinPaie bulletin = bulletinRepo.findById(id)
                 .orElseThrow(() -> new RessourceNotFoundException("Bulletin de paie non trouvé avec l'ID : " + id));
@@ -695,6 +700,7 @@ public class BulletinPaieService {
 
 
 
+    @Transactional
     public List<BulletinPaieResponseDto> getBulletinsFotCurrentUser() {
       Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
       if (authentication == null || !authentication.isAuthenticated()) {
