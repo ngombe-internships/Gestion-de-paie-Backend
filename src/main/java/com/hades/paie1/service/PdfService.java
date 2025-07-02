@@ -213,6 +213,7 @@ private BulletinPaieResponseDto cloneBulletinData(BulletinPaieResponseDto origin
         clone.setBaseCnps(original.getBaseCnps());
         clone.setIrpp(original.getIrpp());
         clone.setCac(original.getCac());
+        clone.setAvancesSurSalaires(original.getAvancesSurSalaires());
         clone.setTaxeCommunale(original.getTaxeCommunale());
         clone.setRedevanceAudioVisuelle(original.getRedevanceAudioVisuelle());
         clone.setCnpsVieillesseSalarie(original.getCnpsVieillesseSalarie());
@@ -239,7 +240,7 @@ private BulletinPaieResponseDto cloneBulletinData(BulletinPaieResponseDto origin
             clone.setEmploye(original.getEmploye());
         }
 
-        // Pour EntrepriseDto, nous allons modifier son 'logoUrl', donc il faut le cloner
+        // Pour EntrepriseService, nous allons modifier son 'logoUrl', donc il faut le cloner
         // pour ne pas modifier l'objet original.
         if (original.getEntreprise() != null) {
             EntrepriseDto clonedEntreprise = new EntrepriseDto();
@@ -250,7 +251,7 @@ private BulletinPaieResponseDto cloneBulletinData(BulletinPaieResponseDto origin
             clonedEntreprise.setTelephoneEntreprise(original.getEntreprise().getTelephoneEntreprise());
             clonedEntreprise.setEmailEntreprise(original.getEntreprise().getEmailEntreprise());
             clonedEntreprise.setLogoUrl(original.getEntreprise().getLogoUrl());
-            // Ajoutez ici d'autres champs si EntrepriseDto en a plus
+            // Ajoutez ici d'autres champs si EntrepriseService en a plus
             clone.setEntreprise(clonedEntreprise);
         }
 

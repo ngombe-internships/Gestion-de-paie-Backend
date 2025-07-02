@@ -12,6 +12,7 @@ import com.hades.paie1.repository.UserRepository;
 import com.hades.paie1.security.JwtTokenProvider;
 import com.hades.paie1.service.AuthService;
 import com.hades.paie1.service.FileStorageService;
+import jakarta.transaction.Transactional;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -116,6 +117,7 @@ public class AuthController {
 
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping(value = "/register/employer-company", consumes = {MediaType.MULTIPART_FORM_DATA_VALUE})
+    @Transactional
     public ResponseEntity<ApiResponse<String>> registerEmployerCompany (
             @RequestPart CreateEmployerAndCompanyDto createDto,
             @RequestPart (value = "logo", required = false )

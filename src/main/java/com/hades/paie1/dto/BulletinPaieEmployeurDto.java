@@ -63,4 +63,6 @@ public class BulletinPaieEmployeurDto {
 
     private String methodePaiement;
 
+    private BigDecimal avancesSurSalaires;
+
 }

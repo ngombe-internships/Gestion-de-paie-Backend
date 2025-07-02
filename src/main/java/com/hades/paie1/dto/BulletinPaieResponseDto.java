@@ -135,6 +135,8 @@ public class BulletinPaieResponseDto {
     @JsonProperty("methodePaiement")
     private String methodePaiement;
 
+    @JsonProperty("avancesSurSalaires")
+    private BigDecimal avancesSurSalaires;
 
 
     //entite employe et Entreprise

@@ -10,6 +10,7 @@ public class CreateEmployerAndCompanyDto {
         private  String username;
         private  String password;
 
+
         //info entreprise
         private String nomEntreprise;
         private String adresseEntreprise;

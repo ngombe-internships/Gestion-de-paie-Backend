@@ -179,10 +179,12 @@ public class BulletinPaie {
     @Column(name = "datePaiement")
     private  LocalDate datePaiement;
 
-    @Enumerated(EnumType.STRING)
+    @Enumerated(EnumType.ORDINAL)
     @Column(name="methodePaiement")
     private MethodePaiement methodePaiement;
 
+    @Column(name = "avances_sur_salaires", precision = 15, scale = 2)
+    private BigDecimal avancesSurSalaires;
 
 
 

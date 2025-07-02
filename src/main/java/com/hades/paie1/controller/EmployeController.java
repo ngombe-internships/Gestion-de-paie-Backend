@@ -110,6 +110,18 @@ public class EmployeController {
 
 
 
+    @GetMapping("/count")
+    @PreAuthorize("hasRole('EMPLOYEUR') or hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<Long>> getEmployeCountForEmployer(){
+        long count = employeService.countEmployeForAuthenticatedEmployer();
+
+        ApiResponse<Long> response = new ApiResponse<>(
+                "Total des employes recuperer avec succes",
+                count,
+                HttpStatus.OK
+        );
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
 
 
 

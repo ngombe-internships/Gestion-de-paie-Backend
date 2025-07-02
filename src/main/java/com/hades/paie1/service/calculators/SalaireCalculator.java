@@ -1,8 +1,10 @@
 package com.hades.paie1.service.calculators;
 
+import com.hades.paie1.exception.RessourceNotFoundException;
 import com.hades.paie1.model.BulletinPaie;
 import com.hades.paie1.model.Employe;
 import com.hades.paie1.repository.BulletinPaieRepo;
+import com.hades.paie1.repository.EmployeRepository;
 import com.hades.paie1.repository.LeaveRequestRepository;
 import com.hades.paie1.service.AncienneteService;
 import com.hades.paie1.utils.MathUtils;
@@ -11,6 +13,7 @@ import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDate;
 
 
 @Component
@@ -21,11 +24,13 @@ public class SalaireCalculator {
     private AncienneteService ancienneteService;
     private LeaveRequestRepository leaveRequestRepository;
     private BulletinPaieRepo bulletinPaieRepo;
-    public SalaireCalculator(MathUtils mathUtils , AncienneteService ancienneteService, BulletinPaieRepo bulletinPaieRepo ,LeaveRequestRepository leaveRequestRepository) {
+    private EmployeRepository employeRepository;
+    public SalaireCalculator(MathUtils mathUtils , AncienneteService ancienneteService, BulletinPaieRepo bulletinPaieRepo ,LeaveRequestRepository leaveRequestRepository, EmployeRepository employeRepository) {
         this.mathUtils = mathUtils;
         this.ancienneteService = ancienneteService;
         this.bulletinPaieRepo = bulletinPaieRepo;
         this.leaveRequestRepository = leaveRequestRepository;
+        this.employeRepository = employeRepository;
     }
 
     public BigDecimal calculSalaireBase(BulletinPaie fiche) {
@@ -78,13 +83,21 @@ public class SalaireCalculator {
     }
 
     public BigDecimal calculPrimeAnciennete (BulletinPaie  fiche) {
+       //verifie que employe est bien associe au bulletin de paie
         if (fiche.getEmploye() == null || fiche.getEmploye().getDateEmbauche() == null) {
             return BigDecimal.ZERO;
         }
 
-        Employe employe = fiche.getEmploye();
+        //on recupere employe pour acceder a la date embauche
+        Employe employe = employeRepository.findById(fiche.getEmploye().getId())
+                .orElseThrow(()-> new RessourceNotFoundException("Employe non trouve avec ID:" +fiche.getEmploye().getId()));
 
-        int ancienneteAnnees = ancienneteService.calculAncienneteEnAnnees(employe.getDateEmbauche());
+        LocalDate dateEmbauche = employe.getDateEmbauche();
+        if(dateEmbauche == null) {
+            return BigDecimal.ZERO;
+        }
+
+        int ancienneteAnnees = ancienneteService.calculAncienneteEnAnnees(dateEmbauche);
 
         BigDecimal smc = calculSalaireBase(fiche);
 
@@ -110,9 +123,9 @@ public class SalaireCalculator {
     }
 
     public BigDecimal calculTotalPrimes(BulletinPaie fiche) {
-
+        BigDecimal primeAnciennete = calculPrimeAnciennete(fiche);
         return mathUtils.safeAdd(
-                fiche.getPrimeAnciennete(),
+                primeAnciennete,
                 fiche.getPrimeRendement(),
                 fiche.getPrimeTransport(),
                 fiche.getPrimePonctualite(),

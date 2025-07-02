@@ -114,6 +114,8 @@ public class BulletinPaieService {
         fiche.setPrimeAnciennete(fiche.getPrimeAnciennete());
         fiche.setPrimeRendement(fiche.getPrimeRendement());
         fiche.setPrimeTechnicite(fiche.getPrimeTechnicite());
+        BigDecimal primeAnciennete = calculator.calculPrimeAnciennete(fiche);
+        fiche.setPrimeAnciennete(primeAnciennete);
         fiche.setTotalPrimes(calculTotalPrimes(fiche));
         fiche.setSalaireBrut(calculator.calculSalaireBrut(fiche));
         fiche.setSalaireImposable(calculator.calculSalaireImposable(fiche));
@@ -176,6 +178,7 @@ public class BulletinPaieService {
         dto.setSalaireBrut(bulletinPaie.getSalaireBrut());
         dto.setBaseCnps(bulletinPaie.getBaseCnps());
         dto.setSalaireImposable(bulletinPaie.getSalaireImposable());
+        dto.setAvancesSurSalaires(bulletinPaie.getAvancesSurSalaires());
 
         dto.setIrpp(bulletinPaie.getIrpp());
         dto.setCac(bulletinPaie.getCac());
@@ -222,7 +225,7 @@ public class BulletinPaieService {
             entrepriseDto.setEmailEntreprise(bulletinPaie.getEntreprise().getEmailEntreprise());
             entrepriseDto.setLogoUrl(bulletinPaie.getEntreprise().getLogoUrl());
 
-            System.out.println("Logo URL dans EntrepriseDto (avant de passer au template) : " + entrepriseDto.getLogoUrl());
+            System.out.println("Logo URL dans EntrepriseService (avant de passer au template) : " + entrepriseDto.getLogoUrl());
 
             dto.setEntreprise(entrepriseDto);
         }
@@ -246,6 +249,7 @@ public class BulletinPaieService {
         return  convertToDto(savedBulletin);
     }
 
+    @Transactional
     public List<BulletinPaieResponseDto> getAllBulletinsPaie() {
 
         return bulletinRepo.findAll().stream()
@@ -417,10 +421,10 @@ public class BulletinPaieService {
 
         //  Tri avec Map inline
         Map<StatusBulletin, Integer> statusOrder = Map.of(
-                StatusBulletin.GÉNÉRÉ ,1,
-                StatusBulletin.ENVOYÉ, 2,
-                StatusBulletin.ARCHIVÉ, 3,
-                StatusBulletin.VALIDÉ, 4,
+                StatusBulletin.VALIDÉ, 1,
+                StatusBulletin.GÉNÉRÉ, 2,
+                StatusBulletin.ENVOYÉ, 3,
+                StatusBulletin.ARCHIVÉ, 4,
                 StatusBulletin.ANNULÉ, 5
         );
 
@@ -595,6 +599,25 @@ public class BulletinPaieService {
 
 
 
+    @Transactional
+    public long countBulletinsForAuthenticatedEmployer(){
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String currentUsername = authentication.getName();
+        User currentUSer = userRepository.findByUsername(currentUsername)
+                .orElseThrow(()-> new UsernameNotFoundException("User not found: " +currentUsername));
+        if(currentUSer.getRole() != Role.EMPLOYEUR && currentUSer.getRole() != Role.ADMIN) {
+            throw new AccessDeniedException("Only emplyers or admis can view bulletin count.");
+        }
+        if (currentUSer.getRole() == Role.ADMIN) {
+            return bulletinRepo.count();
+        } else {
+            Entreprise entreprise = currentUSer.getEntreprise();
+            if(entreprise == null) {
+                throw new IllegalStateException("Authenticated employer is not associated with an enterprise");
+            }
+            return bulletinRepo.countByEntreprise(entreprise);
+        }
+    }
 
 
 
@@ -638,6 +661,7 @@ public class BulletinPaieService {
         dto.setBaseCnps1(bulletinPaie.getBaseCnps());
         dto.setIrpp(bulletinPaie.getIrpp());
         dto.setCac(bulletinPaie.getCac());
+        dto.setAvancesSurSalaires(bulletinPaie.getAvancesSurSalaires());
         dto.setTaxeCommunale(bulletinPaie.getTaxeCommunale());
         dto.setRedevanceAudioVisuelle(bulletinPaie.getRedevanceAudioVisuelle());
         dto.setCnpsVieillesseSalarie(bulletinPaie.getCnpsVieillesseSalarie());

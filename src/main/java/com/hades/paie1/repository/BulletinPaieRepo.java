@@ -5,6 +5,7 @@ import com.hades.paie1.model.BulletinPaie;
 import com.hades.paie1.model.Employe;
 import com.hades.paie1.model.Entreprise;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
@@ -28,4 +29,5 @@ public interface BulletinPaieRepo extends JpaRepository <BulletinPaie, Long> {
             Entreprise entreprise, String nom, String prenom, String matricule);
 
 
+    long countByEntreprise (Entreprise entreprise);
 }

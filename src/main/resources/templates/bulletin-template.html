@@ -6,7 +6,7 @@
     <style>
         @page {
             size: A4;
-            margin: 1.2cm;
+            margin: 2cm;
         }
 
         * {
@@ -499,9 +499,14 @@
                 <span class="info-value" th:text="${#numbers.formatDecimal(bulletin.salaireImposable, 1, 2)} + ' FCFA'">[Imposable]</span>
             </div>
             <div class="info-row">
+                <span class="info-label">Avancement du salaire </span>
+                <span class="info-value" th:text="${bulletin.avancesSurSalaires}">[Avance sur Salaire]</span>
+            </div>
+            <div class="info-row">
                 <span class="info-label">Paiement le:</span>
                 <span class="info-value" th:text="${bulletin.datePaiement}">[Date_de_Paiement]</span>
             </div>
+
             <div class="info-row">
                 <span class="info-label">Paiement par :</span>
                 <span class="info-value" th:text="${bulletin.methodePaiement}">[Methode_Paiement]</span>
@@ -708,6 +713,19 @@
                 <td class="no-border"></td>
                 <td class="text-right amount" th:text="${#numbers.formatDecimal(bulletin.cnpsAccidentsTravail, 1, 2)}">0,00</td>
             </tr>
+
+
+            <tr>
+                <td>210</td>
+                <td class="text-left"><strong>Avances sur le salaire</strong></td>
+                <td class="no-border"></td>
+                <td class="no-border"></td>
+                <td class="no-border"></td>
+                <td class="no-border"></td>
+                <td class="text-right amount" th:text="${#numbers.formatDecimal(bulletin.avancesSurSalaires, 1, 2)}">0,00</td>
+                <td class="no-border"></td>
+            </tr>
+
             </tbody>
             <tfoot>
             <tr class="total-row">

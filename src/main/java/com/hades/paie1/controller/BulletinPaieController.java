@@ -302,6 +302,18 @@ public class BulletinPaieController {
 
 
 
+    @GetMapping("/count")
+    @PreAuthorize("hasRole('EMPLOYEUR') or hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<Long>> getBulletinCountForEmployer(){
+        long count = bulletinPaieService.countBulletinsForAuthenticatedEmployer();
+
+        ApiResponse<Long> response = new ApiResponse<>(
+                "Total des bulletins recuperer avec succes",
+                count,
+                HttpStatus.OK
+        );
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
 
 
 

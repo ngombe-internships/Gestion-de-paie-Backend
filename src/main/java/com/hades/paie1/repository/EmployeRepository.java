@@ -25,4 +25,6 @@ public interface EmployeRepository extends JpaRepository<Employe , Long > , JpaS
 
     Optional <Employe> findByUser (User user);
 
+    long countByEntreprise (Entreprise entreprise);
+
 }

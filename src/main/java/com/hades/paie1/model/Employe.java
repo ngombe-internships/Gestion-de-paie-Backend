@@ -9,6 +9,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 
 @Entity
@@ -26,6 +27,7 @@ public class Employe {
 
     @Column(name = "matricule_interne", unique = true, nullable = false)
     private String matricule;
+
     @Column(name = "nom",nullable = false)
     private String nom;
 
@@ -91,6 +93,10 @@ public class Employe {
     @JoinColumn(name= "entreprise_id", nullable = false)
     private Entreprise entreprise;
 
+
+    // Nouveau pour conge et temps
+
+    BigDecimal EmployeConge;
 
 
 }

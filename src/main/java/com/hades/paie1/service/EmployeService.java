@@ -5,6 +5,7 @@ import com.hades.paie1.dto.EmployeResponseDto;
 import com.hades.paie1.enum1.Role;
 import com.hades.paie1.exception.RessourceNotFoundException;
 import com.hades.paie1.model.Employe;
+import com.hades.paie1.model.Entreprise;
 import com.hades.paie1.model.User;
 import com.hades.paie1.repository.EmployeRepository;
 import com.hades.paie1.repository.UserRepository;
@@ -200,7 +201,6 @@ public class EmployeService {
 
 
 
-    @Transactional
     public List<EmployeResponseDto> getAllEmploye() { // Cette méthode n'a pas de searchTerm en paramètre
         User currentUser = getAuthenticatedUser();
         List<Employe> employes;
@@ -336,6 +336,27 @@ public class EmployeService {
                 .orElseThrow(() -> new RessourceNotFoundException("Aucun profil employé trouvé pour l'utilisateur: " + currentUsername));
 
         return convertToDto(employe);
+    }
+
+
+    @Transactional
+    public long countEmployeForAuthenticatedEmployer(){
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String currentUsername = authentication.getName();
+        User currentUSer = userRepository.findByUsername(currentUsername)
+                .orElseThrow(()-> new UsernameNotFoundException("User not found: " +currentUsername));
+        if(currentUSer.getRole() != Role.EMPLOYEUR && currentUSer.getRole() != Role.ADMIN) {
+            throw new AccessDeniedException("Only emplyers or admis can view bulletin count.");
+        }
+        if (currentUSer.getRole() == Role.ADMIN) {
+            return employeRepo.count();
+        } else {
+            Entreprise entreprise = currentUSer.getEntreprise();
+            if(entreprise == null) {
+                throw new IllegalStateException("Authenticated employer is not associated with an enterprise");
+            }
+            return employeRepo.countByEntreprise(entreprise);
+        }
     }
 
 }

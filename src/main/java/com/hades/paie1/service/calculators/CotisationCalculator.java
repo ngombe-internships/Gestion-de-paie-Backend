@@ -38,13 +38,17 @@ public class CotisationCalculator {
     }
 
     public BigDecimal calculTotalRetenuesSalaire(BulletinPaie fiche){
+       BigDecimal avancesSurSalaires = fiche.getAvancesSurSalaires() != null?
+               fiche.getAvancesSurSalaires() : BigDecimal.ZERO;
+
         return mathUtils.safeAdd(
                 impotCalculator.calculIrpp(fiche),
                 impotCalculator.calculCac(fiche),
                 impotCalculator.calculTaxeCommunal(fiche),
                 impotCalculator.calculRedevanceAudioVisuelle(fiche),
                 calculCreditFoncierSalarie(fiche),
-                calculCnpsVieillesseEmployeur(fiche)
+                calculCnpsVieillesseEmployeur(fiche),
+                avancesSurSalaires
         );
     }
 
