@@ -147,6 +147,14 @@ public class BulletinPaieService {
         //  FIX 1: Traiter les éléments dans l'ordre correct et éviter les doublons
         Set<String> elementsTraites = new HashSet<>(); // Éviter les doublons
 
+        // ✅ NOUVEAU: Ajouter automatiquement le salaire de base s'il n'existe pas déjà
+        System.out.println("\n=== VERIFICATION ET AJOUT DU SALAIRE DE BASE ===");
+        BigDecimal salaireBase = calculator.calculerSalaireBase(fiche);
+        System.out.println("Salaire de base utilisé: " + salaireBase);
+
+        // Marquer le salaire de base comme traité pour éviter qu'il soit retraité dans la boucle
+        elementsTraites.add("SALAIRE_BASE_GAIN");
+
         //  BOUCLE 1 : GAINS SEULEMENT
         System.out.println("\n=== DEBUT CALCUL DES GAINS ===");
         for (TemplateElementPaieConfig config : template.getElementsConfig()) {
@@ -155,11 +163,21 @@ public class BulletinPaieService {
             ElementPaie element = config.getElementPaie();
             String elementKey = element.getCode() + "_" + element.getType(); // Clé unique
 
-            //  FIX 2: Éviter les doublons
+            //  FIX 2: Éviter les doublons ET éviter de retraiter le salaire de base
             if (elementsTraites.contains(elementKey)) {
                 System.out.println("Élément déjà traité : " + element.getCode());
                 continue;
             }
+
+            // ✅ NOUVEAU: Vérifier si c'est le salaire de base pour éviter la duplication
+            if ("Salaire de Base".equals(element.getDesignation()) ||
+                    "SALAIRE_BASE".equals(element.getCode()) ||
+                    element.getCategorie() == CategorieElement.SALAIRE_DE_BASE) {
+                System.out.println("Salaire de base déjà traité, passage au suivant");
+                elementsTraites.add(elementKey);
+                continue;
+            }
+
             elementsTraites.add(elementKey);
 
             System.out.println("\nTraitement élément GAIN: " + element.getCode());
@@ -175,18 +193,7 @@ public class BulletinPaieService {
                 System.out.println("- id:" + c.getId() + ", valeur:" + c.getValeur() + ", dateDebut:" + c.getDateDebut() + ", dateFin:" + c.getDateFin());
             }
 
-//            BigDecimal valeur = employeConfig.map(EmployePaieConfig::getValeur)
-//                    .orElse(config.getValeurDefaut() != null ? config.getValeurDefaut() : element.getTauxDefaut());
-//
-//            System.out.println("Element: " + element.getCode() +
-//                    ", employeConfig: " + (employeConfig.isPresent() ? employeConfig.get().getValeur() : "null") +
-//                    ", valeurDefaut: " + config.getValeurDefaut() +
-//                    ", tauxDefaut: " + element.getTauxDefaut() +
-//                    ", valeur retenue: " + valeur);
-//            if (valeur == null) valeur = BigDecimal.ZERO;
-
             BigDecimal valeur = BigDecimal.ZERO;
-            // ********* CHANGEMENT ICI *********
             BigDecimal montant = BigDecimal.ZERO;
             FormuleCalculType formule = config.getFormuleCalculOverride() != null ?
                     config.getFormuleCalculOverride() : element.getFormuleCalcul();
@@ -298,13 +305,11 @@ public class BulletinPaieService {
 
             Optional<EmployePaieConfig> employeConfig = configs.stream().findFirst();
 
-
             BigDecimal montant = BigDecimal.ZERO;
             FormuleCalculType formule = config.getFormuleCalculOverride() != null ?
                     config.getFormuleCalculOverride() : element.getFormuleCalcul();
 
             BigDecimal valeur = BigDecimal.ZERO;
-            // ********* CHANGEMENT ICI AUSSI *********
             if (formule == FormuleCalculType.MONTANT_FIXE) {
                 valeur = employeConfig.map(EmployePaieConfig::getMontant)
                         .orElse(config.getMontantDefaut() != null ? config.getMontantDefaut() : element.getTauxDefaut());
@@ -320,12 +325,10 @@ public class BulletinPaieService {
             LigneBulletinPaie ligne = new LigneBulletinPaie();
             // Ajouter la ligne même si le montant est 0 (pour les impôts)
 
-            calculerMontantRetenue(ligne, element, formule, valeur, fiche,employeConfig, config);
+            calculerMontantRetenue(ligne, element, formule, valeur, fiche, employeConfig, config);
             fiche.addLignePaie(ligne);
             System.out.println("✅ Ajout ligne RETENUE: " + element.getCode() + ", Montant: " + montant);
         }
-
-
 
         // 🔧 FIX 5: Calcul des totaux finaux
         System.out.println("\n=== CALCUL DES TOTAUX FINAUX ===");
@@ -343,7 +346,6 @@ public class BulletinPaieService {
                 .filter(l -> l.getElementPaie().getCategorie() == CategorieElement.IMPOT_SUR_REVENU)
                 .map(LigneBulletinPaie::getMontantFinal)
                 .reduce(BigDecimal.ZERO, BigDecimal::add));
-
 
         //Calculer les charges patronales
         BigDecimal totalChargesPatronales = fiche.getLignesPaie().stream()
@@ -379,7 +381,6 @@ public class BulletinPaieService {
 
         return fiche;
     }
-
     //Calcule le montant d'une retenue en utilisant CotisationCalculator quand c'est possible
 
     private void calculerMontantRetenue(LigneBulletinPaie ligne, ElementPaie element, FormuleCalculType formule, BigDecimal valeur, BulletinPaie fiche, Optional<EmployePaieConfig> employeConfig, TemplateElementPaieConfig config) {
@@ -452,6 +453,25 @@ public class BulletinPaieService {
                     break;
 
 
+                case TAUX_DEFAUT_X_MONTANT_DEFAUT:
+                    BigDecimal tauxDefaut = config.getTauxDefaut() != null ? config.getTauxDefaut() : element.getTauxDefaut();
+                    BigDecimal montantDefaut = config.getMontantDefaut() != null ? config.getMontantDefaut() : element.getTauxDefaut();
+                    montant = tauxDefaut.multiply(montantDefaut);
+                    tauxApplique = tauxDefaut;
+                    tauxAffiche = String.format("%.2f %%", tauxDefaut.multiply(BigDecimal.valueOf(100)));
+                    baseUtilisee = null;
+                    break;
+
+                case NOMBRE_X_TAUX_DEFAUT_X_MONTANT_DEFAUT:
+                    BigDecimal nombreX = config.getNombreDefaut() != null ? config.getNombreDefaut() : BigDecimal.ONE;
+                    BigDecimal tauxDefautX = config.getTauxDefaut() != null ? config.getTauxDefaut() : element.getTauxDefaut();
+                    BigDecimal montantDefautX = config.getMontantDefaut() != null ? config.getMontantDefaut() : element.getTauxDefaut();
+                    montant = nombreX.multiply(tauxDefautX).multiply(montantDefautX);
+                    tauxApplique = tauxDefautX;
+                    tauxAffiche = String.format("%.2f %%", tauxDefautX.multiply(BigDecimal.valueOf(100)));
+                    baseUtilisee = null;
+                    ligne.setNombre(nombreX); // Remplis le nombre dans la ligne !
+                    break;
 
 
                 case BAREME:
@@ -579,6 +599,10 @@ public class BulletinPaieService {
         // CAC - Centimes Additionnels Communaux
         if ("CAC".equalsIgnoreCase(code) || designation.contains("CAC")) {
             return impotCalculator.calculCac(fiche);
+        }
+
+        if ("200".equals(code) || "IRPP".equalsIgnoreCase(code) || designation.contains("IRPP")) {
+            return impotCalculator.calculIrpp(fiche); // ← Remplacez par la bonne méthode
         }
 
         // Taxe communale

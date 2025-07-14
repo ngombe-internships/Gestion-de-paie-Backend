@@ -67,6 +67,18 @@ public class SalaireCalculator {
 
 
     public BigDecimal calculerSalaireBase(BulletinPaie bulletinPaie) {
+        for (LigneBulletinPaie ligne : bulletinPaie.getLignesPaie()) {
+            ElementPaie element = ligne.getElementPaie();
+            if (element != null &&
+                    "Salaire de Base".equals(element.getDesignation()) &&
+                    element.getType() == TypeElementPaie.GAIN) {
+
+                System.out.println("✅ Salaire de base déjà présent dans les lignes de paie: " + ligne.getMontantFinal());
+                return ligne.getMontantFinal();
+            }
+        }
+
+        // Si pas trouvé dans les lignes, utiliser la logique existante
         BigDecimal salaireBase = bulletinPaie.getSalaireBaseInitial();
 
         // Si le salaire de base initial du bulletin n'est pas défini, essayez de le récupérer de l'employé
@@ -76,10 +88,40 @@ public class SalaireCalculator {
                 salaireBase = employe.getSalaireBase();
                 // Mettez à jour le salaire de base initial du bulletin pour les calculs futurs
                 bulletinPaie.setSalaireBaseInitial(salaireBase);
+
+                // Ajouter automatiquement le salaire de base comme ligne de paie
+                addLignePaieForElement(
+                        bulletinPaie,
+                        "Salaire de Base",
+                        TypeElementPaie.GAIN,
+                        CategorieElement.SALAIRE_DE_BASE,
+                        BigDecimal.ONE,
+                        null,
+                        salaireBase,
+                        salaireBase,
+                        salaireBase
+                );
+
+                System.out.println("✅ Salaire de base ajouté automatiquement: " + salaireBase);
             } else {
                 salaireBase = BigDecimal.ZERO;
                 throw new RessourceNotFoundException("Salaire de base non défini pour l'employé " + bulletinPaie.getEmploye().getMatricule());
             }
+        } else {
+            // Si le salaire de base initial existe mais n'est pas encore dans les lignes, l'ajouter
+            addLignePaieForElement(
+                    bulletinPaie,
+                    "Salaire de Base",
+                    TypeElementPaie.GAIN,
+                    CategorieElement.SALAIRE_DE_BASE,
+                    BigDecimal.ONE,
+                    null,
+                    salaireBase,
+                    salaireBase,
+                    salaireBase
+            );
+
+            System.out.println("✅ Salaire de base ajouté depuis bulletinPaie.getSalaireBaseInitial(): " + salaireBase);
         }
 
         return salaireBase;

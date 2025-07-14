@@ -16,5 +16,6 @@ public class EmployePaieConfigDto {
 
     private BigDecimal taux; // Pour les POURCENTAGE_BASE
 
-    private BigDecimal montant;
+   private BigDecimal montant;
+    private BigDecimal nombre;
 }

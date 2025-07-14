@@ -39,8 +39,7 @@ public class TemplateElementPaieConfigService {
         dto.setActive(entity.isActive());
         dto.setTauxDefaut(entity.getTauxDefaut());
         dto.setMontantDefaut(entity.getMontantDefaut());
-        dto.setMontantDefaut(entity.getMontantDefaut());
-        dto.setTauxDefaut(entity.getTauxDefaut());
+        dto.setNombreDefaut(entity.getNombreDefaut());
         dto.setFormuleCalculOverride(entity.getFormuleCalculOverride()); // Utilisation directe de l'enum
         dto.setAffichageOrdre(entity.getAffichageOrdre());
 
@@ -52,6 +51,8 @@ public class TemplateElementPaieConfigService {
             elementPaieDto.setType(elementPaieEntity.getType());
             elementPaieDto.setFormuleCalcul(elementPaieEntity.getFormuleCalcul());
             elementPaieDto.setTauxDefaut(elementPaieEntity.getTauxDefaut());
+            elementPaieDto.setNombreDefaut(elementPaieEntity.getNombreDefaut());
+            elementPaieDto.setMontantDefaut(elementPaieEntity.getMontantDefaut());
 //            elementPaieDto.setUniteBaseCalcul(elementPaieEntity.getUniteBaseCalcul());
             elementPaieDto.setCategorie(elementPaieEntity.getCategorie());
             elementPaieDto.setDesignation(elementPaieEntity.getDesignation());
@@ -62,10 +63,11 @@ public class TemplateElementPaieConfigService {
             elementPaieDto.setImpacteBaseCreditFoncier(elementPaieEntity.isImpacteBaseCreditFoncier());
             elementPaieDto.setImpacteBaseAnciennete(elementPaieEntity.isImpacteBaseAnciennete());
             elementPaieDto.setImpacteNetAPayer(elementPaieEntity.isImpacteNetAPayer());
+
+
             dto.setElementPaieId(entity.getElementPaie().getId());
         }
-        // Pas besoin d'inclure BulletinTemplateDto directement dans ce DTO si l'API est conçue
-        // pour gérer les configs au sein d'un template spécifique (ex: /templates/{id}/element-configs)
+        System.out.println("DTO mapping nombreDefaut: " + entity.getNombreDefaut());
         return dto;
     }
 
@@ -77,11 +79,12 @@ public class TemplateElementPaieConfigService {
         entity.setActive(dto.isActive());
         entity.setTauxDefaut(dto.getTauxDefaut());
         entity.setMontantDefaut(dto.getMontantDefaut());
-        entity.setTauxDefaut(dto.getTauxDefaut());
-        entity.setMontantDefaut(dto.getMontantDefaut());
+        entity.setNombreDefaut(dto.getNombreDefaut());
         entity.setFormuleCalculOverride(dto.getFormuleCalculOverride());
         entity.setAffichageOrdre(dto.getAffichageOrdre());
         // elementPaie et bulletinTemplate seront définis dans les méthodes create/update
+
+        System.out.println("DTO mapping nombreDefaut: " + entity.getNombreDefaut());
         return entity;
     }
 
@@ -133,8 +136,8 @@ public class TemplateElementPaieConfigService {
         existingConfig.setActive(configDto.isActive());
         existingConfig.setTauxDefaut(configDto.getTauxDefaut());
         existingConfig.setMontantDefaut(configDto.getMontantDefaut());
-        existingConfig.setTauxDefaut(configDto.getTauxDefaut());
-        existingConfig.setMontantDefaut(configDto.getMontantDefaut());
+
+        existingConfig.setNombreDefaut(configDto.getNombreDefaut());
         existingConfig.setFormuleCalculOverride(configDto.getFormuleCalculOverride());
         existingConfig.setAffichageOrdre(configDto.getAffichageOrdre());
 

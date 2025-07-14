@@ -50,12 +50,16 @@ public class TemplateElementPaieConfig {
 
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "formule_calcul_override")
+    @Column(name = "formule_calcul_override",length = 50)
     private FormuleCalculType formuleCalculOverride; // Permet de surcharger la formule de ElementPaie au niveau du template
 
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "ligne_bulletin_paie_id")
     private LigneBulletinPaie ligneBulletinPaie;
+
+
+    @Column(name="nombre")
+    private BigDecimal nombreDefaut;
     // D'autres configurations spécifiques au template peuvent être ajoutées ici
     // comme 'estModifiableParEmploye', 'estVisibleSurBulletin', etc.
 

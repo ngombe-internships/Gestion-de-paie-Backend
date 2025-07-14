@@ -47,5 +47,6 @@ public class EmployePaieConfig {
     @Column(name = "montant_personnel", precision = 15, scale = 2)
     private BigDecimal montant; // Montant personnalisé par employé
 
+    private BigDecimal nombre;
 
 }

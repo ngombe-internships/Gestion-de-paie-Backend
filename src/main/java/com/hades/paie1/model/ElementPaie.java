@@ -24,13 +24,8 @@ public class ElementPaie {
     private Long id;
 
     @Column(name = "code_element", unique = true, nullable = false)
-    private String code; // Ex: "AV_LOG"
-
-//    @Column(name = "intitule_element")
-//    private String intitule; // Ex: "Avantage en Nature Logement"
-//
-//    @Column(name = "memo")
-//    private String memo; // Ex: "SAL", "PRIME",
+    private String code;
+    
 
     @Enumerated(EnumType.STRING)
     @Column(name = "type_element", nullable = false)
@@ -43,8 +38,12 @@ public class ElementPaie {
     @Column(name = "taux_defaut", precision = 13, scale = 2)
     private BigDecimal tauxDefaut; // Taux par défaut, si applicable
 
-//    @Column(name = "unite_base_calcul")
-//    private String uniteBaseCalcul; // Ex: "Salaire Horaires", "Salaire Brut", "Salaire Catégoriel"
+    @Column(name = "montant_defaut", precision = 13, scale = 2)
+    private BigDecimal montantDefaut;
+
+    @Column(name = "nombre_defaut", precision = 13, scale = 2)
+    private BigDecimal nombreDefaut;
+
 
     @Enumerated(EnumType.STRING)
     @Column(name = "categorie_element", nullable = false)

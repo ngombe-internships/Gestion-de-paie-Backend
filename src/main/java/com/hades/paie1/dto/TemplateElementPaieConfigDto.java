@@ -18,5 +18,7 @@ public class TemplateElementPaieConfigDto {
     private BigDecimal tauxDefaut; // Pour les POURCENTAGE_BASE
     private BigDecimal montantDefaut; // Pour les MONTANT_FIXE
 
+    private BigDecimal nombreDefaut;
+
 
 }

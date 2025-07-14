@@ -39,6 +39,7 @@ public class EmployePaieConfigService {
         dto.setId(entity.getId());
         dto.setTaux(entity.getTaux());
         dto.setMontant(entity.getMontant());
+        dto.setNombre(entity.getNombre());
         dto.setDateDebut(entity.getDateDebut());
         dto.setDateFin(entity.getDateFin());
 
@@ -61,6 +62,8 @@ public class EmployePaieConfigService {
             elementPaieDto.setType(elementPaieEntity.getType());
             elementPaieDto.setFormuleCalcul(elementPaieEntity.getFormuleCalcul());
             elementPaieDto.setTauxDefaut(elementPaieEntity.getTauxDefaut());
+            elementPaieDto.setMontantDefaut(elementPaieEntity.getMontantDefaut());
+            elementPaieDto.setNombreDefaut(elementPaieEntity.getNombreDefaut());
 //            elementPaieDto.setUniteBaseCalcul(elementPaieEntity.getUniteBaseCalcul());
             elementPaieDto.setCategorie(elementPaieEntity.getCategorie());
             elementPaieDto.setDesignation(elementPaieEntity.getDesignation());

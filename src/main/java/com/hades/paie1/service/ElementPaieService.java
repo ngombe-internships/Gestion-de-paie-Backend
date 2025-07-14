@@ -27,6 +27,8 @@ public class ElementPaieService {
         dto.setType(elementPaie.getType());
         dto.setFormuleCalcul(elementPaie.getFormuleCalcul());
         dto.setTauxDefaut(elementPaie.getTauxDefaut());
+        dto.setNombreDefaut(elementPaie.getNombreDefaut());
+        dto.setMontantDefaut(elementPaie.getMontantDefaut());
 //        dto.setUniteBaseCalcul(elementPaie.getUniteBaseCalcul());
         dto.setCategorie(elementPaie.getCategorie());
         dto.setDesignation(elementPaie.getDesignation());
@@ -50,6 +52,8 @@ public class ElementPaieService {
         elementPaie.setType(elementPaieDto.getType());
         elementPaie.setFormuleCalcul(elementPaieDto.getFormuleCalcul());
         elementPaie.setTauxDefaut(elementPaieDto.getTauxDefaut());
+        elementPaie.setMontantDefaut(elementPaieDto.getMontantDefaut());
+        elementPaie.setNombreDefaut(elementPaieDto.getNombreDefaut());
         elementPaie.setCategorie(elementPaieDto.getCategorie());
         elementPaie.setDesignation(elementPaieDto.getDesignation());
         elementPaie.setImpacteSalaireBrut(elementPaieDto.isImpacteSalaireBrut());
@@ -90,7 +94,9 @@ public class ElementPaieService {
         existingElementPaie.setType(updatedElementPaie.getType());
         existingElementPaie.setFormuleCalcul(updatedElementPaie.getFormuleCalcul());
         existingElementPaie.setTauxDefaut(updatedElementPaie.getTauxDefaut());
+        existingElementPaie.setMontantDefaut(updatedElementPaie.getMontantDefaut());
         existingElementPaie.setCategorie(updatedElementPaie.getCategorie());
+        existingElementPaie.setNombreDefaut(updatedElementPaie.getNombreDefaut());
         existingElementPaie.setDesignation(updatedElementPaie.getDesignation());
         existingElementPaie.setImpacteSalaireBrut(updatedElementPaie.isImpacteSalaireBrut());
         existingElementPaie.setImpacteBaseCnps(updatedElementPaie.isImpacteBaseCnps());

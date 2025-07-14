@@ -16,6 +16,8 @@ public class ElementPaieDto {
     private TypeElementPaie type;
     private FormuleCalculType formuleCalcul;
     private BigDecimal tauxDefaut;
+    private BigDecimal montantDefaut;
+    private BigDecimal nombreDefaut;
 //    private String uniteBaseCalcul;
     private CategorieElement categorie;
     private String designation;

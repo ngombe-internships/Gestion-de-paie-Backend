@@ -11,6 +11,8 @@ import com.hades.paie1.repository.BulletinTemplateRepository;
 import com.hades.paie1.repository.ElementPaieRepository;
 import com.hades.paie1.repository.EntrepriseRepository;
 import jakarta.transaction.Transactional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -23,6 +25,8 @@ public class BulletinTemplateService {
     private final BulletinTemplateRepository bulletinTemplateRepository;
     private final EntrepriseRepository entrepriseRepository;
     private final ElementPaieRepository elementPaieRepository;
+
+    private static final Logger logger = LoggerFactory.getLogger(BulletinPaieService.class);
 
     public BulletinTemplateService(BulletinTemplateRepository bulletinTemplateRepository,
                                    EntrepriseRepository entrepriseRepository,
@@ -60,14 +64,18 @@ public class BulletinTemplateService {
 
     // Méthode de conversion spécifique pour TemplateElementPaieConfig Entité -> DTO
     private TemplateElementPaieConfigDto convertConfigToDto(TemplateElementPaieConfig config) {
+
+
         TemplateElementPaieConfigDto dto = new TemplateElementPaieConfigDto();
         dto.setId(config.getId());
         dto.setActive(config.isActive());
         dto.setTauxDefaut(config.getTauxDefaut());
+        dto.setNombreDefaut(config.getNombreDefaut());
+        dto.setMontantDefaut(config.getMontantDefaut());
         dto.setFormuleCalculOverride(config.getFormuleCalculOverride());
         dto.setAffichageOrdre(config.getAffichageOrdre());
-        dto.setMontantDefaut(config.getMontantDefaut());
-        dto.setMontantDefaut(config.getMontantDefaut());
+
+
         // Convertir ElementPaie
         if (config.getElementPaie() != null) {
             ElementPaieDto elementPaieDto = new ElementPaieDto();
@@ -77,6 +85,8 @@ public class BulletinTemplateService {
             elementPaieDto.setType(ep.getType());
             elementPaieDto.setFormuleCalcul(ep.getFormuleCalcul());
             elementPaieDto.setTauxDefaut(ep.getTauxDefaut());
+            elementPaieDto.setNombreDefaut(ep.getNombreDefaut());
+            elementPaieDto.setMontantDefaut(ep.getMontantDefaut());
 //            elementPaieDto.setUniteBaseCalcul(ep.getUniteBaseCalcul());
             elementPaieDto.setCategorie(ep.getCategorie());
             elementPaieDto.setDesignation(ep.getDesignation());
@@ -102,13 +112,7 @@ public class BulletinTemplateService {
         entity.setNom(dto.getNom());
         entity.setDefault(dto.isDefault());
 
-//        if (dto.getHeuresConfig() != null) {
-//            BulletinTemplate.HeuresConfig heuresConfigEntity = new BulletinTemplate.HeuresConfig();
-//            heuresConfigEntity.setHeuresNormalesActive(dto.getHeuresConfig().isHeuresNormalesActive());
-//            heuresConfigEntity.setHeuresSup1Active(dto.getHeuresConfig().isHeuresSup1Active());
-//            heuresConfigEntity.setTauxSup1(dto.getHeuresConfig().getTauxSup1());
-//            entity.setHeuresConfig(heuresConfigEntity);
-//        }
+
         return entity;
     }
 
@@ -119,8 +123,7 @@ public class BulletinTemplateService {
 
         entity.setActive(dto.isActive());
         entity.setTauxDefaut(dto.getTauxDefaut());
-        entity.setMontantDefaut(dto.getMontantDefaut());
-        entity.setTauxDefaut(dto.getTauxDefaut());
+        entity.setNombreDefaut(dto.getNombreDefaut());
         entity.setMontantDefaut(dto.getMontantDefaut());
         entity.setFormuleCalculOverride(dto.getFormuleCalculOverride());
         entity.setAffichageOrdre(dto.getAffichageOrdre());
@@ -246,8 +249,7 @@ public class BulletinTemplateService {
                     existingConfig.setActive(updatedConfigDto.isActive());
                     existingConfig.setTauxDefaut(updatedConfigDto.getTauxDefaut());
                     existingConfig.setMontantDefaut(updatedConfigDto.getMontantDefaut());
-                    existingConfig.setTauxDefaut(updatedConfigDto.getTauxDefaut());
-                    existingConfig.setMontantDefaut(updatedConfigDto.getMontantDefaut());
+                    existingConfig.setNombreDefaut(updatedConfigDto.getNombreDefaut());
                     existingConfig.setFormuleCalculOverride(updatedConfigDto.getFormuleCalculOverride());
                     existingConfig.setAffichageOrdre(updatedConfigDto.getAffichageOrdre());
                     newTemplateElements.add(existingConfig);
@@ -301,6 +303,9 @@ public class BulletinTemplateService {
 //            throw new IllegalArgumentException("L'ElementPaie ne peut pas être ajouté à ce template car il appartient à une autre entreprise.");
 //        }
 
+        if (configDto.getFormuleCalculOverride() == null) {
+            configDto.setFormuleCalculOverride(elementPaie.getFormuleCalcul());
+        }
         Optional<TemplateElementPaieConfig> existingConfigOpt = template.getElementsConfig().stream()
                 .filter(config -> config.getElementPaie().getId().equals(elementPaie.getId()))
                 .findFirst();
@@ -312,9 +317,9 @@ public class BulletinTemplateService {
             config.setFormuleCalculOverride(configDto.getFormuleCalculOverride());
             config.setMontantDefaut(configDto.getMontantDefaut());
             config.setTauxDefaut(configDto.getTauxDefaut());
-            config.setTauxDefaut(configDto.getTauxDefaut());
-            config.setMontantDefaut(config.getMontantDefaut());
+            config.setNombreDefaut(configDto.getNombreDefaut());
             config.setActive(configDto.isActive());
+            config.setFormuleCalculOverride(configDto.getFormuleCalculOverride());
             config.setAffichageOrdre(configDto.getAffichageOrdre()); // <--- AJOUT CLÉ ICI
         } else {
             // Création d'une nouvelle configuration
@@ -324,8 +329,7 @@ public class BulletinTemplateService {
                     .formuleCalculOverride(configDto.getFormuleCalculOverride())
                     .tauxDefaut(configDto.getTauxDefaut())
                     .montantDefaut(configDto.getMontantDefaut())
-                    .tauxDefaut(configDto.getTauxDefaut())
-                    .montantDefaut(configDto.getMontantDefaut())
+                    .nombreDefaut(configDto.getNombreDefaut())
                     .isActive(configDto.isActive())
                     .affichageOrdre(configDto.getAffichageOrdre()) // <--- ET ICI
                     .build();
@@ -381,9 +385,13 @@ public class BulletinTemplateService {
         dto.setFormuleCalculOverride(config.getFormuleCalculOverride());
         dto.setTauxDefaut(config.getTauxDefaut());
         dto.setMontantDefaut(config.getMontantDefaut());
-        dto.setMontantDefaut(config.getMontantDefaut());
-        dto.setTauxDefaut(config.getTauxDefaut());
+        dto.setNombreDefaut(config.getNombreDefaut());
         dto.setActive(config.isActive());
+        if (config.getFormuleCalculOverride() == null) {
+            dto.setFormuleCalculOverride(config.getElementPaie().getFormuleCalcul());
+        } else {
+            dto.setFormuleCalculOverride(config.getFormuleCalculOverride());
+        }
         dto.setAffichageOrdre(config.getAffichageOrdre()); // <--- ASSUREZ-VOUS QUE C'EST BIEN MAPPÉ ICI AUSSI
         return dto;
     }
