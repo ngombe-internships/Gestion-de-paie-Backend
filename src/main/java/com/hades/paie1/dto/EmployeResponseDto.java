@@ -6,6 +6,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 
 @Data
@@ -33,6 +34,13 @@ public class EmployeResponseDto {
     private EchelonEnum echelon;
     private TypeContratEnum typeContratEnum;
     private SexeEnum sexe;
+
+
+    //nouveau
+    private BigDecimal soldeJoursConge;
+    private BigDecimal heuresContractuellesHebdomadaires;
+    private Integer joursOuvrablesContractuelsHebdomadaires;
+    private BigDecimal salaireBase;
 
 
 }

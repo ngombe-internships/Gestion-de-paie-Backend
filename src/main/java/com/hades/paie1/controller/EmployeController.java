@@ -60,7 +60,7 @@ public class EmployeController {
 
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('EMPLOYEUR')")
     public ResponseEntity<ApiResponse<Void>> deleteEmploye(@PathVariable Long id){
 
             employeService.deleteEmploye(id);

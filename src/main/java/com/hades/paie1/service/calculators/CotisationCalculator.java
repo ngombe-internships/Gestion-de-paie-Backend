@@ -8,6 +8,7 @@ import org.springframework.stereotype.Component;
 import java.math.BigDecimal;
 
 @Component
+
 public class CotisationCalculator {
 
     private MathUtils mathUtils ;
@@ -24,7 +25,7 @@ public class CotisationCalculator {
 
     public BigDecimal calculCnpsVieillesseSalarie(BulletinPaie fiche){
         BigDecimal baseCnps = calculator.calculBaseCnps(fiche);
-        return mathUtils.safeMultiply(baseCnps, PaieConstants.TAUX_CNPS_VIEILLESSE_EMPLOYEUR);
+        return mathUtils.safeMultiply(baseCnps, PaieConstants.TAUX_CNPS_VIEILLESSE_SALARIE);
     }
 
     public BigDecimal calculCreditFoncierSalarie(BulletinPaie fiche){
@@ -48,6 +49,7 @@ public class CotisationCalculator {
                 impotCalculator.calculRedevanceAudioVisuelle(fiche),
                 calculCreditFoncierSalarie(fiche),
                 calculCnpsVieillesseEmployeur(fiche),
+                calculFneSalaire(fiche),
                 avancesSurSalaires
         );
     }
@@ -55,7 +57,7 @@ public class CotisationCalculator {
     // Calcul Des charges patronales
     public BigDecimal calculCnpsVieillesseEmployeur(BulletinPaie fiche){
         BigDecimal baseCnps =  calculator.calculBaseCnps(fiche);
-        return mathUtils.safeMultiply(baseCnps, PaieConstants.TAUX_CNPS_VIEILLESSE_SALARIE);
+        return mathUtils.safeMultiply(baseCnps, PaieConstants.TAUX_CNPS_VIEILLESSE_EMPLOYEUR);
     }
 
 
@@ -98,4 +100,6 @@ public class CotisationCalculator {
                 calculCnpsAccidentsTravail(fiche)
         );
     }
+
+
 }

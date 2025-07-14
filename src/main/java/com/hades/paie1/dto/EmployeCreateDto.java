@@ -3,15 +3,15 @@ package com.hades.paie1.dto;
 
 import com.hades.paie1.enum1.*;
 import jakarta.persistence.Column;
-import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.PastOrPresent;
+import jakarta.validation.constraints.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 
 @Data
 @AllArgsConstructor
@@ -67,9 +67,24 @@ public class EmployeCreateDto {
     @PastOrPresent (message = "L'acte de naissance ne peut pas etre dans le futur")
     private LocalDate dateNaissance;
 
-
-    @Column(name="sexe")
     private SexeEnum sexe;
+
+    private BigDecimal salaireBase;
+    //nouveau
+
+    //@NotNull(message = " Le solde des jours de congé doit toujours être une valeur connue, même s'il est initialement à zéro")
+    @Min(0)
+    private BigDecimal soldeJoursConge;
+
+    //@NotNull(message = "Les heures contractuelles doivent toujours etre presente")
+    @Min(value = 1, message = "Les heures contractuelles hebdomadaires doivent être supérieures à zéro")
+    private BigDecimal heuresContractuellesHebdomadaires;
+
+    @Min(value = 1, message = "Les jours ouvrables contractuels hebdomadaires doivent être supérieurs à zéro")
+    @Max(value = 7, message = "Les jours ouvrables ne peuvent pas dépasser 7 par semaine")
+    private Integer joursOuvrablesContractuelsHebdomadaires;
+
+
 
 
 

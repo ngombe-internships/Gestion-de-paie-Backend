@@ -1,25 +1,18 @@
 package com.hades.paie1.service;
 
-import com.hades.paie1.dto.BulletinPaieEmployeurDto;
-import com.hades.paie1.dto.BulletinPaieResponseDto;
-import com.hades.paie1.dto.EmployeResponseDto;
-import com.hades.paie1.dto.EntrepriseDto;
-import com.hades.paie1.enum1.Role;
-import com.hades.paie1.enum1.StatusBulletin;
+import com.hades.paie1.dto.*;
+import com.hades.paie1.enum1.*;
 import com.hades.paie1.exception.RessourceNotFoundException;
-import com.hades.paie1.model.BulletinPaie;
-import com.hades.paie1.model.Employe;
-import com.hades.paie1.model.Entreprise;
-import com.hades.paie1.model.User;
-import com.hades.paie1.repository.BulletinPaieRepo;
-import com.hades.paie1.repository.EmployeRepository;
-import com.hades.paie1.repository.EntrepriseRepository;
-import com.hades.paie1.repository.UserRepository;
+import com.hades.paie1.model.*;
+import com.hades.paie1.repository.*;
 import com.hades.paie1.service.calculators.CotisationCalculator;
 import com.hades.paie1.service.calculators.ImpotCalculator;
 import com.hades.paie1.service.calculators.SalaireCalculator;
 import com.hades.paie1.utils.MathUtils;
+import com.hades.paie1.utils.PaieConstants;
 import jakarta.transaction.Transactional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -27,9 +20,12 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.format.TextStyle;
 import java.util.*;
+import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 @Service
@@ -45,6 +41,13 @@ public class BulletinPaieService {
     private  EmployeService employeService;
     private UserRepository userRepository;
     private EntrepriseRepository entrepriseRepository;
+    private EmployePaieConfigRepository employePaieConfigRepo;
+    private BulletinTemplateRepository bulletinTemplateRepository;
+    private TemplateElementPaieConfigRepository templateRepository;
+
+    private ElementPaieRepository elementPaieRepository;
+    private PayrollDisplayService payrollDisplayService;
+    private static final Logger logger = LoggerFactory.getLogger(BulletinPaieService.class);
 
     public BulletinPaieService (
             CotisationCalculator cotisationCalculator,
@@ -55,7 +58,12 @@ public class BulletinPaieService {
             EmployeRepository employeRepo,
             EmployeService employeService,
             UserRepository userRepository,
-            EntrepriseRepository entrepriseRepository
+            EntrepriseRepository entrepriseRepository,
+            EmployePaieConfigRepository employePaieConfigRepo,
+            TemplateElementPaieConfigRepository templateepository,
+            BulletinTemplateRepository bulletinTemplate,
+            ElementPaieRepository elementPaieRepository,
+            PayrollDisplayService payrollDisplayService
 
 
     ){
@@ -68,6 +76,11 @@ public class BulletinPaieService {
        this.employeService= employeService;
        this.userRepository = userRepository;
        this.entrepriseRepository = entrepriseRepository;
+       this.employePaieConfigRepo = employePaieConfigRepo;
+       this.templateRepository = templateepository;
+       this.bulletinTemplateRepository = bulletinTemplate;
+       this.elementPaieRepository = elementPaieRepository;
+       this.payrollDisplayService = payrollDisplayService;
     }
 
 
@@ -88,73 +101,647 @@ public class BulletinPaieService {
 
 
 
+
     //methode pour calculer employer avec son bulletin
-    public BulletinPaie calculBulletin (BulletinPaie fiche){
+    @Transactional
+    public BulletinPaie calculBulletin(BulletinPaie fiche) {
+        System.out.println("Début calculBulletin :");
+        System.out.println("Heures normales : " + fiche.getHeuresNormal());
+        System.out.println("Taux horaire : " + fiche.getTauxHoraireInitial());
+        System.out.println("Salaire base initial : " + fiche.getSalaireBaseInitial());
 
-        //Assurez-vous que entite employe est charge
         Employe employe = employeRepo.findById(fiche.getEmploye().getId())
-                .orElseThrow(()-> new RessourceNotFoundException("Employe non trouve avec l'ID : " +fiche.getEmploye().getId()));
+                .orElseThrow(() -> new RessourceNotFoundException("Employe non trouve"));
 
+        if (fiche.getSalaireBaseInitial() == null) {
+            fiche.setSalaireBaseInitial(employe.getSalaireBase());
+        }
 
-        //charger entite entreprise
+        if (fiche.getHeuresNormal() == null && employe.getHeuresContractuellesHebdomadaires() != null) {
+            // Ex : heuresContractuellesHebdomadaires * 52 / 12 (moyenne mensuelle)
+            BigDecimal heuresMensuelles = employe.getHeuresContractuellesHebdomadaires()
+                    .multiply(BigDecimal.valueOf(52))
+                    .divide(BigDecimal.valueOf(12), 2, RoundingMode.HALF_UP);
+            fiche.setHeuresNormal(heuresMensuelles);
+        }
+
+        if (fiche.getTauxHoraireInitial() == null) {
+            if (fiche.getSalaireBaseInitial() != null && fiche.getHeuresNormal() != null && fiche.getHeuresNormal().compareTo(BigDecimal.ZERO) > 0) {
+                BigDecimal tauxHoraire = fiche.getSalaireBaseInitial().divide(fiche.getHeuresNormal(), 2, RoundingMode.HALF_UP);
+                fiche.setTauxHoraireInitial(tauxHoraire);
+            }
+        }
+
         Entreprise entreprise = entrepriseRepository.findById(fiche.getEntreprise().getId())
-                        .orElseThrow(()-> new RessourceNotFoundException("Entreprise non trouver avec l'ID :" +fiche.getEntreprise().getId()));
+                .orElseThrow(() -> new RessourceNotFoundException("Entreprise non trouve"));
 
         fiche.setEmploye(employe);
         fiche.setEntreprise(entreprise);
+        fiche.clearLignesPaie(); // Nettoyer AVANT de recalculer
+
+        BulletinTemplate template = bulletinTemplateRepository.findByEntrepriseAndIsDefaultTrue(entreprise)
+                .orElseThrow(() -> new RessourceNotFoundException("Aucun template par défaut"));
+
+        LocalDate periodePourConfig = fiche.getDateDebutPeriode() != null ? fiche.getDateDebutPeriode() : LocalDate.now();
+
+        //  FIX 1: Traiter les éléments dans l'ordre correct et éviter les doublons
+        Set<String> elementsTraites = new HashSet<>(); // Éviter les doublons
+
+        //  BOUCLE 1 : GAINS SEULEMENT
+        System.out.println("\n=== DEBUT CALCUL DES GAINS ===");
+        for (TemplateElementPaieConfig config : template.getElementsConfig()) {
+            if (!config.isActive() || config.getElementPaie().getType() != TypeElementPaie.GAIN) continue;
+
+            ElementPaie element = config.getElementPaie();
+            String elementKey = element.getCode() + "_" + element.getType(); // Clé unique
+
+            //  FIX 2: Éviter les doublons
+            if (elementsTraites.contains(elementKey)) {
+                System.out.println("Élément déjà traité : " + element.getCode());
+                continue;
+            }
+            elementsTraites.add(elementKey);
+
+            System.out.println("\nTraitement élément GAIN: " + element.getCode());
+
+            List<EmployePaieConfig> configs = employePaieConfigRepo
+                    .findActiveConfigForEmployeAndElementAndPeriode(employe, element.getId(), periodePourConfig);
+
+            Optional<EmployePaieConfig> employeConfig = configs.stream().findFirst();
+
+            System.out.println("Recherche config pour Employé " + employe.getId() + ", Element " + element.getId() + ", Période " + periodePourConfig);
+            System.out.println("Nombre de configs trouvées: " + configs.size());
+            for (EmployePaieConfig c : configs) {
+                System.out.println("- id:" + c.getId() + ", valeur:" + c.getValeur() + ", dateDebut:" + c.getDateDebut() + ", dateFin:" + c.getDateFin());
+            }
+
+//            BigDecimal valeur = employeConfig.map(EmployePaieConfig::getValeur)
+//                    .orElse(config.getValeurDefaut() != null ? config.getValeurDefaut() : element.getTauxDefaut());
+//
+//            System.out.println("Element: " + element.getCode() +
+//                    ", employeConfig: " + (employeConfig.isPresent() ? employeConfig.get().getValeur() : "null") +
+//                    ", valeurDefaut: " + config.getValeurDefaut() +
+//                    ", tauxDefaut: " + element.getTauxDefaut() +
+//                    ", valeur retenue: " + valeur);
+//            if (valeur == null) valeur = BigDecimal.ZERO;
+
+            BigDecimal valeur = BigDecimal.ZERO;
+            // ********* CHANGEMENT ICI *********
+            BigDecimal montant = BigDecimal.ZERO;
+            FormuleCalculType formule = config.getFormuleCalculOverride() != null ?
+                    config.getFormuleCalculOverride() : element.getFormuleCalcul();
+
+            if (formule == FormuleCalculType.MONTANT_FIXE) {
+                valeur = employeConfig.map(EmployePaieConfig::getMontant)
+                        .orElse(config.getMontantDefaut() != null ? config.getMontantDefaut() : element.getTauxDefaut());
+            } else if (formule == FormuleCalculType.POURCENTAGE_BASE) {
+                valeur = employeConfig.map(EmployePaieConfig::getTaux)
+                        .orElse(config.getTauxDefaut() != null ? config.getTauxDefaut() : element.getTauxDefaut());
+            } else {
+                valeur = BigDecimal.ZERO;
+            }
+            if (valeur == null) valeur = BigDecimal.ZERO;
+
+            switch (formule) {
+                case MONTANT_FIXE:
+                    montant = valeur;
+                    break;
+                case NOMBRE_BASE_TAUX:
+                    BigDecimal heures = fiche.getHeuresNormal() != null ? fiche.getHeuresNormal() : BigDecimal.ZERO;
+                    BigDecimal taux = fiche.getTauxHoraireInitial() != null ? fiche.getTauxHoraireInitial() : BigDecimal.ZERO;
+                    montant = heures.multiply(taux);
+                    System.out.println("Calcul NOMBRE_BASE_TAUX - Heures: " + heures + ", Taux: " + taux + ", Montant: " + montant);
+                    break;
+                case POURCENTAGE_BASE:
+                    // GAIN très rare ici, mais pour homogénéité :
+                    BigDecimal base = element.isImpacteBaseCnps() && fiche.getBaseCnps() != null
+                            ? fiche.getBaseCnps()
+                            : fiche.getSalaireBrut() != null ? fiche.getSalaireBrut() : BigDecimal.ZERO;
+                    montant = base.multiply(valeur);
+                    break;
+            }
+
+            // 🔧 FIX 3: Vérifier que le montant est > 0 avant d'ajouter
+            if (montant.compareTo(BigDecimal.ZERO) > 0) {
+                LigneBulletinPaie ligne = new LigneBulletinPaie();
+                ligne.setElementPaie(element);
+                ligne.setNombre(formule == FormuleCalculType.NOMBRE_BASE_TAUX ?
+                        fiche.getHeuresNormal() != null ? fiche.getHeuresNormal() : BigDecimal.ONE :
+                        BigDecimal.ONE);
+                ligne.setTauxApplique(valeur);
+                ligne.setMontantCalcul(montant);
+                ligne.setMontantFinal(montant);
+                fiche.addLignePaie(ligne);
+
+                System.out.println("Ajout ligne GAIN: " + element.getCode() + ", Montant: " + montant);
+            } else {
+                System.out.println(" Montant zéro pour: " + element.getCode());
+            }
+        }
+
+        // Calcul des avantages en nature
+        BigDecimal totalAvantageNature = calculator.calculerTotalAvantageNature(fiche);
+        if (totalAvantageNature.compareTo(BigDecimal.ZERO) > 0) {
+            calculator.addLignePaieForElement(
+                    fiche,
+                    "Avantage en nature",
+                    TypeElementPaie.GAIN,
+                    CategorieElement.AVANTAGE_EN_NATURE,
+                    BigDecimal.ONE,
+                    BigDecimal.ZERO,
+                    totalAvantageNature,
+                    totalAvantageNature,
+                    fiche.getSalaireBrut()
+            );
+        }
+
+        // Calcul des heures supplémentaires
+        calculator.calculerHeuresSupplementaires(fiche);
+        calculator.calculerHeuresNuit(fiche);
+        calculator.calculerHeuresFerie(fiche);
+        calculator.calculerPrimeAnciennete(fiche);
+
+        // 🔧 FIX 4: Calcul des bases APRÈS tous les gains
+        System.out.println("\n=== CALCUL DES BASES (UNE SEULE FOIS) ===");
+        fiche.setSalaireBrut(fiche.getTotalGains());
+        System.out.println("Salaire Brut calculé: " + fiche.getSalaireBrut());
+
+        // ✅ Calculer la base CNPS une seule fois
+        BigDecimal baseCnps = calculator.calculBaseCnps(fiche);
+        fiche.setBaseCnps(baseCnps);
+        System.out.println("Base CNPS calculée: " + baseCnps);
+
+        // ✅ Calculer le salaire imposable une seule fois
+        BigDecimal salaireImposable = calculator.calculSalaireImposable(fiche);
+        fiche.setSalaireImposable(salaireImposable);
+        System.out.println("Salaire Imposable calculé: " + salaireImposable);
+
+        // 2️⃣ BOUCLE 2 : RETENUES & IMPOTS
+        System.out.println("\n=== DEBUT CALCUL DES RETENUES ===");
+        for (TemplateElementPaieConfig config : template.getElementsConfig()) {
+            if (!config.isActive()) continue;
+
+            ElementPaie element = config.getElementPaie();
+            if (element.getType() == TypeElementPaie.GAIN) continue; // Déjà traité
+
+            String elementKey = element.getCode() + "_" + element.getType();
+            if (elementsTraites.contains(elementKey)) {
+                System.out.println("Élément déjà traité : " + element.getCode());
+                continue;
+            }
+            elementsTraites.add(elementKey);
+
+            System.out.println("\nTraitement élément RETENUE: " + element.getCode());
+
+            List<EmployePaieConfig> configs = employePaieConfigRepo
+                    .findActiveConfigForEmployeAndElementAndPeriode(employe, element.getId(), periodePourConfig);
+
+            Optional<EmployePaieConfig> employeConfig = configs.stream().findFirst();
 
 
-        fiche.setSalaireBase(calculSalaireBase(fiche));
-        fiche.setHeuresSup1(calculHeureSup1(fiche));
-        fiche.setHeuresSup2(calculHeureSup2(fiche));
-        fiche.setHeuresFerie(calculHeureFerie(fiche));
-        fiche.setHeuresNuit(calculHeureNuit(fiche));
-        fiche.setPrimeTransport(fiche.getPrimeTransport());
-        fiche.setPrimePonctualite(fiche.getPrimePonctualite());
-        fiche.setPrimeAnciennete(fiche.getPrimeAnciennete());
-        fiche.setPrimeRendement(fiche.getPrimeRendement());
-        fiche.setPrimeTechnicite(fiche.getPrimeTechnicite());
-        BigDecimal primeAnciennete = calculator.calculPrimeAnciennete(fiche);
-        fiche.setPrimeAnciennete(primeAnciennete);
-        fiche.setTotalPrimes(calculTotalPrimes(fiche));
-        fiche.setSalaireBrut(calculator.calculSalaireBrut(fiche));
-        fiche.setSalaireImposable(calculator.calculSalaireImposable(fiche));
-        fiche.setBaseCnps(calculator.calculBaseCnps(fiche));
+            BigDecimal montant = BigDecimal.ZERO;
+            FormuleCalculType formule = config.getFormuleCalculOverride() != null ?
+                    config.getFormuleCalculOverride() : element.getFormuleCalcul();
+
+            BigDecimal valeur = BigDecimal.ZERO;
+            // ********* CHANGEMENT ICI AUSSI *********
+            if (formule == FormuleCalculType.MONTANT_FIXE) {
+                valeur = employeConfig.map(EmployePaieConfig::getMontant)
+                        .orElse(config.getMontantDefaut() != null ? config.getMontantDefaut() : element.getTauxDefaut());
+            } else if (formule == FormuleCalculType.POURCENTAGE_BASE) {
+                valeur = employeConfig.map(EmployePaieConfig::getTaux)
+                        .orElse(config.getTauxDefaut() != null ? config.getTauxDefaut() : element.getTauxDefaut());
+            } else {
+                valeur = BigDecimal.ZERO;
+            }
+            if (valeur == null) valeur = BigDecimal.ZERO;
+
+            // 🆕 CRITICAL FIX: Créez une nouvelle instance de LigneBulletinPaie à chaque itération
+            LigneBulletinPaie ligne = new LigneBulletinPaie();
+            // Ajouter la ligne même si le montant est 0 (pour les impôts)
+
+            calculerMontantRetenue(ligne, element, formule, valeur, fiche,employeConfig, config);
+            fiche.addLignePaie(ligne);
+            System.out.println("✅ Ajout ligne RETENUE: " + element.getCode() + ", Montant: " + montant);
+        }
 
 
-        // === SECTION IMPÔTS ET TAXES ===
-        fiche.setIrpp(impotCalculator.calculIrpp(fiche));
-        fiche.setCac(impotCalculator.calculCac(fiche));
-        fiche.setTaxeCommunale(impotCalculator.calculTaxeCommunal(fiche));
-        fiche.setRedevanceAudioVisuelle(impotCalculator.calculRedevanceAudioVisuelle(fiche));
 
-        // === SECTION COTISATIONS SALARIALES (RETENUES) ===
-        fiche.setCnpsVieillesseSalarie(cotisationCalculator.calculCnpsVieillesseSalarie(fiche));
-        fiche.setCreditFoncierSalarie(cotisationCalculator.calculCreditFoncierSalarie(fiche));
-        fiche.setFneSalarie(cotisationCalculator.calculFneSalaire(fiche));
-        fiche.setTotalRetenues(cotisationCalculator.calculTotalRetenuesSalaire(fiche));
+        // 🔧 FIX 5: Calcul des totaux finaux
+        System.out.println("\n=== CALCUL DES TOTAUX FINAUX ===");
+        fiche.setTotalGains(fiche.getLignesPaie().stream()
+                .filter(l -> l.getElementPaie().getType() == TypeElementPaie.GAIN)
+                .map(LigneBulletinPaie::getMontantFinal)
+                .reduce(BigDecimal.ZERO, BigDecimal::add));
 
-        // === SECTION CHARGES PATRONALES ===
-        fiche.setCnpsVieillesseEmployeur(cotisationCalculator.calculCnpsVieillesseEmployeur(fiche));
-        fiche.setCnpsAllocationsFamiliales(cotisationCalculator.calculCnpsAllocationsFamiliales(fiche));
-        fiche.setCnpsAccidentsTravail(cotisationCalculator.calculCnpsAccidentsTravail(fiche));
-        fiche.setCreditFoncierPatronal(cotisationCalculator.calculCreditFoncierPatronal(fiche));
-        fiche.setFnePatronal(cotisationCalculator.calculFnePatronal(fiche));
-        fiche.setTotalChargesPatronales(cotisationCalculator.calculTotalChargesPatronales(fiche));
+        fiche.setTotalCotisationsSalariales(fiche.getLignesPaie().stream()
+                .filter(l -> l.getElementPaie().getCategorie() == CategorieElement.COTISATION_SALARIALE)
+                .map(LigneBulletinPaie::getMontantFinal)
+                .reduce(BigDecimal.ZERO, BigDecimal::add));
 
-        // === SECTION TOTAUX FINAUX ===
-        fiche.setSalaireNet(calculSalaireNet(fiche));
-        fiche.setCoutTotalEmployeur(calculCoutTotalEmployeur(fiche));
-        fiche.setCotisationCnps(cotisationCalculator.cotisationCnps(fiche));
+        fiche.setTotalImpots(fiche.getLignesPaie().stream()
+                .filter(l -> l.getElementPaie().getCategorie() == CategorieElement.IMPOT_SUR_REVENU)
+                .map(LigneBulletinPaie::getMontantFinal)
+                .reduce(BigDecimal.ZERO, BigDecimal::add));
 
-        fiche.setDateCreationBulletin(LocalDate.now()); // Date de création actuelle
-        fiche.setAnnee(LocalDate.now().getYear()); // Année actuelle
-        fiche.setMois(LocalDate.now().getMonth().getDisplayName(TextStyle.FULL, Locale.FRENCH)); // Nom du mois actuel (ex: "juin")
 
-        // Définissez un statut initial. C'est CRUCIAL pour que les boutons s'affichent.
+        //Calculer les charges patronales
+        BigDecimal totalChargesPatronales = fiche.getLignesPaie().stream()
+                .filter(l -> l.getElementPaie().getCategorie() == CategorieElement.COTISATION_PATRONALE)
+                .map(LigneBulletinPaie::getMontantFinal)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        fiche.setTotalChargesPatronales(totalChargesPatronales);
+
+        // Inclure TOUTES les retenues salariales (pas seulement cotisations + impôts)
+        BigDecimal totalRetenues = fiche.getLignesPaie().stream()
+                .filter(l -> l.getElementPaie().getType() == TypeElementPaie.RETENUE ||
+                        l.getElementPaie().getCategorie() == CategorieElement.IMPOT)
+                .map(LigneBulletinPaie::getMontantFinal)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        fiche.setSalaireNetAvantImpot(fiche.getSalaireBrut().subtract(fiche.getTotalCotisationsSalariales()));
+        fiche.setSalaireNetAPayer(fiche.getSalaireNetAvantImpot().subtract(fiche.getTotalImpots()));
+
+        fiche.setCoutTotalEmployeur(fiche.getSalaireNetAPayer().add(fiche.getTotalChargesPatronales()));
+
+        System.out.println("=== TOTAUX FINAUX ===");
+        System.out.println("Salaire Brut: " + fiche.getSalaireBrut());
+        System.out.println("Total Cotisations Salariales: " + fiche.getTotalCotisationsSalariales());
+        System.out.println("Total Impôts: " + fiche.getTotalImpots());
+        System.out.println("Total Charges Patronales: " + fiche.getTotalChargesPatronales());
+        System.out.println("Total Retenues Salariales: " + fiche.getTotalRetenuesSalariales());
+        System.out.println("Salaire Net à payer: " + fiche.getSalaireNetAPayer());
+        System.out.println("Coût total employeur: " + fiche.getCoutTotalEmployeur());
+
         fiche.setStatusBulletin(StatusBulletin.GÉNÉRÉ);
+        fiche.setDateCreationBulletin(LocalDate.now());
+        fiche.setAnnee(LocalDate.now().getYear());
+        fiche.setMois(LocalDate.now().getMonth().getDisplayName(TextStyle.FULL, Locale.FRENCH));
 
         return fiche;
+    }
+
+    //Calcule le montant d'une retenue en utilisant CotisationCalculator quand c'est possible
+
+    private void calculerMontantRetenue(LigneBulletinPaie ligne, ElementPaie element, FormuleCalculType formule, BigDecimal valeur, BulletinPaie fiche, Optional<EmployePaieConfig> employeConfig, TemplateElementPaieConfig config) {
+        String code = element.getCode().toUpperCase();
+        String designation = element.getDesignation() != null ? element.getDesignation().toUpperCase() : "";
+
+        BigDecimal montant = BigDecimal.ZERO;
+        BigDecimal baseUtilisee = null;
+        BigDecimal tauxApplique = valeur;
+        String tauxAffiche = null;
+
+
+        // Utiliser CotisationCalculator pour les cotisations spécifiques
+        BigDecimal montantSpecifique = calculerCotisationSpecifique(code, designation, fiche);
+        if (montantSpecifique != null) {
+            System.out.println("Montant calculé via CotisationCalculator pour " + code + ": " + montantSpecifique);
+            montant = montantSpecifique;
+            baseUtilisee = determinerBaseCalcul(element, fiche);
+            tauxApplique = obtenirTauxDepuisConstants(code, designation, element);
+
+            if (tauxApplique == null || tauxApplique.compareTo(BigDecimal.ZERO) == 0) {
+                if (valeur != null && valeur.compareTo(BigDecimal.ZERO) > 0) {
+                    tauxApplique = valeur;
+                } else {
+                    tauxApplique = calculerTauxEffectif(montant, baseUtilisee);
+                }
+            }
+        } else {
+
+            switch (formule) {
+                case MONTANT_FIXE:
+                    montant = employeConfig.isPresent() && employeConfig.get().getMontant() != null ?
+                            employeConfig.get().getMontant() :
+                            (config.getMontantDefaut() != null ? config.getMontantDefaut() :
+                                    (element.getTauxDefaut() != null ? element.getTauxDefaut() : BigDecimal.ZERO));
+                    baseUtilisee = null;
+                    tauxApplique = null;
+                    tauxAffiche= null;
+                    break;
+
+                case POURCENTAGE_BASE:
+                    baseUtilisee = determinerBaseCalcul(element, fiche);
+                    tauxApplique = employeConfig.isPresent() && employeConfig.get().getTaux() != null ?
+                            employeConfig.get().getTaux() :
+                            (config.getTauxDefaut() != null ? config.getTauxDefaut() :
+                                    (element.getTauxDefaut() != null ? element.getTauxDefaut() : BigDecimal.ZERO));
+
+                    // Vérifier d'abord les constantes système
+                    BigDecimal tauxConstant = obtenirTauxDepuisConstants(code, designation, element);
+                    if (tauxConstant != null && tauxConstant.compareTo(BigDecimal.ZERO) > 0) {
+                        tauxApplique = tauxConstant;
+                    }
+
+                    montant = baseUtilisee.multiply(tauxApplique);
+                    if (tauxApplique != null) {
+                        tauxAffiche = String.format("%.2f %%", tauxApplique.multiply(BigDecimal.valueOf(100)));
+                    }
+                    break;
+
+                case NOMBRE_BASE_TAUX:
+                    BigDecimal nombre = BigDecimal.ONE; // Par défaut
+                    tauxApplique = employeConfig.isPresent() && employeConfig.get().getTaux() != null ?
+                            employeConfig.get().getTaux() :
+                            (config.getTauxDefaut() != null ? config.getTauxDefaut() :
+                                    (element.getTauxDefaut() != null ? element.getTauxDefaut() : BigDecimal.ZERO));
+
+                    montant = nombre.multiply(tauxApplique);
+                    tauxAffiche = String.format("%.2f %%", tauxApplique.multiply(BigDecimal.valueOf(100)));
+
+                    break;
+
+
+
+
+                case BAREME:
+                    baseUtilisee = determinerBaseCalcul(element, fiche);
+                    montant = calculerMontantBareme(code, fiche);
+                    tauxApplique = null;
+                    break;
+
+                default:
+                    montant = BigDecimal.ZERO;
+                    tauxApplique = BigDecimal.ZERO;
+            }
+        }
+
+        // CORRECTION IMPORTANTE : Définir correctement le type d'élément
+        TypeElementPaie typeElement = determinerTypeElement(element, code, designation);
+
+        ligne.setElementPaie(element);
+        ligne.setNombre(BigDecimal.ONE);
+        ligne.setTauxApplique(tauxApplique);
+        ligne.setMontantCalcul(montant);
+        ligne.setMontantFinal(montant);
+        ligne.setBaseApplique(baseUtilisee);
+        ligne.setType(typeElement);
+        ligne.setTauxAffiche(tauxAffiche);
+        // Marquer les propriétés booléennes selon le type
+        ligne.setEstGain(typeElement == TypeElementPaie.GAIN);
+        ligne.setEstRetenue(typeElement == TypeElementPaie.RETENUE);
+        ligne.setEstChargePatronale(typeElement == TypeElementPaie.CHARGE_PATRONALE);
+
+        if (formule == FormuleCalculType.BAREME) {
+            ligne.setBareme(true);
+        }
+
+        ligne.setFormuleCalcul(formule);
+
+
+        System.out.println("Ligne créée - Code: " + code + ", Montant: " + montant +
+                ", Taux: " + tauxApplique + ", Base: " + baseUtilisee + ", Type: " + typeElement +
+                ", Formule: " + formule + ",TauxAffiche " +tauxAffiche);
+    }
+
+
+    private TypeElementPaie determinerTypeElement(ElementPaie element, String code, String designation) {
+        // Si l'élément a déjà un type défini, l'utiliser
+        if (element.getType() != null) {
+            return element.getType();
+        }
+
+        // Déterminer selon le code/désignation
+        if (code.contains("EMPLOYEUR") || code.contains("PATRONAL") ||
+                designation.contains("EMPLOYEUR") || designation.contains("PATRONAL")) {
+            return TypeElementPaie.CHARGE_PATRONALE;
+        }
+
+        // Si c'est une cotisation patronale selon la catégorie
+        if (element.getCategorie() == CategorieElement.COTISATION_PATRONALE) {
+            return TypeElementPaie.CHARGE_PATRONALE;
+        }
+
+        // Par défaut, c'est une retenue salariale
+        return TypeElementPaie.RETENUE;
+    }
+    // Méthode pour récupérer les taux depuis PaieConstants
+    private BigDecimal obtenirTauxDepuisConstants(String code, String designation, ElementPaie element) {
+        // CNPS Vieillesse
+        if ((code.contains("CNPS_VIEILLESSE") || (designation.contains("CNPS") && designation.contains("VIEILLESSE")))) {
+            if (code.contains("EMPLOYEUR") || designation.contains("EMPLOYEUR") || code.contains("PATRONAL") ||
+                    element.getCategorie() == CategorieElement.COTISATION_PATRONALE) {
+                return PaieConstants.TAUX_CNPS_VIEILLESSE_EMPLOYEUR;
+            } else {
+                return PaieConstants.TAUX_CNPS_VIEILLESSE_SALARIE;
+            }
+        }
+
+        // CNPS Allocations Familiales
+        if (code.contains("CNPS_ALLOCATIONS_FAMILIALES") ||
+                code.contains("ALLOCATION_FAMILIALE_CNPS") ||
+                (designation.contains("CNPS") && designation.contains("ALLOCATION"))) {
+            return PaieConstants.TAUX_CNPS_ALLOCATIONS_FAMILIALES;
+        }
+
+        // CNPS Accidents du Travail
+        if (code.contains("CNPS_ACCIDENTS_TRAVAIL") ||
+                code.contains("ACCIDENT_TRAVAIL_CNPS") ||
+                (designation.contains("CNPS") && designation.contains("ACCIDENT"))) {
+            return PaieConstants.TAUX_CNPS_ACCIDENTS_TRAVAIL;
+        }
+
+        // Crédit Foncier
+        if (code.contains("CREDIT_FONCIER")) {
+            if (code.contains("SALARIE") || code.contains("SALARIAL") || designation.contains("SALARI")) {
+                return PaieConstants.TAUX_CREDIT_FONCIER_SALARIE;
+            } else if (code.contains("PATRONAL") || designation.contains("PATRONAL")) {
+                return PaieConstants.TAUX_CREDIT_FONCIER_PATRONAL;
+            }
+        }
+
+        // FNE - Fonds National de l'Emploi
+        if (code.contains("FNE") || (designation.contains("FONDS NATIONAL") && designation.contains("EMPLOI"))) {
+            if (code.contains("SALARIE") || code.contains("SALARIAL") || designation.contains("SALARI")) {
+                return PaieConstants.TAUX_FNE_SALARIE;
+            } else if (code.contains("PATRONAL") || designation.contains("PATRONAL")) {
+                return PaieConstants.TAUX_FNE_PATRONAL;
+            }
+        }
+
+        // CAC - Centimes Additionnels Communaux
+        if ("CAC".equalsIgnoreCase(code) || designation.contains("CAC")) {
+            return PaieConstants.TAUX_CAC;
+        }
+
+        // Pour les barèmes, retourner null (sera géré différemment)
+        if ("IRPP".equalsIgnoreCase(code) || designation.contains("IRPP") ||
+                code.contains("TAXE_COMMUNALE") || designation.contains("TAXE COMMUNALE") ||
+                code.contains("REDEVANCE_AUDIOVISUELLE") || designation.contains("REDEVANCE AUDIOVISUELLE")) {
+            return null;
+        }
+
+        return null; // Aucun taux trouvé dans les constantes
+    }
+    //  Modification de calculerCotisationSpecifique pour gérer les cotisations combinées
+    private BigDecimal calculerCotisationSpecifique(String code, String designation, BulletinPaie fiche) {
+
+        // CAC - Centimes Additionnels Communaux
+        if ("CAC".equalsIgnoreCase(code) || designation.contains("CAC")) {
+            return impotCalculator.calculCac(fiche);
+        }
+
+        // Taxe communale
+        if (code.contains("TAXE_COMMUNALE") || designation.contains("TAXE COMMUNALE")) {
+            return impotCalculator.calculTaxeCommunal(fiche);
+        }
+
+        // Redevance audiovisuelle
+        if (code.contains("REDEVANCE_AUDIOVISUELLE") || designation.contains("REDEVANCE AUDIOVISUELLE")) {
+            return impotCalculator.calculRedevanceAudioVisuelle(fiche);
+        }
+
+        // 🔧 CNPS Vieillesse - Séparation correcte employeur/salarié
+        if (code.contains("CNPS_VIEILLESSE") || (designation.contains("CNPS") && designation.contains("VIEILLESSE"))) {
+            // Si c'est spécifiquement pour l'employeur
+            if (code.contains("EMPLOYEUR") || designation.contains("EMPLOYEUR") || code.contains("PATRONAL")) {
+                return cotisationCalculator.calculCnpsVieillesseEmployeur(fiche);
+            }
+            // Si c'est spécifiquement pour le salarié
+            else if (code.contains("SALARIE") || designation.contains("SALARIE") || code.contains("SALARIAL")) {
+                return cotisationCalculator.calculCnpsVieillesseSalarie(fiche);
+            }
+            // 🔧 Si c'est générique, déterminer selon la catégorie de l'élément
+            else {
+                ElementPaie element = fiche.getLignesPaie().stream()
+                        .filter(l -> l.getElementPaie().getCode().equals(code))
+                        .findFirst()
+                        .map(LigneBulletinPaie::getElementPaie)
+                        .orElse(null);
+
+                if (element != null) {
+                    if (element.getCategorie() == CategorieElement.COTISATION_PATRONALE) {
+                        return cotisationCalculator.calculCnpsVieillesseEmployeur(fiche);
+                    } else {
+                        return cotisationCalculator.calculCnpsVieillesseSalarie(fiche);
+                    }
+                }
+
+                // Par défaut, retourner la cotisation salariale
+                return cotisationCalculator.calculCnpsVieillesseSalarie(fiche);
+            }
+        }
+
+
+        // Autres cotisations CNPS (restent inchangées)
+        if (code.contains("CNPS_ALLOCATIONS_FAMILIALES") ||
+                code.contains("ALLOCATION_FAMILIALE_CNPS") ||
+                (designation.contains("CNPS") && designation.contains("ALLOCATION"))) {
+            return cotisationCalculator.calculCnpsAllocationsFamiliales(fiche);
+        }
+
+        if (code.contains("CNPS_ACCIDENTS_TRAVAIL") ||
+                code.contains("ACCIDENT_TRAVAIL_CNPS") ||
+                (designation.contains("CNPS") && designation.contains("ACCIDENT"))) {
+            return cotisationCalculator.calculCnpsAccidentsTravail(fiche);
+        }
+
+        // Crédit Foncier
+        if (code.contains("CREDIT_FONCIER_SALARIE") ||
+                code.contains("CREDIT_FONCIER_SALARIAL") ||
+                (designation.contains("CRÉDIT FONCIER") && designation.contains("SALARI"))) {
+            return cotisationCalculator.calculCreditFoncierSalarie(fiche);
+        }
+
+        if (code.contains("CREDIT_FONCIER_PATRONAL") ||
+                (designation.contains("CRÉDIT FONCIER") && designation.contains("PATRONAL"))) {
+            return cotisationCalculator.calculCreditFoncierPatronal(fiche);
+        }
+
+        // Fonds National de l'Emploi
+        if (code.contains("FNE_SALARIE") ||
+                code.contains("FONDS_NATIONAL_EMPLOI") ||
+                (designation.contains("FONDS NATIONAL") && designation.contains("EMPLOI"))) {
+            return cotisationCalculator.calculFneSalaire(fiche);
+        }
+
+        if (code.contains("FNE_PATRONAL") ||
+                (designation.contains("FONDS NATIONAL") && designation.contains("PATRONAL"))) {
+            return cotisationCalculator.calculFnePatronal(fiche);
+        }
+
+        // Totaux globaux
+        if (code.equals("TOTAL_CNPS") || designation.contains("TOTAL") && designation.contains("CNPS")) {
+            return cotisationCalculator.cotisationCnps(fiche);
+        }
+        if (code.equals("TOTAL_CHARGES_PATRONALES") || designation.contains("TOTAL") && designation.contains("CHARGES PATRONALES")) {
+            return cotisationCalculator.calculTotalChargesPatronales(fiche);
+        }
+        if (code.equals("TOTAL_RETENUES_SALARIE") || designation.contains("TOTAL") && designation.contains("RETENUES")) {
+            return cotisationCalculator.calculTotalRetenuesSalaire(fiche);
+        }
+
+        return null; // Aucune cotisation spécifique trouvée
+    }
+
+     //Détermine la base de calcul selon l'élément de paie
+    private BigDecimal determinerBaseCalcul(ElementPaie element, BulletinPaie fiche) {
+        String code = element.getCode().toUpperCase();
+        String designation = element.getDesignation() != null ? element.getDesignation().toUpperCase() : "";
+
+        // CAC se base sur l'IRPP
+        if ("CAC".equalsIgnoreCase(code)) {
+            return impotCalculator.calculIrpp(fiche);
+        }
+
+        // CNPS se base sur la base CNPS
+        if (designation.contains("CNPS") || code.contains("CNPS")) {
+            return fiche.getBaseCnps() != null ? fiche.getBaseCnps() : BigDecimal.ZERO;
+        }
+
+        // Crédit foncier et FNE se basent sur le salaire imposable
+        if (designation.contains("CRÉDIT FONCIER") || code.contains("CREDIT_FONCIER") ||
+                designation.contains("FONDS NATIONAL") || code.contains("FNE") ||
+                designation.contains("TAXE COMMUNALE") || code.contains("TAXE_COMMUNALE") ||
+                designation.contains("REDEVANCE AUDIOVISUELLE") || code.contains("REDEVANCE_AUDIOVISUELLE")) {
+            return fiche.getSalaireImposable() != null ? fiche.getSalaireImposable() : BigDecimal.ZERO;
+        }
+
+        // IRPP se base sur le salaire imposable
+        if ("IRPP".equalsIgnoreCase(code)) {
+            return fiche.getSalaireImposable() != null ? fiche.getSalaireImposable() : BigDecimal.ZERO;
+        }
+
+        // Par défaut, utiliser la configuration de l'élément
+        return element.isImpacteBaseCnps() && fiche.getBaseCnps() != null
+                ? fiche.getBaseCnps()
+                : fiche.getSalaireImposable() != null ? fiche.getSalaireImposable() : BigDecimal.ZERO;
+    }
+
+    //Calcule le taux effectif basé sur le montant et la base
+
+    private BigDecimal calculerTauxEffectif(BigDecimal montant, BigDecimal base) {
+        if (base == null || base.compareTo(BigDecimal.ZERO) == 0) {
+            return BigDecimal.ZERO;
+        }
+        return montant.divide(base, 4, RoundingMode.HALF_UP);
+    }
+
+    //Calcule le montant pour les éléments en barème
+
+    private BigDecimal calculerMontantBareme(String code, BulletinPaie fiche) {
+        if ("IRPP".equalsIgnoreCase(code)) {
+            return impotCalculator.calculIrpp(fiche);
+        } else if ("TAXE_COMMUNALE".equalsIgnoreCase(code)) {
+            return impotCalculator.calculTaxeCommunal(fiche);
+        } else if ("REDEVANCE_AUDIOVISUELLE".equalsIgnoreCase(code)) {
+            return impotCalculator.calculRedevanceAudioVisuelle(fiche);
+        }
+        return BigDecimal.ZERO;
+    }
+
+    public String formaterTauxPourAffichage(LigneBulletinPaie ligne) {
+        if (ligne.isBareme() || ligne.getFormuleCalcul() == FormuleCalculType.BAREME) {
+            return "BARÈME";
+        }
+
+        if (ligne.getTauxApplique() == null || ligne.getTauxApplique().compareTo(BigDecimal.ZERO) == 0) {
+            return "-";
+        }
+
+        BigDecimal tauxPourcentage = ligne.getTauxApplique().multiply(BigDecimal.valueOf(100));
+        return tauxPourcentage.setScale(2, RoundingMode.HALF_UP) + "%";
+
     }
 
 
@@ -162,59 +749,39 @@ public class BulletinPaieService {
     public BulletinPaieResponseDto convertToDto(BulletinPaie bulletinPaie) {
         BulletinPaieResponseDto dto = new BulletinPaieResponseDto();
         dto.setId(bulletinPaie.getId());
-        dto.setTauxHoraire(bulletinPaie.getTauxHoraire());
+        dto.setTauxHoraire(bulletinPaie.getTauxHoraireInitial());
         dto.setHeuresNormal(bulletinPaie.getHeuresNormal());
-        dto.setSalaireBase(bulletinPaie.getSalaireBase());
-        dto.setHeureSup1(bulletinPaie.getHeuresSup1());
-        dto.setHeureSup2(bulletinPaie.getHeuresSup2());
-        dto.setHeureNuit(bulletinPaie.getHeuresNuit());
-        dto.setHeureFerie(bulletinPaie.getHeuresFerie());
-        dto.setPrimeTransport(bulletinPaie.getPrimeTransport());
-        dto.setPrimePonctualite(bulletinPaie.getPrimePonctualite());
-        dto.setPrimeAnciennete(bulletinPaie.getPrimeAnciennete());
-        dto.setPrimeRendement(bulletinPaie.getPrimeRendement());
-        dto.setPrimeTechnicite(bulletinPaie.getPrimeTechnicite());
-        dto.setTotalPrimes(bulletinPaie.getTotalPrimes());
+
+        // Mapping des totaux principaux (qui sont déjà agrégés dans l'entité BulletinPaie)
+        dto.setTotalGains(bulletinPaie.getTotalGains());
         dto.setSalaireBrut(bulletinPaie.getSalaireBrut());
         dto.setBaseCnps(bulletinPaie.getBaseCnps());
         dto.setSalaireImposable(bulletinPaie.getSalaireImposable());
-        dto.setAvancesSurSalaires(bulletinPaie.getAvancesSurSalaires());
-
-        dto.setIrpp(bulletinPaie.getIrpp());
-        dto.setCac(bulletinPaie.getCac());
-        dto.setTaxeCommunale(bulletinPaie.getTaxeCommunale());
-        dto.setRedevanceAudioVisuelle(bulletinPaie.getRedevanceAudioVisuelle());
-        dto.setCnpsVieillesseSalarie(bulletinPaie.getCnpsVieillesseSalarie());
-        dto.setCreditFoncierSalarie(bulletinPaie.getCreditFoncierSalarie());
-        dto.setFneSalarie(bulletinPaie.getFneSalarie());
-        dto.setTotalRetenues(bulletinPaie.getTotalRetenues());
-        dto.setCnpsVieillesseEmployeur(bulletinPaie.getCnpsVieillesseEmployeur());
-        dto.setCnpsAllocationsFamiliales(bulletinPaie.getCnpsAllocationsFamiliales());
-        dto.setCnpsAccidentsTravail(bulletinPaie.getCnpsAccidentsTravail());
-        dto.setCreditFoncierPatronal(bulletinPaie.getCreditFoncierPatronal());
-        dto.setFnePatronal(bulletinPaie.getFnePatronal());
+        dto.setAvancesSurSalaires(bulletinPaie.getAvancesSurSalaires()); // Assurez-vous que ceci est géré comme une ligne de retenue si possible
+        dto.setTotalImpots(bulletinPaie.getTotalImpots());
+        dto.setTotalRetenuesSalariales(bulletinPaie.getTotalRetenuesSalariales());
         dto.setTotalChargesPatronales(bulletinPaie.getTotalChargesPatronales());
-        dto.setSalaireNet(bulletinPaie.getSalaireNet());
+        dto.setSalaireNetAPayer(bulletinPaie.getSalaireNetAPayer());
         dto.setCoutTotalEmployeur(bulletinPaie.getCoutTotalEmployeur());
         dto.setCotisationCnps(bulletinPaie.getCotisationCnps());
-
+        // Informations générales du bulletin
         dto.setDatePaiement(bulletinPaie.getDatePaiement());
         dto.setStatusBulletin(bulletinPaie.getStatusBulletin());
         dto.setDateCreationBulletin(bulletinPaie.getDateCreationBulletin());
+
         if (bulletinPaie.getMois() != null && bulletinPaie.getAnnee() != null) {
             dto.setPeriodePaie(bulletinPaie.getMois() + " " + bulletinPaie.getAnnee());
         } else {
-            dto.setPeriodePaie("N/A"); // Valeur par défaut si les champs sont nuls
+            dto.setPeriodePaie("N/A");
         }
 
         if(bulletinPaie.getMethodePaiement() != null) {
             dto.setMethodePaiement(bulletinPaie.getMethodePaiement().getDisplayValue());
-        }else {
+        } else {
             dto.setMethodePaiement("Non specifiee");
         }
 
-
-        //Mappez les donne de entrepise
+        // Mapping des objets complexes
         if(bulletinPaie.getEntreprise() != null){
             EntrepriseDto entrepriseDto = new EntrepriseDto();
             entrepriseDto.setId(bulletinPaie.getEntreprise().getId());
@@ -224,20 +791,66 @@ public class BulletinPaieService {
             entrepriseDto.setTelephoneEntreprise(bulletinPaie.getEntreprise().getTelephoneEntreprise());
             entrepriseDto.setEmailEntreprise(bulletinPaie.getEntreprise().getEmailEntreprise());
             entrepriseDto.setLogoUrl(bulletinPaie.getEntreprise().getLogoUrl());
-
-            System.out.println("Logo URL dans EntrepriseService (avant de passer au template) : " + entrepriseDto.getLogoUrl());
-
             dto.setEntreprise(entrepriseDto);
         }
 
-
-        // Convertir et définir EmployeResponseDto
         if (bulletinPaie.getEmploye() != null) {
             EmployeResponseDto employeDto = employeService.convertToDto(bulletinPaie.getEmploye());
             dto.setEmploye(employeDto);
         }
 
+        // *** MAPPING DES LIGNES DE PAIE DYNAMIQUES ***
+        // Récupérez les lignes brutes (celles de l'entité BulletinPaie)
+        List<LigneBulletinPaie> lignesBrutes = bulletinPaie.getLignesPaie();
+
+        // Appelez le PayrollDisplayService pour préparer les lignes (y compris la fusion)
+        List<LignePaieDto> lignesPourAffichage = payrollDisplayService.prepareLignesPaieForDisplay(lignesBrutes);
+
+        // Définissez les lignes préparées dans votre DTO de réponse
+        dto.setLignesPaie(lignesPourAffichage);
+
         return dto;
+    }
+
+    // Nouvelle méthode pour convertir une LigneBulletinPaie en LignePaieDto
+    private LignePaieDto convertLigneBulletinPaieToDto(LigneBulletinPaie ligne) {
+        Integer affichageOrdre = null;
+        String tauxAffiche = null;
+
+        // Correction ici !
+        if (ligne.getElementPaie() != null) {
+            FormuleCalculType formule = ligne.getElementPaie().getFormuleCalcul();
+            if (formule == FormuleCalculType.BAREME) {
+                tauxAffiche = "BARÈME";
+            } else if (formule == FormuleCalculType.MONTANT_FIXE) {
+                tauxAffiche = ""; // Toujours "-" pour montant fixe
+            } else if (ligne.getTauxApplique() != null && ligne.getTauxApplique().compareTo(BigDecimal.ZERO) != 0) {
+                tauxAffiche = ligne.getTauxApplique().multiply(BigDecimal.valueOf(100)).setScale(2, RoundingMode.HALF_UP).toString() + " %";
+            } else {
+                tauxAffiche = "-";
+            }
+        } else if (ligne.getTauxApplique() != null && ligne.getTauxApplique().compareTo(BigDecimal.ZERO) != 0) {
+            tauxAffiche = ligne.getTauxApplique().multiply(BigDecimal.valueOf(100)).setScale(2, RoundingMode.HALF_UP).toString() + " %";
+        } else {
+            tauxAffiche = "-";
+        }
+
+        if (ligne.getTemplateElementPaieConfig() != null) {
+            affichageOrdre = ligne.getTemplateElementPaieConfig().getAffichageOrdre();
+        }
+        return LignePaieDto.builder()
+                .affichageOrdre(affichageOrdre)
+                .designation(ligne.getElementPaie() != null ? ligne.getElementPaie().getDesignation() : "N/A")
+                .categorie(ligne.getElementPaie() != null ? ligne.getElementPaie().getCategorie() : null)
+                .type(ligne.getElementPaie() != null ? ligne.getElementPaie().getType() : null)
+                .nombre(ligne.getNombre() != null && ligne.getNombre().compareTo(BigDecimal.ONE) == 0 ? null : ligne.getNombre())
+                .tauxApplique(ligne.getTauxApplique())
+                .montantFinal(ligne.getMontantFinal())
+                .descriptionDetaillee(ligne.getDescriptionDetaillee())
+                .tauxAffiche(tauxAffiche)
+                .baseApplique(ligne.getBaseApplique())
+                .formuleCalcul(ligne.getFormuleCalcul())
+                .build();
     }
 
     //Methode Crud
@@ -621,10 +1234,72 @@ public class BulletinPaieService {
 
 
 
+    private BulletinPaieResponseDto convertToResponseDto(BulletinPaie bulletinPaie) {
+        BulletinPaieResponseDto dto = new BulletinPaieResponseDto();
+
+        // Mapping des champs de base
+        dto.setId(bulletinPaie.getId());
+        dto.setTauxHoraire(bulletinPaie.getTauxHoraireInitial());
+        dto.setHeuresNormal(bulletinPaie.getHeuresNormal());
+        dto.setSalaireBrut(bulletinPaie.getSalaireBrut());
+        dto.setSalaireImposable(bulletinPaie.getSalaireImposable());
+        dto.setBaseCnps(bulletinPaie.getBaseCnps());
+        dto.setCoutTotalEmployeur(bulletinPaie.getCoutTotalEmployeur());
+        dto.setCotisationCnps(bulletinPaie.getCotisationCnps());
+        dto.setDateCreationBulletin(bulletinPaie.getDateCreationBulletin());
+        dto.setDatePaiement(bulletinPaie.getDatePaiement());
+        dto.setStatusBulletin(bulletinPaie.getStatusBulletin());
+
+        // Gestion de la période de paie
+        if (bulletinPaie.getMois() != null && bulletinPaie.getAnnee() != null) {
+            dto.setPeriodePaie(bulletinPaie.getMois() + " " + bulletinPaie.getAnnee());
+        } else {
+            dto.setPeriodePaie("N/A");
+        }
+
+        // Gestion de la méthode de paiement
+        if (bulletinPaie.getMethodePaiement() != null) {
+            dto.setMethodePaiement(bulletinPaie.getMethodePaiement().getDisplayValue());
+        } else {
+            dto.setMethodePaiement("Non spécifiée");
+        }
+
+        // Mapping de l'employé
+        if (bulletinPaie.getEmploye() != null) {
+            EmployeResponseDto employeDto = employeService.convertToDto(bulletinPaie.getEmploye());
+            dto.setEmploye(employeDto);
+        }
+
+        // Mapping de l'entreprise
+        if (bulletinPaie.getEmploye() != null && bulletinPaie.getEmploye().getEntreprise() != null) {
+            EntrepriseDto entrepriseDto = convertEntrepriseToDto(bulletinPaie.getEmploye().getEntreprise());
+            dto.setEntreprise(entrepriseDto);
+        }
+
+        // *** MAPPING DYNAMIQUE DES LIGNES DE PAIE ***
+        if (bulletinPaie.getLignesPaie() != null) {
+            List<LignePaieDto> lignesPaieDto = bulletinPaie.getLignesPaie().stream()
+                    .map(this::convertLigneBulletinPaieToDto)
+                    .collect(Collectors.toList());
+            dto.setLignesPaie(lignesPaieDto);
+        }
+
+        return dto;
+    }
 
 
 
-
+    private EntrepriseDto convertEntrepriseToDto(Entreprise entreprise) {
+        EntrepriseDto dto = new EntrepriseDto();
+        dto.setId(entreprise.getId());
+        dto.setNom(entreprise.getNom());
+        dto.setNumeroSiret(entreprise.getNumeroSiret());
+        dto.setAdresseEntreprise(entreprise.getAdresseEntreprise());
+        dto.setTelephoneEntreprise(entreprise.getTelephoneEntreprise());
+        dto.setEmailEntreprise(entreprise.getEmailEntreprise());
+        dto.setLogoUrl(entreprise.getLogoUrl());
+        return dto;
+    }
 
 
 
@@ -640,61 +1315,35 @@ public class BulletinPaieService {
     private BulletinPaieEmployeurDto convertToEmployeurDto(BulletinPaie bulletinPaie) {
         BulletinPaieEmployeurDto dto = new BulletinPaieEmployeurDto();
         dto.setId(bulletinPaie.getId());
-        dto.setSalaireBase(bulletinPaie.getSalaireBase());
-        dto.setTauxHoraire(bulletinPaie.getTauxHoraire());
+
+        // Mappage des champs spécifiques qui sont des inputs ou des totaux agrégés
+        dto.setSalaireBaseInitial(bulletinPaie.getSalaireBaseInitial());
+        dto.setTauxHoraireInitial(bulletinPaie.getTauxHoraireInitial());
         dto.setHeuresNormal(bulletinPaie.getHeuresNormal());
-        dto.setHeuresSup1(bulletinPaie.getHeuresSup1());
-        dto.setHeuresSup2(bulletinPaie.getHeuresSup2());
+        dto.setHeuresSup(bulletinPaie.getHeuresSup()); // Assurez-vous que bulletinPaie.getHeuresSup() existe
         dto.setHeuresNuit(bulletinPaie.getHeuresNuit());
         dto.setHeuresFerie(bulletinPaie.getHeuresFerie());
-        dto.setPrimeTransport(bulletinPaie.getPrimeTransport());
-        dto.setPrimePonctualite(bulletinPaie.getPrimePonctualite());
-        dto.setPrimeTechnicite(bulletinPaie.getPrimeTechnicite());
-        dto.setPrimeAnciennete(bulletinPaie.getPrimeAnciennete());
-        dto.setPrimeRendement(bulletinPaie.getPrimeRendement());
-        dto.setAutrePrimes(bulletinPaie.getAutrePrimes());
-        dto.setAvantageNature(bulletinPaie.getAvantageNature());
-        dto.setTotalPrimes(bulletinPaie.getTotalPrimes());
+        dto.setAvancesSurSalaires(bulletinPaie.getAvancesSurSalaires());
+
+        dto.setTotalGains(bulletinPaie.getTotalGains()); // Ancien totalPrimes
         dto.setSalaireBrut(bulletinPaie.getSalaireBrut());
         dto.setSalaireImposable(bulletinPaie.getSalaireImposable());
         dto.setBaseCnps(bulletinPaie.getBaseCnps());
-        dto.setBaseCnps1(bulletinPaie.getBaseCnps());
-        dto.setIrpp(bulletinPaie.getIrpp());
-        dto.setCac(bulletinPaie.getCac());
-        dto.setAvancesSurSalaires(bulletinPaie.getAvancesSurSalaires());
-        dto.setTaxeCommunale(bulletinPaie.getTaxeCommunale());
-        dto.setRedevanceAudioVisuelle(bulletinPaie.getRedevanceAudioVisuelle());
-        dto.setCnpsVieillesseSalarie(bulletinPaie.getCnpsVieillesseSalarie());
-        dto.setCreditFoncierSalarie(bulletinPaie.getCreditFoncierSalarie());
-        dto.setFneSalarie(bulletinPaie.getFneSalarie());
-        dto.setTotalRetenues(bulletinPaie.getTotalRetenues());
-        dto.setCnpsVieillesseEmployeur(bulletinPaie.getCnpsVieillesseEmployeur());
-        dto.setCnpsAllocationsFamiliales(bulletinPaie.getCnpsAllocationsFamiliales());
-        dto.setCnpsAccidentsTravail(bulletinPaie.getCnpsAccidentsTravail());
-        dto.setCreditFoncierPatronal(bulletinPaie.getCreditFoncierPatronal());
-        dto.setFnePatronal(bulletinPaie.getFnePatronal());
+        dto.setTotalRetenuesSalariales(bulletinPaie.getTotalRetenuesSalariales()); // Ancien totalRetenues
+        dto.setTotalImpots(bulletinPaie.getTotalImpots()); // Nouveau champ
         dto.setTotalChargesPatronales(bulletinPaie.getTotalChargesPatronales());
         dto.setCotisationCnps(bulletinPaie.getCotisationCnps());
         dto.setCoutTotalEmployeur(bulletinPaie.getCoutTotalEmployeur());
-        dto.setSalaireNet(bulletinPaie.getSalaireNet());
-//        dto.setDateCreation(bulletinPaie.getDateEmbauche());
-//        dto.setPeriodeDebut(bulletinPaie.getPeriodeDebut());
-//        dto.setPeriodeFin(bulletinPaie.getPeriodeFin());
-//        dto.setJourConge(bulletinPaie.getJourConge());
-//        dto.setMois(bulletinPaie.getMois());
-//        dto.setAnnee(bulletinPaie.getAnnee());
-//        dto.setPeriodePaie(dto.getPeriodePaie());
-//      ;
-//        dto.setDateCreation(dto.getDateCreation());
-//        dto.setDatePaiement(dto.getDatePaiement());
-
+        dto.setSalaireNetAPayer(bulletinPaie.getSalaireNetAPayer());
+        // Informations générales du bulletin
         dto.setDateCreationBulletin(bulletinPaie.getDateCreationBulletin());
         dto.setDatePaiement(bulletinPaie.getDatePaiement());
-        dto.setStatusBulletin(bulletinPaie.getStatusBulletin());// Le statut est maintenant renseigné
+        dto.setStatusBulletin(bulletinPaie.getStatusBulletin());
+
         if (bulletinPaie.getMois() != null && bulletinPaie.getAnnee() != null) {
             dto.setPeriodePaie(bulletinPaie.getMois() + " " + bulletinPaie.getAnnee());
         } else {
-            dto.setPeriodePaie("N/A"); // Valeur par défaut si les champs sont nuls
+            dto.setPeriodePaie("N/A");
         }
 
         if(bulletinPaie.getMethodePaiement() != null) {
@@ -703,23 +1352,20 @@ public class BulletinPaieService {
             dto.setMethodePaiement("Non specifiee");
         }
 
-
         // Convert Employe to EmployeResponseDto
         if (bulletinPaie.getEmploye() != null) {
-            EmployeResponseDto employeDto = new EmployeResponseDto();
-            employeDto.setId(bulletinPaie.getEmploye().getId());
-            employeDto.setNom(bulletinPaie.getEmploye().getNom());
-            employeDto.setPrenom(bulletinPaie.getEmploye().getPrenom());
-            employeDto.setMatricule(bulletinPaie.getEmploye().getMatricule());
-            employeDto.setPoste(bulletinPaie.getEmploye().getPoste());
-            // Add other necessary employee fields
+            EmployeResponseDto employeDto = employeService.convertToDto(bulletinPaie.getEmploye()); // Réutiliser la méthode existante
             dto.setEmploye(employeDto);
         }
 
+        // *** MAPPING DES LIGNES DE PAIE DYNAMIQUES POUR EMPLOYEUR ***
+        List<LignePaieDto> lignesPaieDto = bulletinPaie.getLignesPaie().stream()
+                .map(this::convertLigneBulletinPaieToDto) // Réutiliser la méthode de conversion
+                .collect(Collectors.toList());
+        dto.setLignesPaie(lignesPaieDto);
 
         return dto;
     }
-
 
 
 
@@ -765,158 +1411,31 @@ public class BulletinPaieService {
 
 
 
-    //Calculs salaire
-    public BigDecimal calculSalaireBase(BulletinPaie fiche){
-        return calculator.calculSalaireBase(fiche);
-    }
-
-    //ajout de allocation de conge
-    public BigDecimal calculSalaireBrut(BulletinPaie fiche) {
-        return calculator.calculSalaireBrut(fiche);
-    }
-
-    public BigDecimal calculSalaireImposable(BulletinPaie fiche) {
-        return calculator.calculSalaireImposable(fiche);
-    }
-
-    //Calcul d'impots
-    public BigDecimal calculIrpp(BulletinPaie fiche) {
-        return impotCalculator.calculIrpp(fiche);
-    }
-
-    public BigDecimal calculTaxeCommunale(BulletinPaie fiche) {
-        return impotCalculator.calculTaxeCommunal(fiche);
-    }
-
-    // Calculs de cotisations
-    public BigDecimal calculTotalRetenues(BulletinPaie fiche) {
-        return cotisationCalculator.calculTotalRetenuesSalaire(fiche);
-    }
-
-    public BigDecimal calculTotalChargesPatronales(BulletinPaie fiche) {
-        return cotisationCalculator.calculTotalChargesPatronales(fiche);
-    }
-
-    // Calculs finaux
-    public BigDecimal calculSalaireNet (BulletinPaie fiche) {
-        BigDecimal salaireBrut = calculSalaireBrut(fiche);
-        BigDecimal totalRetenues = calculTotalRetenues(fiche);
-        return salaireBrut.subtract(totalRetenues).max(BigDecimal.ZERO);
-
-    }
-
-    public  BigDecimal calculCoutTotalEmployeur (BulletinPaie fiche) {
-        BigDecimal salaireBrut = calculSalaireBrut(fiche);
-        BigDecimal chargesPatronal = calculTotalChargesPatronales(fiche);
-        return mathUtils.safeAdd(salaireBrut, chargesPatronal);
-    }
-
-
-    // Méthodes utilitaires pour accéder aux calculs détaillés
-    public BigDecimal calculHeureSup1(BulletinPaie fiche) {
-        return calculator.calculHeureSup1(fiche);
-    }
-
-    public BigDecimal calculHeureSup2(BulletinPaie fiche) {
-        return calculator.calculHeureSup2(fiche);
-    }
-
-    public BigDecimal calculHeureNuit(BulletinPaie fiche) {
-        return calculator.calculHeureNuit(fiche);
-    }
-
-    public BigDecimal calculHeureFerie(BulletinPaie fiche) {
-        return calculator.calculHeureFerie(fiche);
-    }
-
-    public BigDecimal calculTotalPrimes(BulletinPaie fiche) {
-        return calculator.calculTotalPrimes(fiche);
-    }
-
-    public BigDecimal calculCac(BulletinPaie fiche) {
-        return impotCalculator.calculCac(fiche);
-    }
-
-    public BigDecimal calculRedevanceAudioVisuelle(BulletinPaie fiche) {
-        return impotCalculator.calculRedevanceAudioVisuelle(fiche);
-    }
-
-    // Cotisations détaillées - salariales
-    public BigDecimal calculCnpsVieillesseSalaire(BulletinPaie fiche) {
-        return cotisationCalculator.calculCnpsVieillesseSalarie(fiche);
-    }
-
-    public BigDecimal calculCreditFoncierSalaire(BulletinPaie fiche) {
-        return cotisationCalculator.calculCreditFoncierSalarie(fiche);
-    }
-
-    public BigDecimal calculFneSalaire(BulletinPaie fiche) {
-        return cotisationCalculator.calculFneSalaire(fiche);
-    }
-
-    // Cotisations détaillées - patronales
-    public BigDecimal calculCnpsVieillesseEmployeur(BulletinPaie fiche) {
-        return cotisationCalculator.calculCnpsVieillesseEmployeur(fiche);
-    }
-
-    public BigDecimal calculCnpsAllocationsFamiliales(BulletinPaie fiche) {
-        return cotisationCalculator.calculCnpsAllocationsFamiliales(fiche);
-    }
-
-    public BigDecimal calculCnpsAccidentsTravail(BulletinPaie fiche) {
-        return cotisationCalculator.calculCnpsAccidentsTravail(fiche);
-    }
-
-    public BigDecimal calculCreditFoncierPatronal(BulletinPaie fiche) {
-        return cotisationCalculator.calculCreditFoncierPatronal(fiche);
-    }
-
-    public BigDecimal calculFnePatronal(BulletinPaie fiche) {
-        return cotisationCalculator.calculFnePatronal(fiche);
-    }
-
-
-    public BigDecimal calculBaseCnps(BulletinPaie fiche) {
-        return calculator.calculBaseCnps(fiche);
-    }
-
-
-    // pour les calcul de la cnps on utilise ceci
-//    public BigDecimal calculBaseCnps1(BulletinPaie fiche) {
-//        return calculator.calculAllocationConge(fiche);
-//    }
-
-    public BigDecimal calculCotisationCnps (BulletinPaie fiche){ return  cotisationCalculator.cotisationCnps(fiche); }
-
     public BulletinPaieResponseDto updateBulletinPaie (Long id, BulletinPaie updatedBulletinPaie){
 
         BulletinPaie existingBulletinPaie = bulletinRepo.findById(id)
                 .orElseThrow(() -> new RessourceNotFoundException("Bulletin de paie non trouvé avec l'ID :  "+ id));
 
-        existingBulletinPaie.setSalaireBase(updatedBulletinPaie.getSalaireBase());
-        existingBulletinPaie.setTauxHoraire(updatedBulletinPaie.getTauxHoraire());
-        existingBulletinPaie.setHeuresSup1(updatedBulletinPaie.getHeuresSup1());
-        existingBulletinPaie.setHeuresSup2(updatedBulletinPaie.getHeuresSup2());
+        existingBulletinPaie.setSalaireBaseInitial(updatedBulletinPaie.getSalaireBaseInitial());
+        existingBulletinPaie.setTauxHoraireInitial(updatedBulletinPaie.getTauxHoraireInitial());
+        existingBulletinPaie.setHeuresNormal(updatedBulletinPaie.getHeuresNormal());
+        existingBulletinPaie.setHeuresSup(updatedBulletinPaie.getHeuresSup()); // Utilise heuresSup
         existingBulletinPaie.setHeuresNuit(updatedBulletinPaie.getHeuresNuit());
         existingBulletinPaie.setHeuresFerie(updatedBulletinPaie.getHeuresFerie());
-        existingBulletinPaie.setPrimeTransport(updatedBulletinPaie.getPrimeTransport());
-        existingBulletinPaie.setPrimePonctualite(updatedBulletinPaie.getPrimePonctualite());
-        existingBulletinPaie.setPrimeTechnicite(updatedBulletinPaie.getPrimeTechnicite());
-        existingBulletinPaie.setPrimeAnciennete(updatedBulletinPaie.getPrimeAnciennete());
-        existingBulletinPaie.setPrimeRendement(updatedBulletinPaie.getPrimeRendement());
-        existingBulletinPaie.setAutrePrimes(updatedBulletinPaie.getAutrePrimes());
-        existingBulletinPaie.setAvantageNature(updatedBulletinPaie.getAvantageNature());
+        existingBulletinPaie.setPrimeAnciennete(updatedBulletinPaie.getPrimeAnciennete()); // Garde primeAnciennete si toujours présent
+        existingBulletinPaie.setAvancesSurSalaires(updatedBulletinPaie.getAvancesSurSalaires()); // Maintenu car c'est une valeur d'entrée/déduction spécifique
 
-        if(updatedBulletinPaie.getEmploye() != null && updatedBulletinPaie.getEmploye().getId() != null
-                && !existingBulletinPaie.getEmploye().getId().equals(updatedBulletinPaie.getEmploye().getId())){
+        if (updatedBulletinPaie.getEmploye() != null && updatedBulletinPaie.getEmploye().getId() != null
+                && !existingBulletinPaie.getEmploye().getId().equals(updatedBulletinPaie.getEmploye().getId())) {
             Employe newEmploye = employeRepo.findById(updatedBulletinPaie.getEmploye().getId())
-                    .orElseThrow(()-> new RessourceNotFoundException("Nouveau Employe non trouve avec id :" +updatedBulletinPaie.getEmploye().getId()));
+                    .orElseThrow(() -> new RessourceNotFoundException("Nouveau Employe non trouve avec id :" + updatedBulletinPaie.getEmploye().getId()));
             existingBulletinPaie.setEmploye(newEmploye);
         }
-
         BulletinPaie calculBulletinUpdate = calculBulletin(existingBulletinPaie);
 
+        // Sauvegarde du bulletin de paie mis à jour et recalculé
         BulletinPaie savedBulletin = bulletinRepo.save(calculBulletinUpdate);
+
         return convertToDto(savedBulletin);
     }
 }

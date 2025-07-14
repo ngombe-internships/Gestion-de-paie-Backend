@@ -9,6 +9,8 @@ import com.hades.paie1.model.Entreprise;
 import com.hades.paie1.model.User;
 import com.hades.paie1.repository.EmployeRepository;
 import com.hades.paie1.repository.UserRepository;
+import com.hades.paie1.service.calculators.AncienneteService;
+import com.hades.paie1.utils.PaieConstants;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
@@ -19,6 +21,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -31,15 +35,18 @@ public class EmployeService {
     private EmployeRepository employeRepo;
     private UserRepository userRepository;
 
+    private AncienneteService ancienneteService;
+
     private static  final Logger logger = LoggerFactory.getLogger(EmployeService.class);
-    public EmployeService (EmployeRepository employeRepo, UserRepository userRepository){
+    public EmployeService (EmployeRepository employeRepo, UserRepository userRepository, AncienneteService ancienneteService){
         this.employeRepo = employeRepo;
         this.userRepository = userRepository;
+        this.ancienneteService = ancienneteService;
     }
 
 
     // Méthode utilitaire pour obtenir l'utilisateur authentifié
-    private User getAuthenticatedUser() {
+    public User getAuthenticatedUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated() || "anonymousUser".equals(authentication.getPrincipal())) {
             throw new AccessDeniedException("User not authenticated.");
@@ -70,6 +77,10 @@ public class EmployeService {
                .typeContratEnum(dto.getTypeContratEnum())
                .dateNaissance(dto.getDateNaissance())
                .sexe(dto.getSexe())
+               .soldeJoursConge(dto.getSoldeJoursConge())
+               .heuresContractuellesHebdomadaires(dto.getHeuresContractuellesHebdomadaires())
+               .joursOuvrablesContractuelsHebdomadaires(dto.getJoursOuvrablesContractuelsHebdomadaires())
+               .salaireBase(dto.getSalaireBase())
                .build();
 
 
@@ -102,6 +113,10 @@ public class EmployeService {
                 .typeContratEnum(employe.getTypeContratEnum())
                 .sexe(employe.getSexe())
                 .dateNaissance(employe.getDateNaissance())
+                .soldeJoursConge(employe.getSoldeJoursConge())
+                .heuresContractuellesHebdomadaires(employe.getHeuresContractuellesHebdomadaires())
+                .joursOuvrablesContractuelsHebdomadaires(employe.getJoursOuvrablesContractuelsHebdomadaires())
+                .salaireBase(employe.getSalaireBase())
                 .build();
 
     }
@@ -163,13 +178,19 @@ public class EmployeService {
         if ( !existingEmploye.getMatricule().equals(employeDto.getMatricule()) && employeRepo.existsByMatricule(employeDto.getMatricule())){
             throw new RessourceNotFoundException ("Matricule deja utilise " + employeDto.getMatricule());
         }
-        if(employeDto.getNumeroCnps() != null && employeRepo.existsByNumeroCnps(employeDto.getNumeroCnps())){
+        if(employeDto.getNumeroCnps() != null &&
+                !employeDto.getNumeroCnps().equals(existingEmploye.getNumeroCnps()) &&
+                employeRepo.existsByNumeroCnps(employeDto.getNumeroCnps())){
             throw new RessourceNotFoundException("Numero CNPS deja utilise " +employeDto.getNumeroCnps());
         }
-        if(employeDto.getNiu() !=null && employeRepo.existsByNiu(employeDto.getNiu())){
+        if(employeDto.getNiu() !=null &&
+                !employeDto.getNiu().equals(existingEmploye.getNiu())&&
+                employeRepo.existsByNiu(employeDto.getNiu())){
             throw new RessourceNotFoundException("NIU deja utilise" +employeDto.getNiu());
         }
-        if(employeDto.getEmail() != null && employeRepo.existsByEmail(employeDto.getEmail())){
+        if(employeDto.getEmail() != null &&
+                !employeDto.getEmail().equals(existingEmploye.getEmail())&&
+                employeRepo.existsByEmail(employeDto.getEmail())){
             throw new RessourceNotFoundException("Email deja utilise" +employeDto.getEmail());
         }
 
@@ -192,6 +213,10 @@ public class EmployeService {
         existingEmploye.setTypeContratEnum(employeDto.getTypeContratEnum());
         existingEmploye.setDateNaissance(employeDto.getDateNaissance());
         existingEmploye.setSexe(employeDto.getSexe());
+        existingEmploye.setSoldeJoursConge(employeDto.getSoldeJoursConge());
+        existingEmploye.setJoursOuvrablesContractuelsHebdomadaires(employeDto.getJoursOuvrablesContractuelsHebdomadaires());
+        existingEmploye.setHeuresContractuellesHebdomadaires(employeDto.getHeuresContractuellesHebdomadaires());
+        existingEmploye.setSalaireBase(employeDto.getSalaireBase());
 
 
         Employe savedEmploye = employeRepo.save(existingEmploye);
@@ -204,8 +229,6 @@ public class EmployeService {
     public List<EmployeResponseDto> getAllEmploye() { // Cette méthode n'a pas de searchTerm en paramètre
         User currentUser = getAuthenticatedUser();
         List<Employe> employes;
-
-
 
         if (currentUser.getRole() == Role.ADMIN) {
 
@@ -358,5 +381,33 @@ public class EmployeService {
             return employeRepo.countByEntreprise(entreprise);
         }
     }
+
+    @Transactional
+    public void updateEmployeLeaveBalance (Employe employe) {
+        if(employe.getDateEmbauche() == null){
+            return;
+        }
+
+        int ancienneteEnAnnees = ancienneteService.calculAncienneteEnAnnees(employe.getDateEmbauche());
+
+        BigDecimal jourBonusAnciennete = BigDecimal.ZERO;
+        if (ancienneteEnAnnees >=5){
+            jourBonusAnciennete = BigDecimal.valueOf(ancienneteEnAnnees)
+                    .divide(BigDecimal.valueOf(5), 0, RoundingMode.FLOOR)
+                    .multiply(BigDecimal.valueOf(2));
+        }
+
+        BigDecimal totalJoursCongesAnnuels = PaieConstants.JOURCONGESBASE.add(jourBonusAnciennete);
+
+        BigDecimal joursCongesMensuels = totalJoursCongesAnnuels.divide(BigDecimal.valueOf(12),2,RoundingMode.HALF_UP);
+        if(employe.getSoldeJoursConge() == null){
+            employe.setSoldeJoursConge(BigDecimal.ZERO);
+        }
+
+        employe.setSoldeJoursConge(employe.getSoldeJoursConge().add(joursCongesMensuels));
+
+        employeRepo.save(employe);
+    }
+
 
 }

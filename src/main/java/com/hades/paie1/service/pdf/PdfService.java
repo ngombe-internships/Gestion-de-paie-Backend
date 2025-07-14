@@ -1,8 +1,9 @@
-package com.hades.paie1.service;
+package com.hades.paie1.service.pdf;
 
-import com.hades.paie1.dto.BulletinPaieEmployeurDto;
 import com.hades.paie1.dto.BulletinPaieResponseDto;
 import com.hades.paie1.dto.EntrepriseDto;
+import com.hades.paie1.dto.LignePaieDto;
+import com.hades.paie1.model.LigneBulletinPaie;
 import com.openhtmltopdf.pdfboxout.PdfRendererBuilder; // N'oubliez pas cette importation
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -19,6 +20,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.net.URI; // Nouvelle importation requise pour Paths.get(new URI(url))
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class PdfService {
@@ -48,7 +51,7 @@ public class PdfService {
                     fileName = relativeLogoPath;
                 }
 
-                 Path absoluteLogoPath = Paths.get(uploadDir).resolve(fileName);
+                Path absoluteLogoPath = Paths.get(uploadDir).resolve(fileName);
 
                 String htmlLogoUrl = absoluteLogoPath.toUri().toString();
                 logger.info("URL du logo générée pour le PDF (HTML) : {}", htmlLogoUrl);
@@ -186,47 +189,20 @@ public class PdfService {
         context.setVariable("bulletin", dataForHtml);
         context.setVariable("isPreview", true);
 
-     return templateEngine.process("bulletin-template", context);
+        return templateEngine.process("bulletin-template", context);
     }
 
 
-private BulletinPaieResponseDto cloneBulletinData(BulletinPaieResponseDto original) {
+    private BulletinPaieResponseDto cloneBulletinData(BulletinPaieResponseDto original) {
         BulletinPaieResponseDto clone = new BulletinPaieResponseDto();
 
         // Copier tous les champs primitifs et String
         clone.setId(original.getId());
         clone.setTauxHoraire(original.getTauxHoraire());
         clone.setHeuresNormal(original.getHeuresNormal());
-        clone.setSalaireBase(original.getSalaireBase());
-        clone.setHeureSup1(original.getHeureSup1());
-        clone.setHeureSup2(original.getHeureSup2());
-        clone.setHeureNuit(original.getHeureNuit());
-        clone.setHeureFerie(original.getHeureFerie());
-        clone.setPrimeTransport(original.getPrimeTransport());
-        clone.setPrimePonctualite(original.getPrimePonctualite());
-        clone.setPrimeAnciennete(original.getPrimeAnciennete());
-        clone.setPrimeRendement(original.getPrimeRendement());
-        clone.setPrimeTechnicite(original.getPrimeTechnicite());
-        clone.setTotalPrimes(original.getTotalPrimes());
         clone.setSalaireBrut(original.getSalaireBrut());
         clone.setSalaireImposable(original.getSalaireImposable());
         clone.setBaseCnps(original.getBaseCnps());
-        clone.setIrpp(original.getIrpp());
-        clone.setCac(original.getCac());
-        clone.setAvancesSurSalaires(original.getAvancesSurSalaires());
-        clone.setTaxeCommunale(original.getTaxeCommunale());
-        clone.setRedevanceAudioVisuelle(original.getRedevanceAudioVisuelle());
-        clone.setCnpsVieillesseSalarie(original.getCnpsVieillesseSalarie());
-        clone.setCreditFoncierSalarie(original.getCreditFoncierSalarie());
-        clone.setFneSalarie(original.getFneSalarie());
-        clone.setTotalRetenues(original.getTotalRetenues());
-        clone.setCnpsVieillesseEmployeur(original.getCnpsVieillesseEmployeur());
-        clone.setCnpsAllocationsFamiliales(original.getCnpsAllocationsFamiliales());
-        clone.setCnpsAccidentsTravail(original.getCnpsAccidentsTravail());
-        clone.setCreditFoncierPatronal(original.getCreditFoncierPatronal());
-        clone.setFnePatronal(original.getFnePatronal());
-        clone.setTotalChargesPatronales(original.getTotalChargesPatronales());
-        clone.setSalaireNet(original.getSalaireNet());
         clone.setCoutTotalEmployeur(original.getCoutTotalEmployeur());
         clone.setCotisationCnps(original.getCotisationCnps());
         clone.setPeriodePaie(original.getPeriodePaie());
@@ -234,14 +210,13 @@ private BulletinPaieResponseDto cloneBulletinData(BulletinPaieResponseDto origin
         clone.setStatusBulletin(original.getStatusBulletin());
         clone.setDatePaiement(original.getDatePaiement());
         clone.setMethodePaiement(original.getMethodePaiement());
+
         // Cloner les objets imbriqués
-        // Pour EmployeDto, une simple copie de référence peut suffire si l'objet n'est pas modifié.
         if (original.getEmploye() != null) {
             clone.setEmploye(original.getEmploye());
         }
 
-        // Pour EntrepriseService, nous allons modifier son 'logoUrl', donc il faut le cloner
-        // pour ne pas modifier l'objet original.
+        // Pour EntrepriseDto, nous allons modifier son 'logoUrl', donc il faut le cloner
         if (original.getEntreprise() != null) {
             EntrepriseDto clonedEntreprise = new EntrepriseDto();
             clonedEntreprise.setId(original.getEntreprise().getId());
@@ -251,10 +226,32 @@ private BulletinPaieResponseDto cloneBulletinData(BulletinPaieResponseDto origin
             clonedEntreprise.setTelephoneEntreprise(original.getEntreprise().getTelephoneEntreprise());
             clonedEntreprise.setEmailEntreprise(original.getEntreprise().getEmailEntreprise());
             clonedEntreprise.setLogoUrl(original.getEntreprise().getLogoUrl());
-            // Ajoutez ici d'autres champs si EntrepriseService en a plus
             clone.setEntreprise(clonedEntreprise);
+        }
+
+        // *** MAPPING DYNAMIQUE DES LIGNES DE PAIE ***
+        if (original.getLignesPaie() != null) {
+            List<LignePaieDto> lignesPaieClonees = original.getLignesPaie().stream()
+                    .map(this::cloneLignePaieDto) // Cloner chaque ligne
+                    .collect(Collectors.toList());
+            clone.setLignesPaie(lignesPaieClonees);
         }
 
         return clone;
     }
+
+    private LignePaieDto cloneLignePaieDto(LignePaieDto original) {
+        return LignePaieDto.builder()
+                .designation(original.getDesignation())
+                .categorie(original.getCategorie())
+                .type(original.getType())
+                .nombre(original.getNombre())
+                .tauxApplique(original.getTauxApplique())
+                .montantFinal(original.getMontantFinal())
+                .baseApplique(original.getBaseApplique())
+                .formuleCalcul(original.getFormuleCalcul())
+                .build();
+    }
+
+
 }

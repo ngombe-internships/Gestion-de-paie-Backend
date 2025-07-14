@@ -2,6 +2,7 @@ package com.hades.paie1.dto;
 
 import lombok.Data;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 
 @Data
@@ -18,5 +19,12 @@ public class CreateEmployerAndCompanyDto {
         private LocalDate dateCreation;
         private String emailEntreprise;
         private String telephoneEntreprise;
+
+        //nouveau
+        private Double latitudeEntreprise;
+        private Double longitudeEntreprise;
+        private Integer radiusToleranceMeters;
+        private BigDecimal standardHeuresHebdomadaires;
+        private Integer standardJoursOuvrablesHebdomadaires;
 
 }

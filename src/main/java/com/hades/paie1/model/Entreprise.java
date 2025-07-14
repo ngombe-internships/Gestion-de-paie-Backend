@@ -1,14 +1,17 @@
 package com.hades.paie1.model;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 @Data
 @NoArgsConstructor
@@ -44,12 +47,53 @@ public class Entreprise {
     private String logoUrl;
 
 
-    @OneToOne(mappedBy =  "entreprise", cascade = CascadeType.ALL, fetch =FetchType.LAZY, optional = true )
+
+    //nouveau
+//    @Column(name="latitude_entreprise")
+//    private Double latitudeEntreprise;
+//
+//    @Column(name="longitude_entreprise")
+//    private Double longitudeEntreprise;
+//
+//    @Column(name="radius_tolerance_meters")
+//    private Integer radiusToleranceMeters;
+
+    @Column(name = "standard_heures_hebdomadaires", precision = 5, scale = 2)
+    private BigDecimal standardHeuresHebdomadaires;
+
+    @Column(name = "standard_jours_ouvrables_hebdomadaires")
+    private Integer standardJoursOuvrablesHebdomadaires;
+
+
+    @OneToOne(mappedBy = "entreprise", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JsonManagedReference("user-entreprise")
     private  User employeurPrincipal;
 
-    @OneToMany(mappedBy = "entreprise", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private List <Employe> employes;
 
+    @OneToMany(mappedBy = "entreprise", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JsonManagedReference("employe-entreprise")
+    private List <Employe> employes = new ArrayList<>();
+
+
+    @Column(name = "template_bulletin_path")
+    private String templateBulletinPath;
+
+    @ManyToMany
+    @JoinTable(
+            name = "entreprise_element_paie",
+            joinColumns = @JoinColumn(name = "entreprise_id"),
+            inverseJoinColumns = @JoinColumn(name = "element_paie_id")
+    )
+    private Set<ElementPaie> elementPaieActifs;
+
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "default_bulletin_template_id", unique = true) // Assurez-vous que cette colonne n'existe pas déjà
+    @JsonManagedReference("entreprise-templates")
+    private BulletinTemplate defaultBulletinTemplate;
+
+
+    @OneToMany(mappedBy = "entreprise", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    private List<BulletinTemplate> bulletinTemplates = new ArrayList<>();
 
 
 }

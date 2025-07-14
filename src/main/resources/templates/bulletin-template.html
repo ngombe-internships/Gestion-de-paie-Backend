@@ -6,7 +6,7 @@
     <style>
         @page {
             size: A4;
-            margin: 2cm;
+            margin: 0.8cm;
         }
 
         * {
@@ -18,7 +18,7 @@
         body {
             font-family: 'Arial', sans-serif;
             font-size: 10px;
-            line-height: 1.2;
+            line-height: 1.3;
             color: #333;
             background: white;
         }
@@ -32,24 +32,24 @@
             flex-direction: column;
         }
 
-        /* Section pour le logo et informations de l'entreprise - SOLUTION ROBUSTE */
+        /* Section pour le logo et informations de l'entreprise */
         .company-header {
             display: table;
             width: 100%;
             table-layout: fixed;
             border-bottom: 1px solid #bdc3c7;
-            margin-bottom: 15px;
-            padding: 10px 0;
+            margin-bottom: 12px;
+            padding: 8px 0;
         }
 
         .company-logo {
             display: table-cell;
             width: 140px;
-            height: 80px;
+            height: 85px;
             border: 2px dashed #bdc3c7;
             text-align: center;
             vertical-align: middle;
-            font-size: 9px;
+            font-size: 10px;
             color: #7f8c8d;
             overflow: hidden;
         }
@@ -75,7 +75,7 @@
         }
 
         .company-info p {
-            font-size: 10px;
+            font-size: 11px;
             color: #555;
             margin-bottom: 3px;
             line-height: 1.3;
@@ -84,12 +84,12 @@
         .header {
             text-align: center;
             border-bottom: 2px solid #2c3e50;
-            padding-bottom: 10px;
-            margin-bottom: 15px;
+            padding-bottom: 12px;
+            margin-bottom: 18px;
         }
 
         .header h1 {
-            font-size: 18px;
+            font-size: 20px;
             font-weight: bold;
             color: #2c3e50;
             margin-bottom: 3px;
@@ -98,7 +98,7 @@
         }
 
         .header .subtitle {
-            font-size: 10px;
+            font-size: 11px;
             color: #7f8c8d;
         }
 
@@ -106,7 +106,7 @@
         .info-section {
             display: table;
             width: 100%;
-            margin-bottom: 15px;
+            margin-bottom: 12px;
             table-layout: fixed;
         }
 
@@ -114,7 +114,7 @@
             display: table-cell;
             width: 50%;
             border: 1px solid #bdc3c7;
-            padding: 12px;
+            padding: 10px;
             background: #f8f9fa;
             vertical-align: top;
         }
@@ -124,82 +124,82 @@
         }
 
         .info-box h2 {
-            font-size: 11px;
+            font-size: 12px;
             font-weight: bold;
             color: #2c3e50;
-            margin-bottom: 8px;
+            margin-bottom: 10px;
             text-transform: uppercase;
             border-bottom: 1px solid #bdc3c7;
-            padding-bottom: 4px;
+            padding-bottom: 5px;
         }
 
         .info-row {
             display: flex;
             justify-content: space-between;
-            margin-bottom: 4px;
-            padding: 1px 0;
+            margin-bottom: 5px;
+            padding: 2px 0;
         }
 
         .info-label {
             font-weight: 500;
             color: #555;
-            font-size: 9px;
+            font-size: 10px;
         }
 
         .info-value {
             font-weight: bold;
             color: #2c3e50;
-            font-size: 9px;
+            font-size: 10px;
             text-align: right;
         }
 
         .section-title {
-            font-size: 12px;
+            font-size: 13px;
             font-weight: bold;
             color: #2c3e50;
-            margin: 12px 0 8px 0;
+            margin: 10px 0 7px 0;
             text-transform: uppercase;
             border-bottom: 1px solid #bdc3c7;
-            padding-bottom: 3px;
+            padding-bottom: 5px;
         }
 
         .payroll-table {
             width: 100%;
             border-collapse: collapse;
-            margin: 8px 0;
+            margin: 10px 0;
             border: 1px solid #bdc3c7;
-            font-size: 9px; /* Augmenté de 8px à 9px */
+            font-size: 10px;
         }
 
         .payroll-table th {
             background-color: #34495e;
             color: white;
-            padding: 8px 5px; /* Augmenté le padding */
+            padding: 12px 6px;
             text-align: center;
             font-weight: bold;
-            font-size: 9px; /* Augmenté de 8px à 9px */
+            font-size: 10px;
             text-transform: uppercase;
             border: 1px solid #2c3e50;
             vertical-align: middle;
-            line-height: 1.2;
+            line-height: 1.3;
         }
 
         .payroll-table td {
-            padding: 5px 4px; /* Augmenté le padding */
+            padding: 6px 5px;
             border: 1px solid #bdc3c7;
             text-align: center;
-            font-size: 9px; /* Augmenté de 8px à 9px */
-            line-height: 1.1;
+            font-size: 10px;
+            line-height: 1.2;
         }
 
         .payroll-table .text-left {
             text-align: left;
-            padding-left: 6px;
+            padding-left: 8px;
         }
 
         .payroll-table .text-right {
             text-align: right;
-            padding-right: 6px;
+            padding-right: 8px;
         }
 
         .payroll-table tbody tr:nth-child(even) {
@@ -213,22 +213,36 @@
 
         .payroll-table .total-row td {
             border-top: 2px solid #34495e;
-            font-size: 10px; /* Augmenté pour les totaux */
-            padding: 7px 5px; /* Augmenté le padding */
+            font-size: 11px;
+            padding: 10px 6px;
         }
 
-        /* Colonnes avec largeurs optimisées pour plus de lisibilité */
-        .payroll-table th:nth-child(1) { width: 7%; }   /* Code */
-        .payroll-table th:nth-child(2) { width: 30%; }  /* Désignation - augmenté */
-        .payroll-table th:nth-child(3) { width: 7%; }   /* Nombre */
-        .payroll-table th:nth-child(4) { width: 13%; }  /* Base - augmenté */
-        .payroll-table th:nth-child(5) { width: 8%; }   /* Taux */
-        .payroll-table th:nth-child(6) { width: 12%; }  /* Gain */
-        .payroll-table th:nth-child(7) { width: 11%; }  /* Retenue */
-        .payroll-table th:nth-child(8) { width: 12%; }  /* Charges patronales */
+        /* Ligne Salaire Brut mise en évidence */
+        .payroll-table .salaire-brut-row {
+            background-color: #e8f5e8;
+            border-top: 1px solid #27ae60;
+            border-bottom: 1px solid #27ae60;
+        }
+
+        .payroll-table .salaire-brut-row td {
+            padding: 7px 4px;
+            font-weight: bold;
+            font-size: 10px;
+            color: #27ae60;
+        }
+
+        /* Colonnes avec largeurs optimisées */
+        .payroll-table th:nth-child(1) { width: 7%; }
+        .payroll-table th:nth-child(2) { width: 32%; }
+        .payroll-table th:nth-child(3) { width: 7%; }
+        .payroll-table th:nth-child(4) { width: 14%; }
+        .payroll-table th:nth-child(5) { width: 8%; }
+        .payroll-table th:nth-child(6) { width: 12%; }
+        .payroll-table th:nth-child(7) { width: 10%; }
+        .payroll-table th:nth-child(8) { width: 10%; }
 
         .summary-section {
-            margin-top: 15px;
+            margin-top: 18px;
             border: 2px solid #2c3e50;
             flex-shrink: 0;
         }
@@ -241,20 +255,20 @@
         .summary-table th {
             background-color: #2c3e50;
             color: white;
-            padding: 10px 5px; /* Augmenté le padding */
+            padding: 12px 6px;
             text-align: center;
             font-weight: bold;
-            font-size: 9px; /* Augmenté de 8px à 9px */
+            font-size: 10px;
             text-transform: uppercase;
             border: 1px solid #2c3e50;
-            line-height: 1.2;
+            line-height: 1.3;
         }
 
         .summary-table td {
-            padding: 10px 5px; /* Augmenté le padding */
+            padding: 6px 4px;
             text-align: center;
             font-weight: bold;
-            font-size: 10px; /* Augmenté de 9px à 10px */
+            font-size: 11px;
             border: 1px solid #bdc3c7;
             background-color: #f8f9fa;
         }
@@ -262,7 +276,7 @@
         .summary-table .net-pay {
             background-color: #27ae60;
             color: white;
-            font-size: 11px; /* Augmenté pour le net à payer */
+            font-size: 13px;
         }
 
         .amount {
@@ -272,12 +286,23 @@
 
         .footer {
             margin-top: auto;
-            padding-top: 12px;
+            padding-top: 10px;
             border-top: 1px solid #bdc3c7;
             text-align: center;
-            font-size: 9px;
+            font-size: 10px;
             color: #7f8c8d;
             flex-shrink: 0;
+        }
+
+        .name {
+            position: absolute;
+            right: 10px;
+            bottom: -10px;
+            font-size: 10px;
+            color: #949494;
+            opacity: 0.9;
+            font-style: italic;
+            z-index: 2;
         }
 
         .no-border {
@@ -291,15 +316,14 @@
             flex-direction: column;
         }
 
-        /* Texte optimisé pour les désignations */
         .payroll-table .long-text {
-            font-size: 8px;
+            font-size: 9px;
             line-height: 1.1;
         }
 
         @media print {
             body {
-                font-size: 9px;
+                font-size: 10px;
             }
 
             .container {
@@ -307,7 +331,6 @@
                 min-height: auto;
             }
 
-            /* Maintenir la structure table pour l'impression */
             .company-header {
                 display: table !important;
                 width: 100% !important;
@@ -342,51 +365,54 @@
                 margin-right: 10px !important;
             }
 
-            /* Tailles de police légèrement réduites pour l'impression */
             .payroll-table th,
             .payroll-table td {
-                font-size: 8px;
-                padding: 4px 3px;
+                font-size: 9px;
+                padding: 6px 4px;
             }
 
             .payroll-table .total-row td {
-                font-size: 9px;
-                padding: 5px 4px;
+                font-size: 10px;
+                padding: 8px 5px;
+            }
+
+            .payroll-table .salaire-brut-row td {
+                font-size: 11px;
+                padding: 8px 5px;
             }
 
             .summary-table th {
-                font-size: 8px;
-                padding: 8px 4px;
+                font-size: 9px;
+                padding: 10px 5px;
             }
 
             .summary-table td {
-                font-size: 9px;
-                padding: 8px 4px;
+                font-size: 10px;
+                padding: 10px 5px;
             }
 
             .summary-table .net-pay {
-                font-size: 10px;
+                font-size: 12px;
             }
 
             .company-header {
-                padding: 8px 0;
-                margin-bottom: 12px;
+                padding: 10px 0;
+                margin-bottom: 15px;
             }
 
             .info-section {
-                margin-bottom: 12px;
+                margin-bottom: 15px;
             }
 
             .section-title {
-                margin: 10px 0 6px 0;
+                margin: 12px 0 8px 0;
             }
 
             .header {
-                margin-bottom: 12px;
+                margin-bottom: 15px;
             }
         }
 
-        /* Corrections pour éviter la casse de page */
         .company-header,
         .info-section,
         .summary-section {
@@ -408,29 +434,36 @@
 </head>
 <body>
 <div class="container">
-    <!-- Section entreprise avec logo -->
+
     <div class="company-header">
         <div class="company-logo">
             <img th:if="${bulletin.entreprise != null and bulletin.entreprise.logoUrl != null}"
                  th:src="${bulletin.entreprise.logoUrl}"
                  alt="Logo Entreprise" >
-
         </div>
 
         <div class="company-info">
-            <h3><span th:text="${bulletin.entreprise.nom}">NOM DE L'ENTREPRISE</span></h3>
-            <p><strong>Adresse de l'entreprise:</strong> <span th:text="${bulletin.entreprise.adresseEntreprise}">Adresse de l'entreprise</span></p>
-            <p><strong>Téléphone de l'entreprise:</strong> <span th:text="${bulletin.entreprise.telephoneEntreprise}">Téléphone de l'entreprise</span></p>
-            <p><strong>Email de l'entreprise:</strong> <span th:text="${bulletin.entreprise.emailEntreprise}">Email de l'entreprise</span></p>
-            <p><strong>NIU de l'entreprise:</strong> <span th:text="${bulletin.entreprise.numeroSiret}">NIU de l'entreprise</span></p>
+            <div><span class="info-label">Entreprise :</span>
+                <span th:text="${bulletin != null and bulletin.entreprise != null ? bulletin.entreprise.nom : 'Non renseignée'}">Non renseignée</span>
+            </div>
+            <div><span class="info-label">Adresse :</span>
+                <span th:text="${bulletin != null and bulletin.entreprise != null ? bulletin.entreprise.adresseEntreprise : '-'}">-</span>
+            </div>
+            <div><span class="info-label">Téléphone :</span>
+                <span th:text="${bulletin != null and bulletin.entreprise != null ? bulletin.entreprise.telephoneEntreprise : '-'}">-</span>
+            </div>
+            <div><span class="info-label">Email :</span>
+                <span th:text="${bulletin != null and bulletin.entreprise != null ? bulletin.entreprise.emailEntreprise : '-'}">-</span>
+            </div>
+            <div><span class="info-label">NIU :</span>
+                <span th:text="${bulletin != null and bulletin.entreprise != null ? bulletin.entreprise.numeroSiret : '-'}">-</span>
+            </div>
         </div>
     </div>
-
-    <header class="header">
+    <div class="header">
         <h1>Bulletin de Paie</h1>
         <p class="subtitle">Fiche de rémunération</p>
-    </header>
-
+    </div>
     <div class="info-section clearfix">
         <div class="info-box">
             <h2>Informations de l'Employé</h2>
@@ -512,234 +545,101 @@
                 <span class="info-value" th:text="${bulletin.methodePaiement}">[Methode_Paiement]</span>
             </div>
         </div>
+
+
     </div>
-
-
-
-
-
-
     <div class="main-content">
         <h3 class="section-title">Détail des Éléments de Paie</h3>
-
         <table class="payroll-table">
             <thead>
             <tr>
-                <th>CODE</th>
-                <th>DÉSIGNATION</th>
-                <th>NB</th>
-                <th>BASE</th>
-                <th>TAUX</th>
+                <th rowspan="2">DÉSIGNATION</th>
+                <th rowspan="2">NB</th>
+                <th rowspan="2">BASE</th>
+                <th colspan="3">PART SALARIALE</th>
+                <th colspan="2">PART PATRONALE</th>
+            </tr>
+            <tr>
+                <th>Taux</th>
                 <th>GAIN</th>
-                <th>RETENUE</th>
-                <th>CH. PATRON.</th>
+                <th>Retenue</th>
+                <th>Taux</th>
+                <th>Retenue</th>
             </tr>
             </thead>
             <tbody>
-            <tr>
-                <td>100</td>
-                <td class="text-left">Salaire de base</td>
-                <td th:text="${#numbers.formatDecimal(bulletin.heuresNormal, 1, 2)}">0,00</td>
-                <td th:text="${#numbers.formatDecimal(bulletin.tauxHoraire, 1, 2)}">0,00</td>
-                <td>100%</td>
-                <td class="text-right amount" th:text="${#numbers.formatDecimal(bulletin.salaireBase, 1, 2)}">0,00</td>
-                <td class="no-border"></td>
-                <td class="no-border"></td>
-            </tr>
-            <tr>
-                <td>107</td>
-                <td class="text-left">Prime transport</td>
-                <td class="no-border"></td>
-                <td class="no-border"></td>
-                <td class="no-border"></td>
-                <td class="text-right amount" th:text="${#numbers.formatDecimal(bulletin.primeTransport, 1, 2)}">0,00</td>
-                <td class="no-border"></td>
-                <td class="no-border"></td>
-            </tr>
-            <tr>
-                <td>115</td>
-                <td class="text-left">Prime ponctualité</td>
-                <td class="no-border"></td>
-                <td class="no-border"></td>
-                <td class="no-border"></td>
-                <td class="text-right amount" th:text="${#numbers.formatDecimal(bulletin.primePonctualite, 1, 2)}">0,00</td>
-                <td class="no-border"></td>
-                <td class="no-border"></td>
-            </tr>
-            <tr>
-                <td>117</td>
-                <td class="text-left">Prime technicité</td>
-                <td class="no-border"></td>
-                <td class="no-border"></td>
-                <td class="no-border"></td>
-                <td class="text-right amount" th:text="${#numbers.formatDecimal(bulletin.primeTechnicite, 1, 2)}">0,00</td>
-                <td class="no-border"></td>
-                <td class="no-border"></td>
-            </tr>
-            <tr>
-                <td>118</td>
-                <td class="text-left">Prime ancienneté</td>
-                <td class="no-border"></td>
-                <td class="no-border"></td>
-                <td class="no-border"></td>
-                <td class="text-right amount" th:text="${#numbers.formatDecimal(bulletin.primeAnciennete, 1, 2)}">0,00</td>
-                <td class="no-border"></td>
-                <td class="no-border"></td>
-            </tr>
-            <tr>
-                <td>119</td>
-                <td class="text-left">Prime rendement</td>
-                <td class="no-border"></td>
-                <td class="no-border"></td>
-                <td class="no-border"></td>
-                <td class="text-right amount" th:text="${#numbers.formatDecimal(bulletin.primeRendement, 1, 2)}">0,00</td>
-                <td class="no-border"></td>
-                <td class="no-border"></td>
+            <!-- Affichage des gains -->
+            <tr th:each="ligne : ${bulletin.lignesPaie}" th:if="${ligne.type != null and ligne.type.name() == 'GAIN'}">
+                <td th:text="${ligne.designation}">DESIGNATION</td>
+                <td th:text="${ligne.nombre != null ? #numbers.formatDecimal(ligne.nombre, 1, 2) : ''}">NB</td>
+                <td th:text="${ligne.baseApplique != null ? #numbers.formatDecimal(ligne.baseApplique, 1, 2) : ''}">BASE</td>
+                <td th:text="${ligne.tauxAffiche != null ? #numbers.formatDecimal(ligne.tauxAffiche , 1, 2)  : ''}">TAUX</td>
+                <td th:text="${#numbers.formatDecimal(ligne.montantFinal, 1, 2)}">GAIN</td>
+                <td></td>
+                <td></td>
+                <td></td>
             </tr>
 
-            <tr class="total-row">
-                <td colspan="5"><strong>Salaire Brut</strong></td>
-                <td class="text-right amount" th:text="${#numbers.formatDecimal(bulletin.salaireBrut, 1, 2)}">0,00</td>
-                <td class="no-border"></td>
-                <td class="no-border"></td>
+            <!-- Ligne Salaire Brut -->
+            <tr class="salaire-brut-row">
+                <td><strong>Salaire Brut</strong></td>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td><strong th:text="${#numbers.formatDecimal(bulletin.salaireBrut, 1, 2)}">0,00</strong></td>
+                <td></td>
+                <td></td>
+                <td></td>
             </tr>
 
-            <tr>
-                <td>200</td>
-                <td class="text-left long-text">IRPP</td>
-                <td class="no-border"></td>
-                <td class="text-right" th:text="${#numbers.formatDecimal(bulletin.salaireImposable, 1, 2)}">0,00</td>
-                <td>Barème</td>
-                <td class="no-border"></td>
-                <td class="text-right amount" th:text="${#numbers.formatDecimal(bulletin.irpp, 1, 2)}">0,00</td>
-                <td class="no-border"></td>
+            <!-- Affichage des retenues/impôts -->
+            <tr th:each="ligne : ${bulletin.lignesPaie}"
+                th:if="${ligne.type != null and ligne.type.name() == 'RETENUE'}"
+                th:class="${ligne.merged ? 'merged-row' : ''}">
+                <td th:text="${ligne.designation}">DESIGNATION</td>
+                <td th:text="${ligne.nombre != null ? #numbers.formatDecimal(ligne.nombre, 1, 2) : ''}">NB</td>
+                <td th:text="${ligne.baseApplique != null ? #numbers.formatDecimal(ligne.baseApplique, 1, 2) : ''}">BASE</td>
+
+                <!-- Taux salarial -->
+                <td th:text="${ligne.tauxAffiche != null ? ligne.tauxAffiche : ''}">TAUX</td>
+
+                <!-- Gain (vide pour les retenues) -->
+                <td></td>
+
+                <!-- Retenue salariale -->
+                <td th:text="${#numbers.formatDecimal(ligne.montantFinal, 1, 2)}">RETENUE</td>
+
+                <!-- 🔧 NOUVEAU : Taux patronal (pour les lignes fusionnées) -->
+                <td th:text="${ligne.merged and ligne.tauxPatronalAffiche != null ? ligne.tauxPatronalAffiche : ''}">TAUX PATRONAL</td>
+
+                <!-- 🔧 NOUVEAU : Montant patronal (pour les lignes fusionnées) -->
+                <td th:text="${ligne.merged and ligne.montantPatronal != null ? #numbers.formatDecimal(ligne.montantPatronal, 1, 2) : ''}">PATRON</td>
             </tr>
 
-            <tr>
-                <td>201</td>
-                <td class="text-left long-text">CAC</td>
-                <td class="no-border"></td>
-                <td class="text-right" th:text="${#numbers.formatDecimal(bulletin.irpp, 1, 2)}">0,00</td>
-                <td>10%</td>
-                <td class="no-border"></td>
-                <td class="text-right amount" th:text="${#numbers.formatDecimal(bulletin.cac, 1, 2)}">0,00</td>
-                <td class="no-border"></td>
+            <!-- 🔧 MODIFIÉ : Affichage des charges patronales (seulement celles qui ne sont pas fusionnées) -->
+            <tr th:each="ligne : ${bulletin.lignesPaie}"
+                th:if="${ligne.type != null and ligne.type.name() == 'CHARGE_PATRONALE' and not ligne.merged}">
+                <td th:text="${ligne.designation}">DESIGNATION</td>
+                <td th:text="${ligne.nombre != null ? #numbers.formatDecimal(ligne.nombre, 1, 2) : ''}">NB</td>
+                <td th:text="${ligne.baseApplique != null ? #numbers.formatDecimal(ligne.baseApplique, 1, 2) : ''}">BASE</td>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td th:text="${ligne.tauxAffiche != null ? ligne.tauxAffiche : ''}">TAUX PATRONAL</td>
+                <td th:text="${#numbers.formatDecimal(ligne.montantFinal, 1, 2)}">PATRON</td>
             </tr>
-
-            <tr>
-                <td>202</td>
-                <td class="text-left">Taxe Communale</td>
-                <td class="no-border"></td>
-                <td class="text-right" th:text="${#numbers.formatDecimal(bulletin.salaireBase, 1, 2)}">0,00</td>
-                <td>Barème</td>
-                <td class="no-border"></td>
-                <td class="text-right amount" th:text="${#numbers.formatDecimal(bulletin.taxeCommunale, 1, 2)}">0,00</td>
-                <td class="no-border"></td>
-            </tr>
-
-            <tr>
-                <td>203</td>
-                <td class="text-left long-text">Redevance audio</td>
-                <td class="no-border"></td>
-                <td class="text-right" th:text="${#numbers.formatDecimal(bulletin.salaireImposable, 1, 2)}">0,00</td>
-                <td>Barème</td>
-                <td class="no-border"></td>
-                <td class="text-right amount" th:text="${#numbers.formatDecimal(bulletin.redevanceAudioVisuelle, 1, 2)}">0,00</td>
-                <td class="no-border"></td>
-            </tr>
-
-            <tr>
-                <td>204</td>
-                <td class="text-left long-text">Crédit foncier sal.</td>
-                <td class="no-border"></td>
-                <td class="text-right" th:text="${#numbers.formatDecimal(bulletin.salaireImposable, 1, 2)}">0,00</td>
-                <td>1%</td>
-                <td class="no-border"></td>
-                <td class="text-right amount" th:text="${#numbers.formatDecimal(bulletin.creditFoncierSalarie, 1, 2)}">0,00</td>
-                <td class="no-border"></td>
-            </tr>
-
-            <tr>
-                <td>205</td>
-                <td class="text-left long-text">Crédit foncier pat.</td>
-                <td class="no-border"></td>
-                <td class="text-right" th:text="${#numbers.formatDecimal(bulletin.salaireImposable, 1, 2)}">0,00</td>
-                <td>1.5%</td>
-                <td class="no-border"></td>
-                <td class="no-border"></td>
-                <td class="text-right amount" th:text="${#numbers.formatDecimal(bulletin.creditFoncierPatronal, 1, 2)}">0,00</td>
-            </tr>
-
-            <tr>
-                <td>206</td>
-                <td class="text-left long-text">FNE</td>
-                <td class="no-border"></td>
-                <td class="text-right" th:text="${#numbers.formatDecimal(bulletin.salaireImposable, 1, 2)}">0,00</td>
-                <td>1%</td>
-                <td class="no-border"></td>
-                <td class="no-border"></td>
-                <td class="text-right amount" th:text="${#numbers.formatDecimal(bulletin.fnePatronal, 1, 2)}">0,00</td>
-            </tr>
-
-            <tr>
-                <td>207</td>
-                <td class="text-left">Pension CNPS</td>
-                <td class="no-border"></td>
-                <td class="text-right" th:text="${#numbers.formatDecimal(bulletin.baseCnps, 1, 2)}">0,00</td>
-                <td>4,20%</td>
-                <td class="no-border"></td>
-                <td class="text-right amount" th:text="${#numbers.formatDecimal(bulletin.cnpsVieillesseSalarie, 1, 2)}">0,00</td>
-                <td class="text-right amount" th:text="${#numbers.formatDecimal(bulletin.cnpsVieillesseEmployeur, 1, 2)}">0,00</td>
-            </tr>
-
-            <tr>
-                <td>208</td>
-                <td class="text-left">Alloc. familiale</td>
-                <td class="no-border"></td>
-                <td class="text-right" th:text="${#numbers.formatDecimal(bulletin.baseCnps, 1, 2)}">0,00</td>
-                <td>3,70%</td>
-                <td class="no-border"></td>
-                <td class="no-border"></td>
-                <td class="text-right amount" th:text="${#numbers.formatDecimal(bulletin.cnpsAllocationsFamiliales, 1, 2)}">0,00</td>
-            </tr>
-
-            <tr>
-                <td>209</td>
-                <td class="text-left">Accident travail</td>
-                <td class="no-border"></td>
-                <td class="text-right" th:text="${#numbers.formatDecimal(bulletin.baseCnps, 1, 2)}">0,00</td>
-                <td>2,50%</td>
-                <td class="no-border"></td>
-                <td class="no-border"></td>
-                <td class="text-right amount" th:text="${#numbers.formatDecimal(bulletin.cnpsAccidentsTravail, 1, 2)}">0,00</td>
-            </tr>
-
-
-            <tr>
-                <td>210</td>
-                <td class="text-left"><strong>Avances sur le salaire</strong></td>
-                <td class="no-border"></td>
-                <td class="no-border"></td>
-                <td class="no-border"></td>
-                <td class="no-border"></td>
-                <td class="text-right amount" th:text="${#numbers.formatDecimal(bulletin.avancesSurSalaires, 1, 2)}">0,00</td>
-                <td class="no-border"></td>
-            </tr>
-
             </tbody>
             <tfoot>
-            <tr class="total-row">
-                <td colspan="5"><strong>TOTAUX</strong></td>
-                <td class="text-right amount" th:text="${#numbers.formatDecimal(bulletin.salaireBrut, 1, 2)}">0,00</td>
-                <td class="text-right amount" th:text="${#numbers.formatDecimal(bulletin.totalRetenues, 1, 2)}">0,00</td>
-                <td class="text-right amount" th:text="${#numbers.formatDecimal(bulletin.totalChargesPatronales, 1, 2)}">0,00</td>
+            <tr>
+                <td colspan="3"><strong>TOTAUX</strong></td>
+                <td></td> <td th:text="${#numbers.formatDecimal(bulletin.totalGains, 1, 2)}">0,00</td>
+                <td th:text="${#numbers.formatDecimal(bulletin.totalRetenuesSalariales, 1, 2)}">0,00</td>
+                <td></td> <td th:text="${#numbers.formatDecimal(bulletin.totalChargesPatronales, 1, 2)}">0,00</td>
             </tr>
             </tfoot>
         </table>
-    </div>
 
-    <div class="summary-section">
-        <table class="summary-table">
+        <div class="summary-section"> <table class="summary-table">
             <thead>
             <tr>
                 <th>BRUT IMPOSABLE</th>
@@ -748,26 +648,30 @@
                 <th>CH. PATRON.</th>
                 <th>SAL. BRUT</th>
                 <th>COÛT TOTAL</th>
-                <th>NET À PAYER</th>
+                <th class="net-pay">NET À PAYER</th>
             </tr>
             </thead>
             <tbody>
             <tr>
-                <td class="amount" th:text="${#numbers.formatDecimal(bulletin.salaireImposable, 1, 2)}">0,00</td>
-                <td class="amount" th:text="${#numbers.formatDecimal(bulletin.totalRetenues, 1, 2)}">0,00</td>
-                <td class="amount" th:text="${#numbers.formatDecimal(bulletin.cotisationCnps, 1, 2)}">0,00</td>
-                <td class="amount" th:text="${#numbers.formatDecimal(bulletin.totalChargesPatronales, 1, 2)}">0,00</td>
-                <td class="amount" th:text="${#numbers.formatDecimal(bulletin.salaireBrut, 1, 2)}">0,00</td>
-                <td class="amount" th:text="${#numbers.formatDecimal(bulletin.coutTotalEmployeur, 1, 2)}">0,00</td>
-                <td class="net-pay amount" th:text="${#numbers.formatDecimal(bulletin.salaireNet, 1, 2)}">0,00</td>
+                <td th:text="${#numbers.formatDecimal(bulletin.salaireImposable, 1, 2)}">0,00</td>
+                <td th:text="${#numbers.formatDecimal(bulletin.totalRetenuesSalariales, 1, 2)}">0,00</td>
+                <td th:text="${#numbers.formatDecimal(bulletin.baseCnps, 1, 2)}">0,00</td>
+                <td th:text="${#numbers.formatDecimal(bulletin.totalChargesPatronales, 1, 2)}">0,00</td>
+                <td th:text="${#numbers.formatDecimal(bulletin.salaireBrut, 1, 2)}">0,00</td>
+                <td th:text="${#numbers.formatDecimal(bulletin.coutTotalEmployeur, 1, 2)}">0,00</td>
+                <td th:text="${#numbers.formatDecimal(bulletin.salaireNetAPayer, 1, 2)}">0,00</td>
             </tr>
             </tbody>
+
         </table>
+        </div>
     </div>
 
-    <footer class="footer">
-        <p>Document officiel à conserver - Émis le <span th:text="${#temporals.format(#temporals.createNow(), 'dd/MM/yyyy')}"></span></p>
-    </footer>
 </div>
+<div class="footer">
+    <div>Document officiel à conserver - Émis le <span th:text="${#temporals.format(#temporals.createNow(), 'dd/MM/yyyy')}">date</span></div>
+    <div class="name">Généré par Ngombe Sarl</div>
+</div>
+
 </body>
 </html>

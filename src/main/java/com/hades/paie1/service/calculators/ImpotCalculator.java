@@ -1,8 +1,11 @@
 package com.hades.paie1.service.calculators;
 
 import com.hades.paie1.model.BulletinPaie;
+import com.hades.paie1.service.BulletinPaieService;
 import com.hades.paie1.utils.MathUtils;
 import com.hades.paie1.utils.PaieConstants;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
@@ -21,6 +24,8 @@ public class ImpotCalculator {
         this.calculator = salaireCalculator;
 
     }
+    private static final Logger logger = LoggerFactory.getLogger(BulletinPaieService.class);
+
 
     //calcul de irpp
 
@@ -47,21 +52,7 @@ public class ImpotCalculator {
         }
         return sncm.setScale(2, RoundingMode.HALF_UP);
     }
-    // Calcul de l'IRPP selon le barème camerounais officiel avec SNCM
-    public BigDecimal calculIrpp (BulletinPaie fiche) {
 
-        BigDecimal salaireBrutTaxable = calculator.calculSalaireImposable(fiche);
-
-        if (salaireBrutTaxable.compareTo(new BigDecimal("62000")) < 0) {
-            return BigDecimal.ZERO;
-        }
-
-        BigDecimal pvidMensuelle = calculPVIDMensuelle(salaireBrutTaxable);
-
-        BigDecimal sncm = calculSNCM(salaireBrutTaxable, pvidMensuelle);
-
-        return calculIRPPSurSNCM(sncm);
-    }
 
     // Application des tranches d'IRPP sur le SNCM
     public BigDecimal calculIRPPSurSNCM (BigDecimal sncm){
@@ -107,16 +98,39 @@ public class ImpotCalculator {
 
     }
 
+    // Calcul de l'IRPP selon le barème camerounais officiel avec SNCM
+    public BigDecimal calculIrpp (BulletinPaie fiche) {
+
+        BigDecimal salaireBrutTaxable = calculator.calculSalaireImposable(fiche);
+
+        if (salaireBrutTaxable.compareTo(new BigDecimal("62000")) < 0) {
+            return BigDecimal.ZERO;
+        }
+
+        BigDecimal pvidMensuelle = calculPVIDMensuelle(salaireBrutTaxable);
+
+        BigDecimal sncm = calculSNCM(salaireBrutTaxable, pvidMensuelle);
+
+        BigDecimal irpp = calculIRPPSurSNCM(sncm);
+        logger.info("IRPP calculé: {}", irpp);
+
+        return irpp;
+    }
+
     //calcul de CAC
     public  BigDecimal calculCac(BulletinPaie fiche){
-        BigDecimal irrp = calculIrpp(fiche);
-        return mathUtils.safeMultiply(irrp, PaieConstants.TAUX_CAC).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal irpp = calculIrpp(fiche);
+        System.out.println("IRPP pour CAC: " + irpp);
+        System.out.println("TAUX_CAC: " + PaieConstants.TAUX_CAC);
+        BigDecimal cac = mathUtils.safeMultiply(irpp, PaieConstants.TAUX_CAC).setScale(2, RoundingMode.HALF_UP);
+        System.out.println("CAC calculé: " + cac);
+        return cac;
     }
 
     //Calcul taxe communal
 
     public BigDecimal calculTaxeCommunal (BulletinPaie fiche){
-        BigDecimal salaireBase = calculator.calculSalaireBase(fiche);
+        BigDecimal salaireBase = calculator.calculerSalaireBase(fiche);
 
         if(salaireBase.compareTo(PaieConstants.SEUIL_TAXE_COMMUNALE) <=0){
             return  BigDecimal.ZERO;

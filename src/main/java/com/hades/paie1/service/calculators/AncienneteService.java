@@ -1,4 +1,4 @@
-package com.hades.paie1.service;
+package com.hades.paie1.service.calculators;
 
 import com.hades.paie1.model.Employe;
 import com.hades.paie1.repository.EmployeRepository;

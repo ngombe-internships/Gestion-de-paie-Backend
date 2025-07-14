@@ -1,4 +1,4 @@
-package com.hades.paie1.service;
+package com.hades.paie1.service.pdf;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

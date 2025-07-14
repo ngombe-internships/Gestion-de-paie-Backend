@@ -1,12 +1,14 @@
 package com.hades.paie1.service.calculators;
 
+import com.hades.paie1.enum1.CategorieElement;
+import com.hades.paie1.enum1.FormuleCalculType;
+import com.hades.paie1.enum1.TypeAvantageNature;
+import com.hades.paie1.enum1.TypeElementPaie;
 import com.hades.paie1.exception.RessourceNotFoundException;
-import com.hades.paie1.model.BulletinPaie;
-import com.hades.paie1.model.Employe;
+import com.hades.paie1.model.*;
 import com.hades.paie1.repository.BulletinPaieRepo;
+import com.hades.paie1.repository.ElementPaieRepository;
 import com.hades.paie1.repository.EmployeRepository;
-import com.hades.paie1.repository.LeaveRequestRepository;
-import com.hades.paie1.service.AncienneteService;
 import com.hades.paie1.utils.MathUtils;
 import com.hades.paie1.utils.PaieConstants;
 import org.springframework.stereotype.Component;
@@ -14,183 +16,373 @@ import org.springframework.stereotype.Component;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.util.Map;
 
 
 @Component
 public class SalaireCalculator {
 
-    private MathUtils mathUtils;
+    private final MathUtils mathUtils;
+    private final AncienneteService ancienneteService;
+    private final BulletinPaieRepo bulletinPaieRepo; // Pas directement utilisé ici, mais conservé pour l'injection
+    private final EmployeRepository employeRepository; // Pas directement utilisé ici, mais conservé pour l'injection
+    private final ElementPaieRepository elementPaieRepository;
 
-    private AncienneteService ancienneteService;
-    private LeaveRequestRepository leaveRequestRepository;
-    private BulletinPaieRepo bulletinPaieRepo;
-    private EmployeRepository employeRepository;
-    public SalaireCalculator(MathUtils mathUtils , AncienneteService ancienneteService, BulletinPaieRepo bulletinPaieRepo ,LeaveRequestRepository leaveRequestRepository, EmployeRepository employeRepository) {
+    public SalaireCalculator(MathUtils mathUtils, AncienneteService ancienneteService,
+                             BulletinPaieRepo bulletinPaieRepo, EmployeRepository employeRepository,
+                             ElementPaieRepository elementPaieRepository) {
         this.mathUtils = mathUtils;
         this.ancienneteService = ancienneteService;
         this.bulletinPaieRepo = bulletinPaieRepo;
-        this.leaveRequestRepository = leaveRequestRepository;
         this.employeRepository = employeRepository;
-    }
-
-    public BigDecimal calculSalaireBase(BulletinPaie fiche) {
-
-        long jourTravailNormal = fiche.getHeuresNormal().longValue()/8;
-
-        long jourAbsenceNonPayes;
-        return mathUtils.safeMultiply(fiche.getTauxHoraire(), fiche.getHeuresNormal());
+        this.elementPaieRepository = elementPaieRepository; // Injection correcte
     }
 
 
-    public BigDecimal calculHeureSup1(BulletinPaie fiche) {
+    private ElementPaie getOrCreateElementPaie(String designation, TypeElementPaie type, CategorieElement categorie) {
+        return elementPaieRepository.findByDesignation(designation)
+                .orElseGet(() -> {
+                    ElementPaie newElement = ElementPaie.builder()
+                            .designation(designation)
+                            .type(type)
+                            .categorie(categorie)
+                            .code(designation.toUpperCase().replaceAll(" ", "_").replaceAll("É", "E")) // Exemple de code
 
-        BigDecimal tauxHoraire = fiche.getTauxHoraire();
-        BigDecimal heureSup1 = fiche.getHeuresSup1();
-        BigDecimal tauxMajore = mathUtils.safeMultiply(tauxHoraire, PaieConstants.TAUX_HEURE_SUP1);
+                            .formuleCalcul(TypeElementPaie.GAIN.equals(type) ? FormuleCalculType.MONTANT_FIXE : FormuleCalculType.POURCENTAGE_BASE) // Exemple
+                            .build();
+                    if ("Prime d'Ancienneté".equals(designation)) {
+                        newElement.setFormuleCalcul(FormuleCalculType.POURCENTAGE_BASE); // Spécifique pour la prime d'ancienneté
+                    } else {
+                       newElement.setFormuleCalcul(TypeElementPaie.GAIN.equals(type) ? FormuleCalculType.MONTANT_FIXE : FormuleCalculType.POURCENTAGE_BASE);
+                    }
+                    newElement.setCode(designation.toUpperCase().replace(" ", "_"));
 
-        return mathUtils.safeMultiply(tauxMajore, heureSup1);
 
-    }
-
-    public BigDecimal calculHeureSup2(BulletinPaie fiche) {
-
-        BigDecimal tauxHoraire = fiche.getTauxHoraire();
-        BigDecimal heureSup2 = fiche.getHeuresSup2();
-        BigDecimal tauxMajore = mathUtils.safeMultiply(tauxHoraire, PaieConstants.TAUX_HEURE_SUP2);
-
-        return mathUtils.safeMultiply(tauxMajore, heureSup2);
-
-    }
-
-    public BigDecimal calculHeureNuit(BulletinPaie fiche) {
-
-        BigDecimal tauxHoraire = fiche.getTauxHoraire();
-        BigDecimal heureNuit = fiche.getHeuresNuit();
-        BigDecimal tauxMajore = mathUtils.safeMultiply(tauxHoraire, PaieConstants.TAUX_HEURE_NUIT);
-
-        return mathUtils.safeMultiply(tauxMajore, heureNuit);
+                    return elementPaieRepository.save(newElement);
+                });
 
     }
 
-    public BigDecimal calculHeureFerie(BulletinPaie fiche) {
 
-        BigDecimal tauxHoraire = fiche.getTauxHoraire();
-        BigDecimal heureFerie = fiche.getHeuresFerie();
-        BigDecimal tauxMajore = mathUtils.safeMultiply(tauxHoraire, PaieConstants.TAUX_HEURE_FERIE);
 
-        return mathUtils.safeMultiply(tauxMajore, heureFerie);
 
-    }
+    public BigDecimal calculerSalaireBase(BulletinPaie bulletinPaie) {
+        BigDecimal salaireBase = bulletinPaie.getSalaireBaseInitial();
 
-    public BigDecimal calculPrimeAnciennete (BulletinPaie  fiche) {
-       //verifie que employe est bien associe au bulletin de paie
-        if (fiche.getEmploye() == null || fiche.getEmploye().getDateEmbauche() == null) {
-            return BigDecimal.ZERO;
+        // Si le salaire de base initial du bulletin n'est pas défini, essayez de le récupérer de l'employé
+        if (salaireBase == null || salaireBase.compareTo(BigDecimal.ZERO) <= 0) {
+            Employe employe = bulletinPaie.getEmploye();
+            if (employe != null && employe.getSalaireBase() != null) {
+                salaireBase = employe.getSalaireBase();
+                // Mettez à jour le salaire de base initial du bulletin pour les calculs futurs
+                bulletinPaie.setSalaireBaseInitial(salaireBase);
+            } else {
+                salaireBase = BigDecimal.ZERO;
+                throw new RessourceNotFoundException("Salaire de base non défini pour l'employé " + bulletinPaie.getEmploye().getMatricule());
+            }
         }
 
-        //on recupere employe pour acceder a la date embauche
-        Employe employe = employeRepository.findById(fiche.getEmploye().getId())
-                .orElseThrow(()-> new RessourceNotFoundException("Employe non trouve avec ID:" +fiche.getEmploye().getId()));
+        return salaireBase;
+    }
 
-        LocalDate dateEmbauche = employe.getDateEmbauche();
-        if(dateEmbauche == null) {
-            return BigDecimal.ZERO;
+
+    public void calculerHeuresSupplementaires(BulletinPaie bulletinPaie) {
+        BigDecimal totalHeuresSup = bulletinPaie.getHeuresSup();
+        BigDecimal tauxHoraire = bulletinPaie.getTauxHoraireInitial();
+
+        if (totalHeuresSup == null || totalHeuresSup.compareTo(BigDecimal.ZERO) <= 0 ||
+                tauxHoraire == null || tauxHoraire.compareTo(BigDecimal.ZERO) <= 0) {
+            return;
         }
 
-        int ancienneteAnnees = ancienneteService.calculAncienneteEnAnnees(dateEmbauche);
+        BigDecimal heuresSupRestantes = totalHeuresSup;
 
-        BigDecimal smc = calculSalaireBase(fiche);
+        BigDecimal montantTotalSup = BigDecimal.ZERO;
 
-        if(smc == null || smc.compareTo(BigDecimal.ZERO) <=0){
-            return BigDecimal.ZERO;
+        // HS1 (20% pour les 8 premières heures sup)
+        BigDecimal heuresHS1 = BigDecimal.ZERO;
+        if (heuresSupRestantes.compareTo(BigDecimal.ZERO) > 0) {
+            heuresHS1 = mathUtils.safeMin(heuresSupRestantes, BigDecimal.valueOf(8));
+            // la multiplication en deux étapes comme safeMultiply ne prend que deux arguments
+            BigDecimal montantCalculHS1 = mathUtils.safeMultiply(heuresHS1, tauxHoraire);
+            BigDecimal montantHS1 = mathUtils.safeMultiply(montantCalculHS1, PaieConstants.TAUX_HEURE_SUP1);
+
+            montantTotalSup =montantTotalSup.add(montantHS1);
+            heuresSupRestantes = heuresSupRestantes.subtract(heuresHS1);
         }
 
-        BigDecimal primeAnciennete = BigDecimal.ZERO;
+        // HS2 (30% pour les 8 heures suivantes)
+        BigDecimal heuresHS2 = BigDecimal.ZERO;
+        if (heuresSupRestantes.compareTo(BigDecimal.ZERO) > 0) {
+            heuresHS2 = mathUtils.safeMin(heuresSupRestantes, BigDecimal.valueOf(8));
+            // Correction: Décomposer la multiplication
+            BigDecimal montantCalculHS2 = mathUtils.safeMultiply(heuresHS2, tauxHoraire);
+            BigDecimal montantHS2 = mathUtils.safeMultiply(montantCalculHS2, PaieConstants.TAUX_HEURE_SUP2);
 
-        if( ancienneteAnnees >=2){
-            double tauxAnciennete = 4.0;
-            if(ancienneteAnnees >2){
-                tauxAnciennete += (ancienneteAnnees -2) *2.0;
+            montantTotalSup = montantTotalSup.add(montantHS2);
+            heuresSupRestantes = heuresSupRestantes.subtract(heuresHS2);
+        }
+
+        // HS3 (40% pour les 4 heures suivantes, de la 57ème à la 60ème)
+        BigDecimal heuresHS3 = BigDecimal.ZERO;
+        if (heuresSupRestantes.compareTo(BigDecimal.ZERO) > 0) {
+            heuresHS3 = mathUtils.safeMin(heuresSupRestantes, BigDecimal.valueOf(4));
+            // Correction: Décomposer la multiplication
+            BigDecimal montantCalculHS3 = mathUtils.safeMultiply(heuresHS3, tauxHoraire);
+            BigDecimal montantHS3 = mathUtils.safeMultiply(montantCalculHS3, PaieConstants.TAUX_HEURE_SUP3);
+            montantTotalSup = montantTotalSup.add(montantHS3);
+            heuresSupRestantes = heuresSupRestantes.subtract(heuresHS3);
+        }
+
+        // Gérer les heures supplémentaires restantes si elles dépassent les 60 heures (toujours 40%)
+        if (heuresSupRestantes.compareTo(BigDecimal.ZERO) > 0) {
+            // Correction: Décomposer la multiplication
+            BigDecimal montantCalculHS40Supp = mathUtils.safeMultiply(heuresSupRestantes, tauxHoraire);
+            BigDecimal montantHS40Supp = mathUtils.safeMultiply(montantCalculHS40Supp, PaieConstants.TAUX_HEURE_SUP3);
+
+            montantTotalSup = montantTotalSup.add(montantHS40Supp);
+        }
+        if (montantTotalSup.compareTo(BigDecimal.ZERO) > 0) {
+            addLignePaieForElement(
+                    bulletinPaie,
+                    "Heures Supplémentaires",
+                    TypeElementPaie.GAIN,
+                    CategorieElement.HEURES_SUPPLEMENTAIRES,
+                    totalHeuresSup,
+                    null,
+                    null,
+                    montantTotalSup,
+                    null
+            );
+        }
+    }
+
+
+    public void calculerHeuresNuit(BulletinPaie bulletinPaie) {
+        BigDecimal heuresNuit = bulletinPaie.getHeuresNuit();
+        BigDecimal tauxHoraire = bulletinPaie.getTauxHoraireInitial();
+
+        if (heuresNuit == null || heuresNuit.compareTo(BigDecimal.ZERO) <= 0 ||
+                tauxHoraire == null || tauxHoraire.compareTo(BigDecimal.ZERO) <= 0) {
+            return;
+        }
+        BigDecimal montantCalculHeuresNuit = mathUtils.safeMultiply(heuresNuit, tauxHoraire);
+        BigDecimal montantHeuresNuit = mathUtils.safeMultiply(montantCalculHeuresNuit, PaieConstants.TAUX_HEURE_NUIT);
+        if (montantHeuresNuit.compareTo(BigDecimal.ZERO) > 0) {
+            addLignePaieForElement(
+                    bulletinPaie,
+                    "Heures de Nuit",
+                    TypeElementPaie.GAIN,
+                    CategorieElement.HEURES_SUPPLEMENTAIRES,
+                    heuresNuit,
+                    PaieConstants.TAUX_HEURE_NUIT,
+                    mathUtils.safeMultiply(heuresNuit, tauxHoraire),
+                    montantHeuresNuit,
+                    mathUtils.safeMultiply(heuresNuit,tauxHoraire)
+            );
+        }
+    }
+
+
+    public void calculerHeuresFerie(BulletinPaie bulletinPaie) {
+        BigDecimal heuresFerie = bulletinPaie.getHeuresFerie();
+        BigDecimal tauxHoraire = bulletinPaie.getTauxHoraireInitial();
+
+        if (heuresFerie == null || heuresFerie.compareTo(BigDecimal.ZERO) <= 0 ||
+                tauxHoraire == null || tauxHoraire.compareTo(BigDecimal.ZERO) <= 0) {
+            return;
+        }
+        // Utilisation de PaieConstants.TAUX_HEURE_FERIE
+        BigDecimal montantCalculHeuresFerie = mathUtils.safeMultiply(heuresFerie, tauxHoraire);
+        BigDecimal montantHeuresFerie = mathUtils.safeMultiply(montantCalculHeuresFerie, PaieConstants.TAUX_HEURE_FERIE);
+        if (montantHeuresFerie.compareTo(BigDecimal.ZERO) > 0) {
+            addLignePaieForElement(
+                    bulletinPaie,
+                    "Heures Jours Fériés / Dimanche",
+                    TypeElementPaie.GAIN,
+                    CategorieElement.HEURES_SUPPLEMENTAIRES, // Ou une nouvelle catégorie si vous voulez distinguer
+                    heuresFerie,
+                    PaieConstants.TAUX_HEURE_FERIE,
+                    mathUtils.safeMultiply(heuresFerie, tauxHoraire), // Montant avant majoration
+                    montantHeuresFerie,
+                    mathUtils.safeMultiply(heuresFerie, tauxHoraire)
+            );
+        }
+    }
+
+
+    public void calculerPrimeAnciennete(BulletinPaie bulletinPaie) {
+        Employe employe = bulletinPaie.getEmploye();
+        if (employe == null || employe.getDateEmbauche() == null) {
+            return;
+        }
+
+        int ancienneteEnAnnees = ancienneteService.calculAncienneteEnAnnees(employe.getDateEmbauche());
+
+        BigDecimal tauxPrimeAnciennete = BigDecimal.ZERO;
+        if (ancienneteEnAnnees >= 2) {
+            // Taux initial de 4% après 2 ans.
+            tauxPrimeAnciennete = PaieConstants.TAUX_PRIME_ANCIENNETE_INIT;
+            if (ancienneteEnAnnees > 2) {
+
+                tauxPrimeAnciennete = tauxPrimeAnciennete.add(BigDecimal.valueOf(ancienneteEnAnnees - 2)
+                        .multiply(PaieConstants.TAUX_PRIME_ANCIENNETE_SUPPL));
+            }
+        }
+
+        if (tauxPrimeAnciennete.compareTo(BigDecimal.ZERO) > 0) {
+            BigDecimal basePrimeAnciennete = bulletinPaie.getSalaireBaseInitial();
+            if (basePrimeAnciennete == null) {
+                basePrimeAnciennete = BigDecimal.ZERO;
             }
 
-            BigDecimal tauxAncienneteDecimal = BigDecimal.valueOf(tauxAnciennete)
-                    .divide(new BigDecimal("100"),4,RoundingMode.HALF_UP);
-
-            primeAnciennete = smc.multiply(tauxAncienneteDecimal);
+            BigDecimal montantPrimeAnciennete = mathUtils.safeMultiply(basePrimeAnciennete, tauxPrimeAnciennete);
+            if (montantPrimeAnciennete.compareTo(BigDecimal.ZERO) > 0) {
+                addLignePaieForElement(
+                        bulletinPaie,
+                        "Prime d'Ancienneté",
+                        TypeElementPaie.GAIN,
+                        CategorieElement.PRIME,
+                        BigDecimal.valueOf(ancienneteEnAnnees), // Nombre d'années comme "nombre"
+                        tauxPrimeAnciennete,
+                        basePrimeAnciennete, // La base sur laquelle le taux est appliqué
+                        montantPrimeAnciennete,
+                        basePrimeAnciennete
+                );
+            }
         }
-        return primeAnciennete.setScale(2, RoundingMode.HALF_UP);
-
     }
 
-    public BigDecimal calculTotalPrimes(BulletinPaie fiche) {
-        BigDecimal primeAnciennete = calculPrimeAnciennete(fiche);
-        return mathUtils.safeAdd(
-                primeAnciennete,
-                fiche.getPrimeRendement(),
-                fiche.getPrimeTransport(),
-                fiche.getPrimePonctualite(),
-                fiche.getPrimeTechnicite(),
-                fiche.getAutrePrimes()
-        );
-    }
 
-    // calcul du salaire brut sans allocation
-    public BigDecimal calculSalaireBrutBase(BulletinPaie fiche) {
-        BigDecimal salaireBase = calculSalaireBase(fiche);
-        BigDecimal heuresSup1 = calculHeureSup1(fiche);
-        BigDecimal heureSup2 = calculHeureSup2(fiche);
-        BigDecimal heureNuit = calculHeureNuit(fiche);
-        BigDecimal heureFerie = calculHeureFerie(fiche);
-        BigDecimal totalPrime = calculTotalPrimes(fiche);
-
-
-
-
-        return mathUtils.safeAdd(salaireBase, heureFerie, heureSup2, heuresSup1, heureNuit, totalPrime);
-    }
-
-//    public BigDecimal calculAllocationConge(BulletinPaie fiche) {
-//        BigDecimal salaireBrut = calculSalaireBrutBase(fiche);
-//        BigDecimal jourConge = fiche.getJourConge();
-//
-//        if(salaireBrut == null || jourConge == null || jourConge.compareTo(BigDecimal.ZERO) <= 0){
-//            return BigDecimal.ZERO;
-//        }
-//
-//        BigDecimal allocationConge = salaireBrut.divide(
-//                PaieConstants.JOUR_CONGER,2, RoundingMode.HALF_UP);
-//        return  allocationConge.multiply(jourConge);
-//    }
 
     public BigDecimal calculSalaireBrut(BulletinPaie fiche) {
-        BigDecimal salaireBrut = calculSalaireBrutBase(fiche);
-//        BigDecimal allocationConge = calculAllocationConge(fiche);
-
-        return mathUtils.safeAdd(salaireBrut);
+        return fiche.getTotalGains();
     }
 
 
-    // Calcul des bases CNPS
+
     public BigDecimal calculBaseCnps(BulletinPaie fiche) {
-        BigDecimal salaireBase = calculSalaireBase(fiche);
-        BigDecimal heuresSup = calculHeureSup1(fiche).add(calculHeureSup2(fiche));
-        BigDecimal primePonctualite = fiche.getPrimePonctualite();
-        BigDecimal primeTechnicite = fiche.getPrimeTechnicite();
-        BigDecimal avantageNature = fiche.getAvantageNature();
+        BigDecimal baseCnps = BigDecimal.ZERO;
+        System.out.println("=== Calcul Base CNPS ===");
 
-        BigDecimal baseCnps = mathUtils.safeAdd(salaireBase, primePonctualite, primeTechnicite, avantageNature,heuresSup);
+        for (LigneBulletinPaie ligne : fiche.getLignesPaie()) {
+            ElementPaie element = ligne.getElementPaie();
+            if (element != null && element.isImpacteBaseCnps()) {
+                System.out.println("Ajout à base CNPS : " + element.getDesignation() + " = " + ligne.getMontantFinal());
+                baseCnps = baseCnps.add(ligne.getMontantFinal());
+            }
+        }
 
-        return mathUtils.safeMin(baseCnps, PaieConstants.PLAFOND_CNPS);
+        BigDecimal basePlafonnee = mathUtils.safeMin(baseCnps, PaieConstants.PLAFOND_CNPS);
+        System.out.println("Base CNPS avant plafonnement : " + baseCnps);
+        System.out.println("Base CNPS après plafonnement : " + basePlafonnee);
+
+        return basePlafonnee;
     }
 
-    // Calcul des bases imposables
+
     public BigDecimal calculSalaireImposable(BulletinPaie fiche) {
+        BigDecimal salaireBrutImposable = BigDecimal.ZERO;
 
-        BigDecimal salaireBrut = calculSalaireBrut(fiche);
-        BigDecimal avatageNature = fiche.getAvantageNature() != null ? fiche.getAvantageNature() : BigDecimal.ZERO;
+        // Ajoute des logs pour débugger
+        System.out.println("Calcul salaire imposable :");
 
-        return mathUtils.safeAdd(salaireBrut, avatageNature);
+        for (LigneBulletinPaie ligne : fiche.getLignesPaie()) {
+            ElementPaie element = ligne.getElementPaie();
+            if (element != null && element.getType() == TypeElementPaie.GAIN) {
+                System.out.println("Élément: " + element.getDesignation()
+                        + ", impacteSalaireBrut: " + element.isImpacteSalaireBrut()
+                        + ", montant: " + ligne.getMontantFinal());
+
+                if (element.isImpacteSalaireBrut()) {
+                    salaireBrutImposable = salaireBrutImposable.add(ligne.getMontantFinal());
+                    System.out.println("→ Ajouté au salaire imposable, nouveau total: " + salaireBrutImposable);
+                }
+            }
+        }
+
+
+        return salaireBrutImposable;
+    }
+
+    public BigDecimal calculerTotalAvantageNature(BulletinPaie fiche) {
+        Map<TypeAvantageNature, BigDecimal> tauxAvantageNature = Map.of(
+                TypeAvantageNature.LOGEMENT, new BigDecimal("0.15"),
+                TypeAvantageNature.ELECTRICITE, new BigDecimal("0.04"),
+                TypeAvantageNature.EAU, new BigDecimal("0.02"),
+                TypeAvantageNature.DOMESTIQUE, new BigDecimal("0.04"),
+                TypeAvantageNature.VEHICULE, new BigDecimal("0.10"),
+                TypeAvantageNature.NOURRITURE, new BigDecimal("0.10"),
+                TypeAvantageNature.TELEPHONE, new BigDecimal("0.05"),
+                TypeAvantageNature.CARBURANT, new BigDecimal("0.10"),
+                TypeAvantageNature.GARDIENNAGE, new BigDecimal("0.05"),
+                TypeAvantageNature.INTERNET, new BigDecimal("0.05")
+        );
+
+        BigDecimal salaireBrutTaxable = fiche.getSalaireBrut();
+        BigDecimal totalAvantageNature = BigDecimal.ZERO;
+
+        if (fiche.getEmploye().getAvantagesNature() != null) {
+            for (EmployeAvantageNature av : fiche.getEmploye().getAvantagesNature()) {
+                if (av.isActif()) {
+                    BigDecimal taux = tauxAvantageNature.get(av.getTypeAvantage());
+                    if (taux != null) {
+                        totalAvantageNature = totalAvantageNature.add(salaireBrutTaxable.multiply(taux));
+                    }
+                }
+            }
+        }
+        return totalAvantageNature.setScale(2, RoundingMode.HALF_UP);
     }
 
 
+
+    public BigDecimal calculCoutTotalEmployeur(BulletinPaie fiche) {
+        if(fiche.getSalaireNetAPayer() == null || fiche.getTotalChargesPatronales()== null){
+            throw new IllegalStateException("Salaire Net à Payer ou Total Charges Patronales non calculés pour le bulletin de paie " + fiche.getId());
+        }
+        return mathUtils.safeAdd(fiche.getSalaireNetAPayer(), fiche.getTotalChargesPatronales());
+
+    }
+
+
+    public void addLignePaieForElement(BulletinPaie bulletinPaie, String designation,
+                                       TypeElementPaie type, CategorieElement categorie,
+                                       BigDecimal nombre, BigDecimal taux, BigDecimal montantCalcul,
+                                       BigDecimal montantFinal, BigDecimal baseApplique) {
+
+        // Validation des paramètres
+        if (bulletinPaie == null) {
+            throw new IllegalArgumentException("BulletinPaie ne peut pas être null");
+        }
+
+        if (designation == null || designation.trim().isEmpty()) {
+            throw new IllegalArgumentException("Designation ne peut pas être null ou vide");
+        }
+
+        ElementPaie elementPaie = getOrCreateElementPaie(designation, type, categorie);
+
+        LigneBulletinPaie ligne = new LigneBulletinPaie();
+        ligne.setElementPaie(elementPaie);
+        ligne.setNombre(nombre != null ? nombre : BigDecimal.ONE);
+        ligne.setTauxApplique(taux != null ? taux : BigDecimal.ZERO);
+        ligne.setMontantCalcul(montantCalcul != null ? montantCalcul : BigDecimal.ZERO);
+        ligne.setMontantFinal(montantFinal != null ? montantFinal : BigDecimal.ZERO);
+        ligne.setBaseApplique(baseApplique != null ? baseApplique : BigDecimal.ZERO);
+        ligne.setBulletinPaie(bulletinPaie);
+
+        // Définir les flags selon le type
+        if (type != null) {
+            ligne.setEstGain(type == TypeElementPaie.GAIN);
+            ligne.setEstRetenue(type == TypeElementPaie.RETENUE);
+            ligne.setEstChargePatronale(type == TypeElementPaie.CHARGE_PATRONALE);
+            ligne.setType(type);
+        }
+
+        bulletinPaie.addLignePaie(ligne);
+
+        System.out.println("✅ Ligne ajoutée - Designation: " + designation +
+                ", Type: " + type +
+                ", Montant: " + montantFinal);
+    }
 }

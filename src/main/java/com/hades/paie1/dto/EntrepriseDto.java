@@ -5,6 +5,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 
 @Data
@@ -23,6 +24,13 @@ public class EntrepriseDto {
 
     private Long employeurPrincipalId;
     private String employeurPrincipalUsername;
+
+    //nouveau
+//    private Double latitudeEntreprise;
+//    private Double longitudeEntreprise;
+//    private Integer radiusToleranceMeters;
+    private BigDecimal standardHeuresHebdomadaires;
+    private Integer standardJoursOuvrablesHebdomadaires;
 
 
 }

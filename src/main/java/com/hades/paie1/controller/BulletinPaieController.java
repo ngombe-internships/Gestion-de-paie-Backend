@@ -5,7 +5,7 @@ import com.hades.paie1.dto.BulletinPaieEmployeurDto;
 import com.hades.paie1.dto.BulletinPaieResponseDto;
 import com.hades.paie1.model.BulletinPaie;
 import com.hades.paie1.service.BulletinPaieService;
-import com.hades.paie1.service.PdfService;
+import com.hades.paie1.service.pdf.PdfService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
@@ -14,7 +14,6 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
@@ -37,21 +36,28 @@ public class BulletinPaieController {
 
 
     //cree bulletin avec  info de employe
-    @PostMapping("/calculate1")
+    @PostMapping(value = "/calculate1")
+    public ResponseEntity<ApiResponse<BulletinPaieResponseDto>> calculerBulletin1(
+            @RequestBody BulletinPaie fiche
+    ) {
+        try {
+            logger.debug("Données reçues pour le calcul : {}", fiche);
+            BulletinPaie calculBulletin = bulletinPaieService.calculBulletin(fiche);
+            BulletinPaieResponseDto responseDto = bulletinPaieService.convertToDto(calculBulletin);
 
-    public ResponseEntity<ApiResponse<BulletinPaieResponseDto>> calculerBulletin1(@RequestBody BulletinPaie fiche) {
+            ApiResponse<BulletinPaieResponseDto> response = new ApiResponse<>(
+                    "Bulletin de paie calcule avec succes",
+                    responseDto,
+                    HttpStatus.OK
+            );
 
-        BulletinPaie calculBulletin = bulletinPaieService.calculBulletin(fiche);
-
-        BulletinPaieResponseDto responseDto = bulletinPaieService.convertToDto(calculBulletin);
-        ApiResponse<BulletinPaieResponseDto> response = new ApiResponse<>(
-
-                "Bulletin de paie calcule avec succes",
-                responseDto,
-                HttpStatus.OK
-        );
-        return new ResponseEntity<>(response, HttpStatus.OK);
-
+            return ResponseEntity.ok()
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(response);
+        } catch (Exception e) {
+            logger.error("Erreur lors du calcul du bulletin : ", e);
+            throw e;
+        }
     }
 
 
@@ -251,54 +257,119 @@ public class BulletinPaieController {
 
     @GetMapping("/pdf/{bulletinId}")
     @PreAuthorize("hasRole('ADMIN') or (hasRole('EMPLOYEUR') or (hasRole('EMPLOYE') and @bulletinPaieService.isBulletinOfCurrentUser(#bulletinId)))")
-    public ResponseEntity<byte[]> generatePdfEmploye(@PathVariable Long bulletinId) {
-
+    public ResponseEntity<?> generatePdfEmploye(@PathVariable Long bulletinId) {
         try {
             Optional<BulletinPaieResponseDto> bulletinOptional = bulletinPaieService.getBulletinPaieById(bulletinId);
 
             if (bulletinOptional.isEmpty()) {
-                return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+                logger.error("Bulletin non trouvé avec l'ID: {}", bulletinId);
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(new ApiResponse<>("Bulletin non trouvé", null, HttpStatus.NOT_FOUND));
             }
 
             BulletinPaieResponseDto bulletinCalcul = bulletinOptional.get();
 
+            if (bulletinCalcul.getEmploye() == null) {
+                logger.error("Données d'employé manquantes pour le bulletin: {}", bulletinId);
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(new ApiResponse<>("Données d'employé manquantes", null, HttpStatus.BAD_REQUEST));
+            }
+
             byte[] pdfBytes = pdfService.generateBulletinPdf(bulletinCalcul);
+
+            if (pdfBytes == null || pdfBytes.length == 0) {
+                logger.error("Échec de la génération du PDF pour le bulletin: {}", bulletinId);
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                        .body(new ApiResponse<>("Échec de la génération du PDF", null, HttpStatus.INTERNAL_SERVER_ERROR));
+            }
 
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_PDF);
-            String filename = "bulletin_paie_" + bulletinCalcul.getEmploye().getNom()
-                    + "_" + bulletinCalcul.getEmploye().getPrenom() + "_" + bulletinCalcul.getEmploye().getMatricule() + ".pdf";
+            String filename = String.format("bulletin_paie_%s_%s_%s.pdf",
+                    bulletinCalcul.getEmploye().getNom(),
+                    bulletinCalcul.getEmploye().getPrenom(),
+                    bulletinCalcul.getEmploye().getMatricule());
 
             headers.setContentDispositionFormData("attachment", filename);
             headers.setContentLength(pdfBytes.length);
 
             return new ResponseEntity<>(pdfBytes, headers, HttpStatus.OK);
 
-        } catch (IOException e) {  // SEULE CETTE EXCEPTION EST MAINTENANT NÉCESSAIRE
+        } catch (IOException e) {
             logger.error("Erreur lors de la génération du PDF pour le bulletin {}: {}", bulletinId, e.getMessage(), e);
-            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ApiResponse<>("Erreur lors de la génération du PDF", null, HttpStatus.INTERNAL_SERVER_ERROR));
+        } catch (Exception e) {
+            logger.error("Erreur inattendue lors de la génération du PDF pour le bulletin {}: {}", bulletinId, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ApiResponse<>("Erreur inattendue lors de la génération du PDF", null, HttpStatus.INTERNAL_SERVER_ERROR));
         }
     }
-
-
 
 
     @GetMapping(value = "/{id}/previews", produces = MediaType.TEXT_HTML_VALUE)
     @PreAuthorize("hasRole('ADMIN') or (hasRole('EMPLOYEUR') or (hasRole('EMPLOYE') and @bulletinPaieService.isBulletinOfCurrentUser(#id)))")
-    public ResponseEntity<String> getBulletinHtml (@PathVariable Long id){
-        try {
-            BulletinPaieResponseDto bulletinData = bulletinPaieService.getBulletinById(id);
+    public ResponseEntity<String> getBulletinHtml(@PathVariable Long id) {
+        logger.info("Début de la génération HTML pour le bulletin ID: {}", id);
 
+        try {
+            // Étape 1 : Vérifier que l'ID est valide
+            if (id == null || id <= 0) {
+                logger.error("ID invalide: {}", id);
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body("<html><body><h1>ID invalide</h1></body></html>");
+            }
+
+            // Étape 2 : Récupérer le bulletin
+            logger.info("Récupération du bulletin avec ID: {}", id);
+            Optional<BulletinPaieResponseDto> bulletinOptional = bulletinPaieService.getBulletinPaieById(id);
+
+            if (bulletinOptional.isEmpty()) {
+                logger.error("Bulletin non trouvé avec l'ID: {}", id);
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body("<html><body><h1>Bulletin non trouvé</h1></body></html>");
+            }
+
+            BulletinPaieResponseDto bulletinData = bulletinOptional.get();
+            logger.info("Bulletin récupéré avec succès: {}", bulletinData.getId());
+
+            // Étape 3 : Vérifier les données essentielles
+            if (bulletinData.getEmploye() == null) {
+                logger.error("Données d'employé manquantes pour le bulletin: {}", id);
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body("<html><body><h1>Données d'employé manquantes</h1></body></html>");
+            }
+
+            // Étape 4 : Générer le HTML
+            logger.info("Génération du HTML pour le bulletin: {}", id);
             String html = pdfService.generateHtmlContentForPdf(bulletinData);
+
+            if (html == null || html.trim().isEmpty()) {
+                logger.error("HTML généré vide pour le bulletin: {}", id);
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                        .body("<html><body><h1>Erreur lors de la génération HTML</h1></body></html>");
+            }
+
+            logger.info("HTML généré avec succès pour le bulletin: {}", id);
             return ResponseEntity.ok()
                     .contentType(MediaType.TEXT_HTML)
                     .body(html);
+
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.error("Erreur lors de la génération du HTML pour le bulletin {}: {}", id, e.getMessage(), e);
+
+            // Log détaillé de l'erreur
+            logger.error("Type d'erreur: {}", e.getClass().getSimpleName());
+            logger.error("Message d'erreur: {}", e.getMessage());
+            logger.error("Stack trace: ", e);
+
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Erreur lors de la generation du html:" + e.getMessage());
+                    .body("<html><body><h1>Erreur lors de la génération du HTML</h1><p>" +
+                            e.getMessage() + "</p></body></html>");
         }
     }
+
+
 
 
 
@@ -320,103 +391,6 @@ public class BulletinPaieController {
 
 
 
-
-
-
-
-
-
-    //calculer le formulaire sans employe
-    @PostMapping("/calculate")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ApiResponse<BulletinPaieResponseDto>> calculerBulletin ( @RequestBody BulletinPaie fiche){
-
-        BulletinPaieResponseDto bulletinCalcule = calculBulletin(fiche);
-
-        ApiResponse<BulletinPaieResponseDto> response = new ApiResponse<>(
-
-                "Bullerin de paie calcule avec succes" ,
-                bulletinCalcule,
-                HttpStatus.OK
-        );
-        return  new ResponseEntity<>(response, HttpStatus.OK);
-
-    }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    private BulletinPaieResponseDto calculBulletin (BulletinPaie fiche) {
-        BulletinPaieResponseDto dto = new BulletinPaieResponseDto();
-
-        //info de base
-//        dto.setFicheOriginal(fiche);
-
-        //calculs de salaire
-        dto.setSalaireBase(bulletinPaieService.calculSalaireBase(fiche));
-        dto.setTauxHoraire(fiche.getTauxHoraire());
-        dto.setHeuresNormal(fiche.getHeuresNormal());
-        dto.setPrimeTransport(fiche.getPrimeTransport());
-        dto.setPrimePonctualite(fiche.getPrimePonctualite());
-        dto.setPrimeTechnicite(fiche.getPrimeTechnicite());
-        dto.setPrimeRendement(fiche.getPrimeRendement());
-        dto.setPrimeAnciennete(fiche.getPrimeAnciennete());
-        dto.setHeureSup1(bulletinPaieService.calculHeureSup1(fiche));
-        dto.setHeureSup2(bulletinPaieService.calculHeureSup2(fiche));
-        dto.setHeureNuit(bulletinPaieService.calculHeureNuit(fiche));
-        dto.setHeureFerie(bulletinPaieService.calculHeureFerie(fiche));
-        dto.setTotalPrimes(bulletinPaieService.calculTotalPrimes(fiche));
-        dto.setSalaireBrut(bulletinPaieService.calculSalaireBrut(fiche));
-        dto.setSalaireImposable(bulletinPaieService.calculSalaireImposable(fiche));
-        dto.setBaseCnps(bulletinPaieService.calculBaseCnps(fiche));
-
-        // Calculs d'impôts et taxes
-        dto.setIrpp(bulletinPaieService.calculIrpp(fiche));
-        dto.setCac(bulletinPaieService.calculCac(fiche));
-        dto.setTaxeCommunale(bulletinPaieService.calculTaxeCommunale(fiche));
-        dto.setRedevanceAudioVisuelle(bulletinPaieService.calculRedevanceAudioVisuelle(fiche));
-
-
-        //calculs des cotisation salariales
-        dto.setCnpsVieillesseSalarie(bulletinPaieService.calculCnpsVieillesseSalaire(fiche));
-        dto.setCreditFoncierSalarie(bulletinPaieService.calculCreditFoncierSalaire(fiche));
-        dto.setFneSalarie(bulletinPaieService.calculFneSalaire(fiche));
-        dto.setTotalRetenues(bulletinPaieService.calculTotalRetenues(fiche));
-
-
-        // Calculs des charges patronales
-        dto.setCnpsVieillesseEmployeur(bulletinPaieService.calculCnpsVieillesseEmployeur(fiche));
-        dto.setCnpsAllocationsFamiliales(bulletinPaieService.calculCnpsAllocationsFamiliales(fiche));
-        dto.setCnpsAccidentsTravail(bulletinPaieService.calculCnpsAccidentsTravail(fiche));
-        dto.setCreditFoncierPatronal(bulletinPaieService.calculCreditFoncierPatronal(fiche));
-        dto.setFnePatronal(bulletinPaieService.calculFnePatronal(fiche));
-        dto.setTotalChargesPatronales(bulletinPaieService.calculTotalChargesPatronales(fiche));
-
-        // Calculs finaux
-        dto.setSalaireNet(bulletinPaieService.calculSalaireNet(fiche));
-        dto.setCoutTotalEmployeur(bulletinPaieService.calculCoutTotalEmployeur(fiche));
-
-        //calcul Cotisation cnps
-        dto.setCotisationCnps(bulletinPaieService.calculCotisationCnps(fiche));
-
-
-
-        return dto;
-    }
 
 
 

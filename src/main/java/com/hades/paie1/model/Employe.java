@@ -1,16 +1,18 @@
 package com.hades.paie1.model;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import com.hades.paie1.enum1.*;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Data
@@ -85,18 +87,35 @@ public class Employe {
     private SexeEnum sexe;
 
 
-    @OneToOne( fetch = FetchType.LAZY)
-    @JoinColumn (name="user_id", unique = true)
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", unique = true)
+    @JsonBackReference("user-employe")
     private  User user;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name= "entreprise_id", nullable = false)
+    @JoinColumn(name = "entreprise_id", nullable = false)
+    @JsonBackReference("employe-entreprise")
     private Entreprise entreprise;
 
 
     // Nouveau pour conge et temps
+    @Column(name = "soldeJoursConge")
+    private BigDecimal soldeJoursConge;
 
-    BigDecimal EmployeConge;
+    @Column(name="heures_contractuelles_hebdomadaires", precision = 5, scale=2)
+    private BigDecimal heuresContractuellesHebdomadaires;
+
+    @Column(name="jours_ouvrable_contractuels_hebdomadaires")
+    private Integer joursOuvrablesContractuelsHebdomadaires;
+
+    @Column(name="salaire_base")
+    private  BigDecimal salaireBase;
+
+
+    @OneToMany(mappedBy = "employe")
+    @JsonManagedReference("employe-avantages")
+    private List<EmployeAvantageNature> avantagesNature = new ArrayList<>();
+
 
 
 }

@@ -11,8 +11,9 @@ public class PaieConstants {
 
     // Constante Heure
     public static final BigDecimal HEURES_NORMALES_MENSUELLES = new BigDecimal("173.3333");
-    public static final BigDecimal TAUX_HEURE_SUP1 = new BigDecimal("1.25");
-    public static final BigDecimal TAUX_HEURE_SUP2 = new BigDecimal("1.40");
+    public static final BigDecimal TAUX_HEURE_SUP1 = new BigDecimal("1.20");
+    public static final BigDecimal TAUX_HEURE_SUP2 = new BigDecimal("1.30");
+    public static final BigDecimal TAUX_HEURE_SUP3 = new BigDecimal("1.40");
     public static final BigDecimal TAUX_HEURE_NUIT = new BigDecimal("1.50");
     public static final BigDecimal TAUX_HEURE_FERIE = new BigDecimal("2.00");
 
@@ -41,5 +42,15 @@ public class PaieConstants {
 
     // Division du nombre jour
     public static final BigDecimal JOUR_CONGER = new BigDecimal("24");
+
+
+    //jour conge base 18 jours
+    public static final BigDecimal JOURCONGESBASE = new BigDecimal("18.0");
+
+
+    public static final BigDecimal TAUX_PRIME_ANCIENNETE_INIT= new BigDecimal("0.04"); //4%
+    public static final BigDecimal TAUX_PRIME_ANCIENNETE_SUPPL = new BigDecimal("0.02");
+
+
 }
 

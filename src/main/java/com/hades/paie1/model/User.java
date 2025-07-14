@@ -1,11 +1,11 @@
 package com.hades.paie1.model;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import com.hades.paie1.enum1.Role;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import org.hibernate.annotations.ColumnDefault;
 
 @Entity
@@ -33,10 +33,13 @@ public class User {
 
 
 
-    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonManagedReference("user-employe")
     private Employe employe;
 
     @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "entreprise_id", unique = true, nullable = true)
+    @JoinColumn(name = "entreprise_id", unique = true)
+    @JsonBackReference("user-entreprise")
     private Entreprise entreprise;
 }

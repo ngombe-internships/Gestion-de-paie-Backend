@@ -11,7 +11,7 @@ import com.hades.paie1.repository.EntrepriseRepository;
 import com.hades.paie1.repository.UserRepository;
 import com.hades.paie1.security.JwtTokenProvider;
 import com.hades.paie1.service.AuthService;
-import com.hades.paie1.service.FileStorageService;
+import com.hades.paie1.service.pdf.FileStorageService;
 import jakarta.transaction.Transactional;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -140,6 +140,13 @@ public class AuthController {
                     .emailEntreprise(createDto.getEmailEntreprise())
                     .telephoneEntreprise(createDto.getTelephoneEntreprise())
                     .dateCreation(createDto.getDateCreation() != null? createDto.getDateCreation() : LocalDate.now())
+                    //nouveau
+//                    .latitudeEntreprise(createDto.getLatitudeEntreprise())
+//                    .longitudeEntreprise(createDto.getLongitudeEntreprise())
+//                    .radiusToleranceMeters(createDto.getRadiusToleranceMeters())
+                    .standardHeuresHebdomadaires(createDto.getStandardHeuresHebdomadaires())
+                    .standardJoursOuvrablesHebdomadaires(createDto.getStandardJoursOuvrablesHebdomadaires())
+
                     .build();
 
             if(logoFile != null && !logoFile.isEmpty()){
