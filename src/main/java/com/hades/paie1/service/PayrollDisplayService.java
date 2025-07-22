@@ -172,7 +172,7 @@ public class PayrollDisplayService {
         return (designation.contains("CNPS") &&
                 (designation.contains("VIEILLESSE") ||
                         designation.contains("PENSION") ||
-                        designation.contains("VIELLESSE"))) ||
+                        designation.contains("VIEILLESSE"))) ||
                 (designation.contains("CNPS") && designation.contains("ACCIDENT")) ||
                 (designation.contains("CNPS") && designation.contains("FAMILLE")) ||
                 (designation.contains("CNPS") && designation.contains("MALADIE"));
@@ -362,6 +362,22 @@ public class PayrollDisplayService {
     }
 
     private Integer getValidAffichageOrdre(LignePaieDto ligne1, LignePaieDto ligne2) {
-        return ligne1.getAffichageOrdre() != null ? ligne1.getAffichageOrdre() : ligne2.getAffichageOrdre();
+         Integer affichageOrdre1 = ligne1.getAffichageOrdre();
+        Integer affichageOrdre2 = ligne2.getAffichageOrdre();
+
+        if (affichageOrdre1 != null && affichageOrdre2 != null) {
+            // Les deux ordres sont définis, on prend le plus petit pour un tri ascendant
+            return Math.min(affichageOrdre1, affichageOrdre2);
+        } else if (affichageOrdre1 != null) {
+            // Seul le premier ordre est défini, on le retourne
+            return affichageOrdre1;
+        } else if (affichageOrdre2 != null) {
+            // Seul le second ordre est défini, on le retourne
+            return affichageOrdre2;
+        } else {
+            // Aucun des deux ordres n'est défini, on retourne null
+            return null;
+        }
+
     }
 }

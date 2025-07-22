@@ -144,10 +144,10 @@ public class BulletinPaieService {
 
         LocalDate periodePourConfig = fiche.getDateDebutPeriode() != null ? fiche.getDateDebutPeriode() : LocalDate.now();
 
-        //  FIX 1: Traiter les éléments dans l'ordre correct et éviter les doublons
+        // FIX 1: Traiter les éléments dans l'ordre correct et éviter les doublons
         Set<String> elementsTraites = new HashSet<>(); // Éviter les doublons
 
-        // ✅ NOUVEAU: Ajouter automatiquement le salaire de base s'il n'existe pas déjà
+        // NOUVEAU: Ajouter automatiquement le salaire de base s'il n'existe pas déjà
         System.out.println("\n=== VERIFICATION ET AJOUT DU SALAIRE DE BASE ===");
         BigDecimal salaireBase = calculator.calculerSalaireBase(fiche);
         System.out.println("Salaire de base utilisé: " + salaireBase);
@@ -155,7 +155,7 @@ public class BulletinPaieService {
         // Marquer le salaire de base comme traité pour éviter qu'il soit retraité dans la boucle
         elementsTraites.add("SALAIRE_BASE_GAIN");
 
-        //  BOUCLE 1 : GAINS SEULEMENT
+        // 1️⃣ BOUCLE 1 : GAINS SEULEMENT
         System.out.println("\n=== DEBUT CALCUL DES GAINS ===");
         for (TemplateElementPaieConfig config : template.getElementsConfig()) {
             if (!config.isActive() || config.getElementPaie().getType() != TypeElementPaie.GAIN) continue;
@@ -163,13 +163,13 @@ public class BulletinPaieService {
             ElementPaie element = config.getElementPaie();
             String elementKey = element.getCode() + "_" + element.getType(); // Clé unique
 
-            //  FIX 2: Éviter les doublons ET éviter de retraiter le salaire de base
+            // FIX 2: Éviter les doublons ET éviter de retraiter le salaire de base
             if (elementsTraites.contains(elementKey)) {
                 System.out.println("Élément déjà traité : " + element.getCode());
                 continue;
             }
 
-            // ✅ NOUVEAU: Vérifier si c'est le salaire de base pour éviter la duplication
+            // NOUVEAU: Vérifier si c'est le salaire de base pour éviter la duplication
             if ("Salaire de Base".equals(element.getDesignation()) ||
                     "SALAIRE_BASE".equals(element.getCode()) ||
                     element.getCategorie() == CategorieElement.SALAIRE_DE_BASE) {
@@ -228,7 +228,7 @@ public class BulletinPaieService {
                     break;
             }
 
-            // 🔧 FIX 3: Vérifier que le montant est > 0 avant d'ajouter
+            // FIX 3: Vérifier que le montant est > 0 avant d'ajouter
             if (montant.compareTo(BigDecimal.ZERO) > 0) {
                 LigneBulletinPaie ligne = new LigneBulletinPaie();
                 ligne.setElementPaie(element);
@@ -242,7 +242,7 @@ public class BulletinPaieService {
 
                 System.out.println("Ajout ligne GAIN: " + element.getCode() + ", Montant: " + montant);
             } else {
-                System.out.println(" Montant zéro pour: " + element.getCode());
+                System.out.println("❌ Montant zéro pour: " + element.getCode());
             }
         }
 
@@ -273,23 +273,79 @@ public class BulletinPaieService {
         fiche.setSalaireBrut(fiche.getTotalGains());
         System.out.println("Salaire Brut calculé: " + fiche.getSalaireBrut());
 
-        // ✅ Calculer la base CNPS une seule fois
+        // Calculer la base CNPS une seule fois
         BigDecimal baseCnps = calculator.calculBaseCnps(fiche);
         fiche.setBaseCnps(baseCnps);
         System.out.println("Base CNPS calculée: " + baseCnps);
 
-        // ✅ Calculer le salaire imposable une seule fois
+        // Calculer le salaire imposable une seule fois
         BigDecimal salaireImposable = calculator.calculSalaireImposable(fiche);
         fiche.setSalaireImposable(salaireImposable);
         System.out.println("Salaire Imposable calculé: " + salaireImposable);
 
-        // 2️⃣ BOUCLE 2 : RETENUES & IMPOTS
-        System.out.println("\n=== DEBUT CALCUL DES RETENUES ===");
+        // 2️⃣ BOUCLE 2 : RETENUES & IMPOTS (ORDRE IMPORTANT)
+        System.out.println("\n=== DEBUT CALCUL DES RETENUES (ORDRE SPECIFIQUE) ===");
+
+        // ✅ ÉTAPE 1: Calculer d'abord l'IRPP (base pour CAC)
         for (TemplateElementPaieConfig config : template.getElementsConfig()) {
             if (!config.isActive()) continue;
 
             ElementPaie element = config.getElementPaie();
-            if (element.getType() == TypeElementPaie.GAIN) continue; // Déjà traité
+            if (element.getType() == TypeElementPaie.GAIN) continue;
+
+            String code = element.getCode().toUpperCase();
+
+            // Traiter UNIQUEMENT l'IRPP dans cette première passe
+            if (!"IRPP".equalsIgnoreCase(code) && !code.contains("200")) continue;
+
+            String elementKey = element.getCode() + "_" + element.getType();
+            if (elementsTraites.contains(elementKey)) continue;
+            elementsTraites.add(elementKey);
+
+            System.out.println("\n🎯 Traitement prioritaire IRPP: " + element.getCode());
+
+            LigneBulletinPaie ligne = new LigneBulletinPaie();
+            calculerMontantRetenue(ligne, element, config.getFormuleCalculOverride() != null ?
+                            config.getFormuleCalculOverride() : element.getFormuleCalcul(),
+                    BigDecimal.ZERO, fiche, Optional.empty(), config);
+
+            fiche.addLignePaie(ligne);
+            System.out.println("✅ IRPP ajouté: " + ligne.getMontantFinal());
+        }
+
+        // ✅ ÉTAPE 2: Calculer ensuite CAC (qui dépend de l'IRPP)
+        for (TemplateElementPaieConfig config : template.getElementsConfig()) {
+            if (!config.isActive()) continue;
+
+            ElementPaie element = config.getElementPaie();
+            if (element.getType() == TypeElementPaie.GAIN) continue;
+
+            String code = element.getCode().toUpperCase();
+
+            // Traiter UNIQUEMENT CAC dans cette deuxième passe
+            if (!"CAC".equalsIgnoreCase(code)) continue;
+
+            String elementKey = element.getCode() + "_" + element.getType();
+            if (elementsTraites.contains(elementKey)) continue;
+            elementsTraites.add(elementKey);
+
+            System.out.println("\n🎯 Traitement CAC (après IRPP): " + element.getCode());
+
+            LigneBulletinPaie ligne = new LigneBulletinPaie();
+            calculerMontantRetenue(ligne, element, config.getFormuleCalculOverride() != null ?
+                            config.getFormuleCalculOverride() : element.getFormuleCalcul(),
+                    BigDecimal.ZERO, fiche, Optional.empty(), config);
+
+            fiche.addLignePaie(ligne);
+            System.out.println("✅ CAC ajouté: " + ligne.getMontantFinal());
+        }
+
+        // ✅ ÉTAPE 3: Calculer toutes les autres retenues
+        for (TemplateElementPaieConfig config : template.getElementsConfig()) {
+            if (!config.isActive()) continue;
+
+            ElementPaie element = config.getElementPaie();
+            if (element.getType() == TypeElementPaie.GAIN) continue;
 
             String elementKey = element.getCode() + "_" + element.getType();
             if (elementsTraites.contains(elementKey)) {
@@ -305,74 +361,100 @@ public class BulletinPaieService {
 
             Optional<EmployePaieConfig> employeConfig = configs.stream().findFirst();
 
-            BigDecimal montant = BigDecimal.ZERO;
-            FormuleCalculType formule = config.getFormuleCalculOverride() != null ?
-                    config.getFormuleCalculOverride() : element.getFormuleCalcul();
-
-            BigDecimal valeur = BigDecimal.ZERO;
-            if (formule == FormuleCalculType.MONTANT_FIXE) {
-                valeur = employeConfig.map(EmployePaieConfig::getMontant)
-                        .orElse(config.getMontantDefaut() != null ? config.getMontantDefaut() : element.getTauxDefaut());
-            } else if (formule == FormuleCalculType.POURCENTAGE_BASE) {
-                valeur = employeConfig.map(EmployePaieConfig::getTaux)
-                        .orElse(config.getTauxDefaut() != null ? config.getTauxDefaut() : element.getTauxDefaut());
-            } else {
-                valeur = BigDecimal.ZERO;
-            }
-            if (valeur == null) valeur = BigDecimal.ZERO;
-
-            // 🆕 CRITICAL FIX: Créez une nouvelle instance de LigneBulletinPaie à chaque itération
             LigneBulletinPaie ligne = new LigneBulletinPaie();
-            // Ajouter la ligne même si le montant est 0 (pour les impôts)
+            calculerMontantRetenue(ligne, element, config.getFormuleCalculOverride() != null ?
+                            config.getFormuleCalculOverride() : element.getFormuleCalcul(),
+                    BigDecimal.ZERO, fiche, employeConfig, config);
 
-            calculerMontantRetenue(ligne, element, formule, valeur, fiche, employeConfig, config);
             fiche.addLignePaie(ligne);
-            System.out.println("✅ Ajout ligne RETENUE: " + element.getCode() + ", Montant: " + montant);
+            System.out.println("✅ Ajout ligne RETENUE: " + element.getCode() + ", Montant: " + ligne.getMontantFinal());
         }
 
-        // 🔧 FIX 5: Calcul des totaux finaux
-        System.out.println("\n=== CALCUL DES TOTAUX FINAUX ===");
+        // 🔧 FIX : Calcul des totaux finaux CORRECTS
+        System.out.println("\n=== CALCUL DES TOTAUX FINAUX CORRIGES ===");
+
+       // Total des GAINS (correct)
         fiche.setTotalGains(fiche.getLignesPaie().stream()
                 .filter(l -> l.getElementPaie().getType() == TypeElementPaie.GAIN)
                 .map(LigneBulletinPaie::getMontantFinal)
                 .reduce(BigDecimal.ZERO, BigDecimal::add));
 
+       // Salaire Brut = Total des gains (correct)
+        fiche.setSalaireBrut(fiche.getTotalGains());
+
+       // Total COTISATIONS SALARIALES seulement (correct)
         fiche.setTotalCotisationsSalariales(fiche.getLignesPaie().stream()
                 .filter(l -> l.getElementPaie().getCategorie() == CategorieElement.COTISATION_SALARIALE)
                 .map(LigneBulletinPaie::getMontantFinal)
                 .reduce(BigDecimal.ZERO, BigDecimal::add));
 
+       // Total IMPÔTS seulement (correct)
         fiche.setTotalImpots(fiche.getLignesPaie().stream()
-                .filter(l -> l.getElementPaie().getCategorie() == CategorieElement.IMPOT_SUR_REVENU)
+                .filter(l -> l.getElementPaie().getCategorie() == CategorieElement.IMPOT_SUR_REVENU ||
+                        l.getElementPaie().getCategorie() == CategorieElement.IMPOT)
+                .map(LigneBulletinPaie::getMontantFinal)
+                .reduce(BigDecimal.ZERO, BigDecimal::add));
+        // ✅ FIX PRINCIPAL : Total RETENUES SALARIALES = Cotisations + Impôts + Autres retenues
+        BigDecimal totalRetenues = fiche.getLignesPaie().stream()
+                .filter(l -> l.getElementPaie().getType() == TypeElementPaie.RETENUE)
+                .map(LigneBulletinPaie::getMontantFinal)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        fiche.setTotalRetenuesSalariales(totalRetenues);
+
+        // Charges patronales (correct)
+        fiche.setTotalChargesPatronales(fiche.getLignesPaie().stream()
+                .filter(l -> l.getElementPaie().getCategorie() == CategorieElement.COTISATION_PATRONALE ||
+                        l.getElementPaie().getType() == TypeElementPaie.CHARGE_PATRONALE)
                 .map(LigneBulletinPaie::getMontantFinal)
                 .reduce(BigDecimal.ZERO, BigDecimal::add));
 
-        //Calculer les charges patronales
-        BigDecimal totalChargesPatronales = fiche.getLignesPaie().stream()
-                .filter(l -> l.getElementPaie().getCategorie() == CategorieElement.COTISATION_PATRONALE)
-                .map(LigneBulletinPaie::getMontantFinal)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-        fiche.setTotalChargesPatronales(totalChargesPatronales);
+        // ✅ NOUVEAU : Calcul de la cotisation CNPS totale (salariale + patronale)
+        System.out.println("\n=== CALCUL COTISATION CNPS TOTALE ===");
+        BigDecimal cotisationCnpsCalculee = cotisationCalculator.cotisationCnps(fiche);
+        fiche.setCotisationCnps(cotisationCnpsCalculee);
+        System.out.println("Cotisation CNPS totale calculée: " + cotisationCnpsCalculee);
 
-        // Inclure TOUTES les retenues salariales (pas seulement cotisations + impôts)
-        BigDecimal totalRetenues = fiche.getLignesPaie().stream()
-                .filter(l -> l.getElementPaie().getType() == TypeElementPaie.RETENUE ||
-                        l.getElementPaie().getCategorie() == CategorieElement.IMPOT)
-                .map(LigneBulletinPaie::getMontantFinal)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+       // ✅ CALCULS FINAUX CORRECTS :
+       // Salaire Net avant impôt = Salaire Brut - Cotisations Salariales
         fiche.setSalaireNetAvantImpot(fiche.getSalaireBrut().subtract(fiche.getTotalCotisationsSalariales()));
+
+       // Salaire Net à payer = Salaire Net avant impôt - Impôts
         fiche.setSalaireNetAPayer(fiche.getSalaireNetAvantImpot().subtract(fiche.getTotalImpots()));
 
-        fiche.setCoutTotalEmployeur(fiche.getSalaireNetAPayer().add(fiche.getTotalChargesPatronales()));
 
-        System.out.println("=== TOTAUX FINAUX ===");
-        System.out.println("Salaire Brut: " + fiche.getSalaireBrut());
+      // Coût total employeur = Salaire Brut + Charges patronales
+        fiche.setCoutTotalEmployeur(fiche.getSalaireBrut().add(fiche.getTotalChargesPatronales()));
+
+
+
+
+      // 5. DEBUG - Ajoutez ces logs pour vérifier :
+        System.out.println("=== VERIFICATION FINALE ===");
+        System.out.println("Nombre de lignes GAIN: " + fiche.getLignesPaie().stream()
+                .filter(l -> l.getElementPaie().getType() == TypeElementPaie.GAIN).count());
+        System.out.println("Nombre de lignes RETENUE: " + fiche.getLignesPaie().stream()
+                .filter(l -> l.getElementPaie().getType() == TypeElementPaie.RETENUE).count());
+        System.out.println("Nombre de lignes CHARGE_PATRONALE: " + fiche.getLignesPaie().stream()
+                .filter(l -> l.getElementPaie().getType() == TypeElementPaie.CHARGE_PATRONALE).count());
+
+        fiche.getLignesPaie().forEach(ligne -> {
+            System.out.println("Ligne: " + ligne.getElementPaie().getCode() +
+                    " - Type: " + ligne.getElementPaie().getType() +
+                    " - Catégorie: " + ligne.getElementPaie().getCategorie() +
+                    " - Montant: " + ligne.getMontantFinal());
+        });
+
+        System.out.println("\nTOTAUX CALCULÉS:");
+        System.out.println("Total Gains: " + fiche.getTotalGains());
         System.out.println("Total Cotisations Salariales: " + fiche.getTotalCotisationsSalariales());
         System.out.println("Total Impôts: " + fiche.getTotalImpots());
-        System.out.println("Total Charges Patronales: " + fiche.getTotalChargesPatronales());
         System.out.println("Total Retenues Salariales: " + fiche.getTotalRetenuesSalariales());
+        System.out.println("Total Charges Patronales: " + fiche.getTotalChargesPatronales());
+        System.out.println("Salaire Brut: " + fiche.getSalaireBrut());
+        System.out.println("Salaire Net avant impôt: " + fiche.getSalaireNetAvantImpot());
         System.out.println("Salaire Net à payer: " + fiche.getSalaireNetAPayer());
         System.out.println("Coût total employeur: " + fiche.getCoutTotalEmployeur());
+
 
         fiche.setStatusBulletin(StatusBulletin.GÉNÉRÉ);
         fiche.setDateCreationBulletin(LocalDate.now());
@@ -381,11 +463,24 @@ public class BulletinPaieService {
 
         return fiche;
     }
-    //Calcule le montant d'une retenue en utilisant CotisationCalculator quand c'est possible
 
+    // 🔧 MÉTHODE AJOUTÉE: Fusion des lignes patronales/salariales
+
+
+
+
+    //Calcule le montant d'une retenue en utilisant CotisationCalculator quand c'est possible
     private void calculerMontantRetenue(LigneBulletinPaie ligne, ElementPaie element, FormuleCalculType formule, BigDecimal valeur, BulletinPaie fiche, Optional<EmployePaieConfig> employeConfig, TemplateElementPaieConfig config) {
         String code = element.getCode().toUpperCase();
         String designation = element.getDesignation() != null ? element.getDesignation().toUpperCase() : "";
+
+        if (element.getCategorie() == CategorieElement.SALAIRE_DE_BASE ||
+                "SALAIRE DE BASE".equals(designation) ||
+                "SALAIRE_DE_BASE".equals(code)) {
+
+            System.out.println("⚠️ SKIP: Salaire de base déjà géré par SalaireCalculator - " + designation);
+            return; // Ne pas traiter ici !
+        }
 
         BigDecimal montant = BigDecimal.ZERO;
         BigDecimal baseUtilisee = null;
@@ -400,6 +495,14 @@ public class BulletinPaieService {
             montant = montantSpecifique;
             baseUtilisee = determinerBaseCalcul(element, fiche);
             tauxApplique = obtenirTauxDepuisConstants(code, designation, element);
+
+            if ("CAC".equalsIgnoreCase(code) || designation.contains("CAC")) {
+                baseUtilisee = impotCalculator.calculIrpp(fiche); // Base = IRPP
+                tauxApplique = PaieConstants.TAUX_CAC; // Taux = 10%
+            } else {
+                baseUtilisee = determinerBaseCalcul(element, fiche);
+                tauxApplique = obtenirTauxDepuisConstants(code, designation, element);
+            }
 
             if (tauxApplique == null || tauxApplique.compareTo(BigDecimal.ZERO) == 0) {
                 if (valeur != null && valeur.compareTo(BigDecimal.ZERO) > 0) {
@@ -519,6 +622,12 @@ public class BulletinPaieService {
         // Si l'élément a déjà un type défini, l'utiliser
         if (element.getType() != null) {
             return element.getType();
+        }
+
+        if (code.contains("SALAIRE_BASE") || code.contains("SALAIRE_BRUT") ||
+                designation.contains("SALAIRE DE BASE") || designation.contains("SALAIRE BRUT") ||
+                element.getCategorie() == CategorieElement.SALAIRE_DE_BASE) {
+            return TypeElementPaie.GAIN;
         }
 
         // Déterminer selon le code/désignation
@@ -705,7 +814,12 @@ public class BulletinPaieService {
 
         // CAC se base sur l'IRPP
         if ("CAC".equalsIgnoreCase(code)) {
-            return impotCalculator.calculIrpp(fiche);
+            BigDecimal irppMontant = impotCalculator.calculIrpp(fiche);
+            return irppMontant;
+        }
+
+        if (designation.contains("TAXE COMMUNALE") || code.contains("TAXE_COMMUNALE")) {
+            return fiche.getSalaireBaseInitial() != null ? fiche.getSalaireBaseInitial() : BigDecimal.ZERO;
         }
 
         // CNPS se base sur la base CNPS
@@ -754,19 +868,6 @@ public class BulletinPaieService {
         return BigDecimal.ZERO;
     }
 
-    public String formaterTauxPourAffichage(LigneBulletinPaie ligne) {
-        if (ligne.isBareme() || ligne.getFormuleCalcul() == FormuleCalculType.BAREME) {
-            return "BARÈME";
-        }
-
-        if (ligne.getTauxApplique() == null || ligne.getTauxApplique().compareTo(BigDecimal.ZERO) == 0) {
-            return "-";
-        }
-
-        BigDecimal tauxPourcentage = ligne.getTauxApplique().multiply(BigDecimal.valueOf(100));
-        return tauxPourcentage.setScale(2, RoundingMode.HALF_UP) + "%";
-
-    }
 
 
 

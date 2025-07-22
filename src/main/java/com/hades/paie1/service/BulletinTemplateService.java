@@ -55,7 +55,14 @@ public class BulletinTemplateService {
         // Convertir la liste de TemplateElementPaieConfig
         if (template.getElementsConfig() != null) {
             dto.setElementsConfig(template.getElementsConfig().stream()
-                    .map(this::convertConfigToDto) // Appel à la méthode de conversion de config
+                    .sorted((c1, c2) -> {
+                        // Tri par affichageOrdre (nulls à la fin)
+                        if (c1.getAffichageOrdre() == null && c2.getAffichageOrdre() == null) return 0;
+                        if (c1.getAffichageOrdre() == null) return 1;
+                        if (c2.getAffichageOrdre() == null) return -1;
+                        return c1.getAffichageOrdre().compareTo(c2.getAffichageOrdre());
+                    })
+                    .map(this::convertConfigToDto)
                     .collect(Collectors.toList()));
         }
 

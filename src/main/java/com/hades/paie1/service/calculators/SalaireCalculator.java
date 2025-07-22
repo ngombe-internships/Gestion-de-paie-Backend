@@ -67,10 +67,11 @@ public class SalaireCalculator {
 
 
     public BigDecimal calculerSalaireBase(BulletinPaie bulletinPaie) {
+        // 🔧 VÉRIFICATION : Existe-t-il déjà une ligne salaire de base ?
         for (LigneBulletinPaie ligne : bulletinPaie.getLignesPaie()) {
             ElementPaie element = ligne.getElementPaie();
             if (element != null &&
-                    "Salaire de Base".equals(element.getDesignation()) &&
+                    element.getCategorie() == CategorieElement.SALAIRE_DE_BASE &&
                     element.getType() == TypeElementPaie.GAIN) {
 
                 System.out.println("✅ Salaire de base déjà présent dans les lignes de paie: " + ligne.getMontantFinal());
@@ -86,32 +87,22 @@ public class SalaireCalculator {
             Employe employe = bulletinPaie.getEmploye();
             if (employe != null && employe.getSalaireBase() != null) {
                 salaireBase = employe.getSalaireBase();
-                // Mettez à jour le salaire de base initial du bulletin pour les calculs futurs
                 bulletinPaie.setSalaireBaseInitial(salaireBase);
-
-                // Ajouter automatiquement le salaire de base comme ligne de paie
-                addLignePaieForElement(
-                        bulletinPaie,
-                        "Salaire de Base",
-                        TypeElementPaie.GAIN,
-                        CategorieElement.SALAIRE_DE_BASE,
-                        BigDecimal.ONE,
-                        null,
-                        salaireBase,
-                        salaireBase,
-                        salaireBase
-                );
-
-                System.out.println("✅ Salaire de base ajouté automatiquement: " + salaireBase);
             } else {
-                salaireBase = BigDecimal.ZERO;
                 throw new RessourceNotFoundException("Salaire de base non défini pour l'employé " + bulletinPaie.getEmploye().getMatricule());
             }
-        } else {
-            // Si le salaire de base initial existe mais n'est pas encore dans les lignes, l'ajouter
+        }
+
+        // 🔧 VÉRIFICATION : S'assurer qu'on n'ajoute pas en double
+        boolean salaireBaseExiste = bulletinPaie.getLignesPaie().stream()
+                .anyMatch(ligne -> ligne.getElementPaie() != null &&
+                        ligne.getElementPaie().getCategorie() == CategorieElement.SALAIRE_DE_BASE);
+
+        if (!salaireBaseExiste) {
+            // Ajouter automatiquement le salaire de base comme ligne de paie
             addLignePaieForElement(
                     bulletinPaie,
-                    "Salaire de Base",
+                    "Salaire de base", // ← Notation cohérente avec le JSON
                     TypeElementPaie.GAIN,
                     CategorieElement.SALAIRE_DE_BASE,
                     BigDecimal.ONE,
@@ -121,12 +112,13 @@ public class SalaireCalculator {
                     salaireBase
             );
 
-            System.out.println("✅ Salaire de base ajouté depuis bulletinPaie.getSalaireBaseInitial(): " + salaireBase);
+            System.out.println("✅ Salaire de base ajouté automatiquement: " + salaireBase);
+        } else {
+            System.out.println("⚠️ Salaire de base déjà existant, pas d'ajout");
         }
 
         return salaireBase;
     }
-
 
     public void calculerHeuresSupplementaires(BulletinPaie bulletinPaie) {
         BigDecimal totalHeuresSup = bulletinPaie.getHeuresSup();

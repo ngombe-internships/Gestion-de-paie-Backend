@@ -1,11 +1,17 @@
 package com.hades.paie1.service.calculators;
 
+import com.hades.paie1.enum1.CategorieElement;
+import com.hades.paie1.enum1.TypeElementPaie;
 import com.hades.paie1.model.BulletinPaie;
+import com.hades.paie1.model.ElementPaie;
+import com.hades.paie1.model.EmployePaieConfig;
+import com.hades.paie1.model.TemplateElementPaieConfig;
 import com.hades.paie1.utils.MathUtils;
 import com.hades.paie1.utils.PaieConstants;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
+import java.util.Optional;
 
 @Component
 
@@ -22,6 +28,30 @@ public class CotisationCalculator {
     }
 
     // calcul  des cotisation sociales
+
+    private  BigDecimal calculMontantParType(BulletinPaie fiche, TypeElementPaie type){
+        if (fiche == null || fiche.getLignesPaie() == null){
+            return BigDecimal.ZERO;
+        }
+        return fiche.getLignesPaie().stream()
+                .filter(ligne -> ligne.getElementPaie() != null &&
+                         ligne.getElementPaie().getType() == type)
+                .map(ligne -> ligne.getMontantFinal() != null ? ligne.getMontantFinal() : BigDecimal.ZERO)
+                .reduce(BigDecimal.ZERO , mathUtils::safeAdd);
+    }
+
+    private  BigDecimal calculerMontantParCategorie (BulletinPaie fiche, CategorieElement categorie) {
+        if (fiche == null || fiche.getLignesPaie() == null) {
+            return BigDecimal.ZERO;
+        }
+        return fiche.getLignesPaie().stream()
+                .filter(ligne -> ligne.getElementPaie() != null &&
+                         ligne.getElementPaie().getCategorie() == categorie)
+                .map (ligne -> ligne.getMontantFinal() != null ? ligne.getMontantFinal() : BigDecimal.ZERO)
+                .reduce(BigDecimal.ZERO, mathUtils::safeAdd);
+    }
+
+
 
     public BigDecimal calculCnpsVieillesseSalarie(BulletinPaie fiche){
         BigDecimal baseCnps = calculator.calculBaseCnps(fiche);
@@ -48,7 +78,7 @@ public class CotisationCalculator {
                 impotCalculator.calculTaxeCommunal(fiche),
                 impotCalculator.calculRedevanceAudioVisuelle(fiche),
                 calculCreditFoncierSalarie(fiche),
-                calculCnpsVieillesseEmployeur(fiche),
+                calculCnpsVieillesseSalarie(fiche),
                 calculFneSalaire(fiche),
                 avancesSurSalaires
         );
@@ -81,25 +111,34 @@ public class CotisationCalculator {
     }
 
     public BigDecimal calculTotalChargesPatronales(BulletinPaie fiche){
-        return mathUtils.safeAdd(
-                calculCnpsAccidentsTravail(fiche),
-                calculCnpsVieillesseEmployeur(fiche),
-                calculCreditFoncierPatronal(fiche),
-                calculFnePatronal(fiche),
-                calculCnpsAllocationsFamiliales(fiche)
-        );
+       if (fiche == null || fiche.getLignesPaie() == null){
+           return BigDecimal.ZERO;
+       }
+       return fiche.getLignesPaie().stream()
+               .filter(ligne -> ligne.getElementPaie() != null &&
+                       ligne.getElementPaie().getType() == TypeElementPaie.CHARGE_PATRONALE)
+               .map(ligne -> ligne.getMontantFinal() != null ? ligne.getMontantFinal() : BigDecimal.ZERO)
+               .reduce(BigDecimal.ZERO, mathUtils::safeAdd);
     }
 
     //Calcul total cotisation cnps
 
     public BigDecimal cotisationCnps (BulletinPaie fiche){
-        return  mathUtils.safeAdd(
-                calculCnpsVieillesseEmployeur(fiche),
-                calculCnpsVieillesseSalarie(fiche),
-                calculCnpsAllocationsFamiliales(fiche),
-                calculCnpsAccidentsTravail(fiche)
-        );
+        if (fiche == null || fiche.getLignesPaie() == null) {
+            return BigDecimal.ZERO;
+        }
+
+        return fiche.getLignesPaie().stream()
+                .filter(ligne -> ligne.getElementPaie() != null &&
+                        ligne.getElementPaie().getDesignation() != null &&
+                        ligne.getElementPaie().getDesignation().toLowerCase().contains("cnps"))
+                .map(ligne -> ligne.getMontantFinal() != null ? ligne.getMontantFinal() : BigDecimal.ZERO)
+                .reduce(BigDecimal.ZERO, mathUtils::safeAdd);
+
     }
+
+
+
 
 
 }

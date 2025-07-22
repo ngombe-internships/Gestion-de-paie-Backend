@@ -154,28 +154,6 @@ public class BulletinPaie {
 
         // Mettre à jour les totaux agrégés en fonction du type de ligne
         if (ligne.getElementPaie() != null) {
-            switch (ligne.getElementPaie().getType()) {
-                case GAIN:
-                    this.totalGains = this.totalGains.add(ligne.getMontantFinal());
-                    this.salaireBrut = this.salaireBrut.add(ligne.getMontantFinal()); // Les gains contribuent au salaire brut
-                    break;
-                case RETENUE:
-                    this.totalRetenuesSalariales = this.totalRetenuesSalariales.add(ligne.getMontantFinal());
-                    // Les retenues (hors impôts) sont soustraites pour le salaire net avant impôt
-                    this.salaireNetAvantImpot = this.salaireNetAvantImpot.subtract(ligne.getMontantFinal());
-                    // Si c'est une cotisation salariale, l'ajouter au total spécifique
-                    if (ligne.getElementPaie().getCategorie() == CategorieElement.COTISATION_SALARIALE) {
-                        this.totalCotisationsSalariales = this.totalCotisationsSalariales.add(ligne.getMontantFinal());
-                    }
-                    // Si c'est un impôt, l'ajouter au total spécifique
-                    if (ligne.getElementPaie().getCategorie() == com.hades.paie1.enum1.CategorieElement.IMPOT) {
-                        this.totalImpots = this.totalImpots.add(ligne.getMontantFinal());
-                    }
-                    break;
-                case CHARGE_PATRONALE:
-                    this.totalChargesPatronales = this.totalChargesPatronales.add(ligne.getMontantFinal());
-                    break;
-            }
             // Mettre à jour les indicateurs estGain, estRetenue, estChargePatronale dans la ligne elle-même (si non déjà fait par le calculateur)
             ligne.setEstGain(ligne.getElementPaie().getType() == TypeElementPaie.GAIN);
             ligne.setEstRetenue(ligne.getElementPaie().getType() == TypeElementPaie.RETENUE);
