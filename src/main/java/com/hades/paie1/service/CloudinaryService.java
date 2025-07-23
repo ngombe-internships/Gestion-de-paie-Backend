@@ -38,7 +38,7 @@ public class CloudinaryService {
                     "width", 300,
                     "height", 300,
                     "crop", "limit",
-                    "quality", "auto:good",
+                    "quality", "auto:good"
                     //"format", "auto"
             );
 
