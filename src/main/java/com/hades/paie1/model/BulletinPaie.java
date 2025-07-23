@@ -30,12 +30,12 @@ public class BulletinPaie {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "employe_id", nullable = false)
-
+    @JsonIdentityReference(alwaysAsId = true)
     private Employe employe;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name ="entreprise_id", nullable = false)
-
+    @JsonIdentityReference(alwaysAsId = true)
     private  Entreprise entreprise;
 
     //sert pour ajouter la liste des lignes de paie
