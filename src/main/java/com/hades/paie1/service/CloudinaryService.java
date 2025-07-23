@@ -39,7 +39,7 @@ public class CloudinaryService {
                     "height", 300,
                     "crop", "limit",
                     "quality", "auto:good",
-                    "format", "auto"
+                    //"format", "auto"
             );
 
             // Upload vers Cloudinary
