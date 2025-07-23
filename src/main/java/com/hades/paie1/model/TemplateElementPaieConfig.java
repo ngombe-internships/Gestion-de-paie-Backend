@@ -27,12 +27,14 @@ public class TemplateElementPaieConfig {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "template_id")
     //@JsonBackReference("template-elements")
+    @JsonIdentityReference(alwaysAsId = true)
     private BulletinTemplate bulletinTemplate;// Le template auquel cette config appartient
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "element_paie_id", nullable = false)
     //@JsonIdentityInfo(generator = ObjectIdGenerators.PropertyGenerator.class, property = "id")
     //@JsonIdentityReference(alwaysAsId = true)
+    @JsonIdentityReference(alwaysAsId = true)
     private ElementPaie elementPaie; // L'élément de paie générique configuré
 
     @Column(name = "is_active", nullable = false)

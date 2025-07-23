@@ -88,12 +88,14 @@ public class Employe {
 
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", unique = true)
-    @JsonBackReference("user-employe")
+    //@JsonBackReference("user-employe")
+    @JsonIdentityReference(alwaysAsId = true)
     private  User user;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "entreprise_id", nullable = false)
    // @JsonBackReference("employe-entreprise")
+    @JsonIdentityReference(alwaysAsId = true)
     private Entreprise entreprise;
 
 

@@ -1,9 +1,6 @@
 package com.hades.paie1.model;
 
-import com.fasterxml.jackson.annotation.JsonBackReference;
-import com.fasterxml.jackson.annotation.JsonIdentityInfo;
-import com.fasterxml.jackson.annotation.JsonManagedReference;
-import com.fasterxml.jackson.annotation.ObjectIdGenerators;
+import com.fasterxml.jackson.annotation.*;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -30,6 +27,7 @@ public class BulletinTemplate {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "entreprise_id", nullable = false)
     //@JsonBackReference("entreprise-templates")
+    @JsonIdentityReference(alwaysAsId = true)
     private Entreprise entreprise;
 
     @Column(name = "nom_template", nullable = false)
@@ -46,6 +44,7 @@ public class BulletinTemplate {
     // avec des configurations propres au template (par exemple, valeur par défaut pour ce template)
     @OneToMany(mappedBy = "bulletinTemplate", cascade = CascadeType.ALL, orphanRemoval = true)
    // @JsonManagedReference("template-elements")
+    @JsonIdentityReference(alwaysAsId = true)
     private List<TemplateElementPaieConfig> elementsConfig = new ArrayList<>();
 
     // Si vous avez besoin de champs spécifiques pour la configuration des heures

@@ -37,10 +37,12 @@ public class User {
 
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     //@JsonManagedReference("user-employe")
+    @JsonIdentityReference(alwaysAsId = true)
     private Employe employe;
 
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "entreprise_id", unique = true)
     //@JsonBackReference("user-entreprise")
+    @JsonIdentityReference(alwaysAsId = true)
     private Entreprise entreprise;
 }

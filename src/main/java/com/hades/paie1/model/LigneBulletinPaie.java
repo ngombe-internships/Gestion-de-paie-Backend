@@ -30,10 +30,12 @@ public class LigneBulletinPaie {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "bulletin_paie_id", nullable = false)
+    @JsonBackReference("bulletin-lignes")
     private BulletinPaie bulletinPaie; // Le bulletin de paie auquel cette ligne appartient
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "element_paie_id", nullable = false)
+    @JsonIdentityReference(alwaysAsId = true)
     private ElementPaie elementPaie; // L'élément de paie du catalogue auquel cette ligne se réfère
 
     @Enumerated(EnumType.STRING)

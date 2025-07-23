@@ -1,6 +1,7 @@
 package com.hades.paie1.model;
 
 import com.fasterxml.jackson.annotation.JsonIdentityInfo;
+import com.fasterxml.jackson.annotation.JsonIdentityReference;
 import com.fasterxml.jackson.annotation.ObjectIdGenerators;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -27,10 +28,12 @@ public class EmployePaieConfig {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "employe_id", nullable = false)
+    @JsonIdentityReference(alwaysAsId = true)
     private Employe employe; // L'employé concerné par cette configuration
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "element_paie_id", nullable = false)
+    @JsonIdentityReference(alwaysAsId = true)
     private ElementPaie elementPaie; // L'élément de paie auquel cette configuration s'applique
 
     @Column(name = "valeur", precision = 15, scale = 2)

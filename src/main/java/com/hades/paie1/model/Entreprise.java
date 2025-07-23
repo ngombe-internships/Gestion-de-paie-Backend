@@ -70,11 +70,13 @@ public class Entreprise {
 
     @OneToOne(mappedBy = "entreprise", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
    // @JsonManagedReference("user-entreprise")
+    @JsonIdentityReference(alwaysAsId = true)
     private  User employeurPrincipal;
 
 
     @OneToMany(mappedBy = "entreprise", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
   //  @JsonManagedReference("employe-entreprise")
+    @JsonIdentityReference(alwaysAsId = true)
     private List <Employe> employes = new ArrayList<>();
 
 
