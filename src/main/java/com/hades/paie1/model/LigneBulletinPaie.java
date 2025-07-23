@@ -21,6 +21,7 @@ import java.math.BigDecimal;
 @NoArgsConstructor
 @Builder
 @Table(name = "ligne_bulletin_paie")
+@JsonIdentityInfo(generator = ObjectIdGenerators.PropertyGenerator.class, property = "id")
 public class LigneBulletinPaie {
 
     @Id
@@ -29,13 +30,10 @@ public class LigneBulletinPaie {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "bulletin_paie_id", nullable = false)
-    @JsonBackReference("bulletin-lignes")
     private BulletinPaie bulletinPaie; // Le bulletin de paie auquel cette ligne appartient
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "element_paie_id", nullable = false)
-    @JsonIdentityInfo(generator = ObjectIdGenerators.PropertyGenerator.class, property = "id")
-    @JsonIdentityReference(alwaysAsId = true)
     private ElementPaie elementPaie; // L'élément de paie du catalogue auquel cette ligne se réfère
 
     @Enumerated(EnumType.STRING)

@@ -1,8 +1,6 @@
 package com.hades.paie1.model;
 
-import com.fasterxml.jackson.annotation.JsonBackReference;
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonManagedReference;
+import com.fasterxml.jackson.annotation.*;
 import com.hades.paie1.enum1.Role;
 import jakarta.persistence.*;
 import lombok.*;
@@ -14,6 +12,8 @@ import org.hibernate.annotations.ColumnDefault;
 @AllArgsConstructor
 @Builder
 @Table(name = "users")
+@JsonIdentityInfo(generator = ObjectIdGenerators.PropertyGenerator.class, property = "id")
+
 public class User {
 
     @Id
@@ -24,6 +24,7 @@ public class User {
     private String username;
 
     @Column (nullable = false)
+    @JsonIgnore
     private String password;
 
     @Enumerated(EnumType.STRING)
@@ -35,11 +36,11 @@ public class User {
 
 
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
-    @JsonManagedReference("user-employe")
+    //@JsonManagedReference("user-employe")
     private Employe employe;
 
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "entreprise_id", unique = true)
-    @JsonBackReference("user-entreprise")
+    //@JsonBackReference("user-entreprise")
     private Entreprise entreprise;
 }

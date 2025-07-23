@@ -1,7 +1,9 @@
 package com.hades.paie1.model;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonIdentityInfo;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
+import com.fasterxml.jackson.annotation.ObjectIdGenerators;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -17,6 +19,7 @@ import java.util.List;
 @Table(name = "bulletin_template")
 @ToString(exclude = {"entreprise", "elementsConfig"})
 @EqualsAndHashCode(exclude = {"entreprise", "elementsConfig"})
+@JsonIdentityInfo(generator = ObjectIdGenerators.PropertyGenerator.class, property = "id")
 public class BulletinTemplate {
 
     @Id
@@ -26,7 +29,7 @@ public class BulletinTemplate {
     // L'entreprise à laquelle ce template est associé
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "entreprise_id", nullable = false)
-    @JsonBackReference("entreprise-templates")
+    //@JsonBackReference("entreprise-templates")
     private Entreprise entreprise;
 
     @Column(name = "nom_template", nullable = false)
@@ -42,7 +45,7 @@ public class BulletinTemplate {
     // Liste des éléments de paie spécifiques activés pour ce template,
     // avec des configurations propres au template (par exemple, valeur par défaut pour ce template)
     @OneToMany(mappedBy = "bulletinTemplate", cascade = CascadeType.ALL, orphanRemoval = true)
-    @JsonManagedReference("template-elements")
+   // @JsonManagedReference("template-elements")
     private List<TemplateElementPaieConfig> elementsConfig = new ArrayList<>();
 
     // Si vous avez besoin de champs spécifiques pour la configuration des heures

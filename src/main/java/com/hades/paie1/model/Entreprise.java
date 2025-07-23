@@ -1,8 +1,6 @@
 package com.hades.paie1.model;
 
-import com.fasterxml.jackson.annotation.JsonBackReference;
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonManagedReference;
+import com.fasterxml.jackson.annotation.*;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
 import lombok.*;
@@ -19,6 +17,7 @@ import java.util.Set;
 @Builder
 @Entity
 @Table(name = "entreprise")
+@JsonIdentityInfo(generator = ObjectIdGenerators.PropertyGenerator.class, property = "id")
 public class Entreprise {
 
     @Id
@@ -44,6 +43,10 @@ public class Entreprise {
     @Column(nullable = false)
     private LocalDate dateCreation;
 
+    @Lob
+    @Basic(fetch = FetchType.LAZY)
+    @Column(name = "logo")
+    @JsonIgnore
     private String logoUrl;
 
 
@@ -66,12 +69,12 @@ public class Entreprise {
 
 
     @OneToOne(mappedBy = "entreprise", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    @JsonManagedReference("user-entreprise")
+   // @JsonManagedReference("user-entreprise")
     private  User employeurPrincipal;
 
 
     @OneToMany(mappedBy = "entreprise", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    @JsonManagedReference("employe-entreprise")
+  //  @JsonManagedReference("employe-entreprise")
     private List <Employe> employes = new ArrayList<>();
 
 
@@ -88,7 +91,7 @@ public class Entreprise {
 
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "default_bulletin_template_id", unique = true) // Assurez-vous que cette colonne n'existe pas déjà
-    @JsonManagedReference("entreprise-templates")
+    //@JsonManagedReference("entreprise-templates")
     private BulletinTemplate defaultBulletinTemplate;
 
 

@@ -1,8 +1,6 @@
 package com.hades.paie1.model;
 
-import com.fasterxml.jackson.annotation.JsonBackReference;
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonManagedReference;
+import com.fasterxml.jackson.annotation.*;
 import com.hades.paie1.enum1.*;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
@@ -20,6 +18,7 @@ import java.util.List;
 @NoArgsConstructor
 @Builder
 @Table(name = "employes")
+@JsonIdentityInfo(generator = ObjectIdGenerators.PropertyGenerator.class, property = "id")
 public class Employe {
 
 
@@ -94,7 +93,7 @@ public class Employe {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "entreprise_id", nullable = false)
-    @JsonBackReference("employe-entreprise")
+   // @JsonBackReference("employe-entreprise")
     private Entreprise entreprise;
 
 
@@ -113,7 +112,7 @@ public class Employe {
 
 
     @OneToMany(mappedBy = "employe")
-    @JsonManagedReference("employe-avantages")
+   // @JsonManagedReference("employe-avantages")
     private List<EmployeAvantageNature> avantagesNature = new ArrayList<>();
 
 

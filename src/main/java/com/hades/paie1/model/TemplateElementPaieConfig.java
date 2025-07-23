@@ -16,6 +16,8 @@ import java.math.BigDecimal;
 @NoArgsConstructor
 @AllArgsConstructor
 @Table(name = "template_element_paie_config")
+@JsonIdentityInfo(generator = ObjectIdGenerators.PropertyGenerator.class, property = "id")
+
 public class TemplateElementPaieConfig {
 
     @Id
@@ -24,13 +26,13 @@ public class TemplateElementPaieConfig {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "template_id")
-    @JsonBackReference("template-elements")
+    //@JsonBackReference("template-elements")
     private BulletinTemplate bulletinTemplate;// Le template auquel cette config appartient
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "element_paie_id", nullable = false)
-    @JsonIdentityInfo(generator = ObjectIdGenerators.PropertyGenerator.class, property = "id")
-    @JsonIdentityReference(alwaysAsId = true)
+    //@JsonIdentityInfo(generator = ObjectIdGenerators.PropertyGenerator.class, property = "id")
+    //@JsonIdentityReference(alwaysAsId = true)
     private ElementPaie elementPaie; // L'élément de paie générique configuré
 
     @Column(name = "is_active", nullable = false)

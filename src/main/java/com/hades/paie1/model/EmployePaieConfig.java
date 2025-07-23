@@ -1,5 +1,7 @@
 package com.hades.paie1.model;
 
+import com.fasterxml.jackson.annotation.JsonIdentityInfo;
+import com.fasterxml.jackson.annotation.ObjectIdGenerators;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -15,6 +17,8 @@ import java.time.LocalDate;
 @NoArgsConstructor
 @Builder
 @Table(name = "employe_paie_config")
+@JsonIdentityInfo(generator = ObjectIdGenerators.PropertyGenerator.class, property = "id")
+
 public class EmployePaieConfig {
 
     @Id

@@ -1,5 +1,7 @@
 package com.hades.paie1.model;
 
+import com.fasterxml.jackson.annotation.JsonIdentityInfo;
+import com.fasterxml.jackson.annotation.ObjectIdGenerators;
 import com.hades.paie1.enum1.CategorieElement;
 import com.hades.paie1.enum1.FormuleCalculType;
 import com.hades.paie1.enum1.TypeElementPaie;
@@ -17,6 +19,8 @@ import java.math.BigDecimal;
 @NoArgsConstructor
 @AllArgsConstructor
 @Table(name = "element_paie")
+@JsonIdentityInfo(generator = ObjectIdGenerators.PropertyGenerator.class, property = "id")
+
 public class ElementPaie {
 
     @Id

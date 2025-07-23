@@ -21,7 +21,7 @@ import java.util.List;
 @AllArgsConstructor
 @NoArgsConstructor
 @Table (name = "bulletin_paie")
-@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+@JsonIdentityInfo(generator = ObjectIdGenerators.PropertyGenerator.class, property = "id")
 public class BulletinPaie {
 
     @Id
@@ -30,19 +30,16 @@ public class BulletinPaie {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "employe_id", nullable = false)
-    @JsonIdentityInfo(generator = ObjectIdGenerators.PropertyGenerator.class, property = "id")
-    @JsonIdentityReference(alwaysAsId = true)
+
     private Employe employe;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name ="entreprise_id", nullable = false)
-    @JsonIdentityInfo(generator = ObjectIdGenerators.PropertyGenerator.class, property = "id")
-    @JsonIdentityReference(alwaysAsId = true)
+
     private  Entreprise entreprise;
 
     //sert pour ajouter la liste des lignes de paie
     @OneToMany(mappedBy = "bulletinPaie", cascade = CascadeType.ALL, orphanRemoval = true )
-    @JsonManagedReference("bulletin-lignes")
     private List<LigneBulletinPaie> lignesPaie = new ArrayList<>();
 
 
