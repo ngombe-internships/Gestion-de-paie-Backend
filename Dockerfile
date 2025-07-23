@@ -30,3 +30,4 @@ ENV JAVA_OPTS="-Xmx512m -Xms256m"
 ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -Dspring.profiles.active=${SPRING_PROFILES_ACTIVE:-prod} -jar app.jar --server.port=${PORT:-8080}"]
 
 
+
