@@ -24,27 +24,25 @@ public class CloudinaryService {
 
     public String uploadFile(MultipartFile file) throws IOException {
         try {
-            logger.info("Debut de l'upload vers Cloudinary pour le fichier : {}", file.getOriginalFilename() );
+            logger.info("Debut de l'upload vers Cloudinary pour le fichier : {}", file.getOriginalFilename());
 
-            //Generer un nom unique
-            String publicId = "logos/" + UUID.randomUUID().toString() + "_" +
+            // Generer un nom unique (sans le préfixe "logos/" car on utilise folder)
+            String publicId = UUID.randomUUID().toString() + "_" +
                     file.getOriginalFilename().replaceAll("[^a-zA-Z0-9._-]", "");
 
-            //Configuration de l'upload
+            // Configuration de l'upload - SOLUTION 1 : Paramètres directs
             Map<String, Object> uploadParams = ObjectUtils.asMap(
                     "public_id", publicId,
-                    "folder","company_logos",
+                    "folder", "company_logos",
                     "resource_type", "image",
-                    "transformation",ObjectUtils.asMap(
-                            "width",300,
-                            "height", 300,
-                            "crop", "limit",
-                            "quality", "auto:good",
-                            "format", "auto"
-                    )
+                    "width", 300,
+                    "height", 300,
+                    "crop", "limit",
+                    "quality", "auto:good",
+                    "format", "auto"
             );
 
-            //Upload vers Cloudinary
+            // Upload vers Cloudinary
             Map<String, Object> uploadResult = cloudinary.uploader().upload(
                     file.getBytes(),
                     uploadParams
@@ -53,12 +51,12 @@ public class CloudinaryService {
             String imageUrl = uploadResult.get("secure_url").toString();
             logger.info("Upload Cloudinary réussi. URL: {}", imageUrl);
             return imageUrl;
-        } catch (Exception e){
-            logger.error("Erreur lors de l'upload Cloudinary : {}", e.getMessage() , e);
-            throw  new IOException("Echec de l'upload vers Cloudinary", e);
+
+        } catch (Exception e) {
+            logger.error("Erreur lors de l'upload Cloudinary : {}", e.getMessage(), e);
+            throw new IOException("Echec de l'upload vers Cloudinary", e);
         }
     }
-
     public void deleteFile(String imageUrl) {
           try {
               String publicId = extractPublicIdFromUrl(imageUrl);
