@@ -1,8 +1,11 @@
 package com.hades.paie1.service.pdf;
 
+import com.hades.paie1.service.CloudinaryService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -15,6 +18,7 @@ import java.util.UUID;
 
 
 @Service
+@Profile("dev")
 public class FileStorageService {
 
     private static final Logger logger = LoggerFactory.getLogger(FileStorageService.class);
@@ -63,7 +67,6 @@ public class FileStorageService {
         }
 
         // 6. Retourner l'URL relative pour l'enregistrement en base de données
-        // Assurez-vous que votre application web est configurée pour servir ce chemin '/logos/**'
         String publicUrl = "/logos/" + fileName;
         logger.info("URL publique du logo générée : {}", publicUrl);
         return publicUrl;

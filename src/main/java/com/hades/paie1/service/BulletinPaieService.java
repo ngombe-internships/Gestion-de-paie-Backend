@@ -7,6 +7,7 @@ import com.hades.paie1.model.*;
 import com.hades.paie1.repository.*;
 import com.hades.paie1.service.calculators.CotisationCalculator;
 import com.hades.paie1.service.calculators.ImpotCalculator;
+import com.hades.paie1.service.calculators.RetenueCalculator;
 import com.hades.paie1.service.calculators.SalaireCalculator;
 import com.hades.paie1.utils.MathUtils;
 import com.hades.paie1.utils.PaieConstants;
@@ -35,9 +36,9 @@ public class BulletinPaieService {
     private EmployeRepository employeRepo;
 
     private CotisationCalculator cotisationCalculator;
-    private ImpotCalculator impotCalculator;
+
     private SalaireCalculator calculator;
-    private MathUtils mathUtils;
+
     private  EmployeService employeService;
     private UserRepository userRepository;
     private EntrepriseRepository entrepriseRepository;
@@ -47,13 +48,13 @@ public class BulletinPaieService {
 
     private ElementPaieRepository elementPaieRepository;
     private PayrollDisplayService payrollDisplayService;
+
+    private RetenueCalculator retenueCalculator;
     private static final Logger logger = LoggerFactory.getLogger(BulletinPaieService.class);
 
     public BulletinPaieService (
             CotisationCalculator cotisationCalculator,
-            ImpotCalculator impotCalculator,
             SalaireCalculator calculator,
-            MathUtils mathUtils,
             BulletinPaieRepo bulletinRepo,
             EmployeRepository employeRepo,
             EmployeService employeService,
@@ -63,14 +64,13 @@ public class BulletinPaieService {
             TemplateElementPaieConfigRepository templateepository,
             BulletinTemplateRepository bulletinTemplate,
             ElementPaieRepository elementPaieRepository,
-            PayrollDisplayService payrollDisplayService
+            PayrollDisplayService payrollDisplayService,
+            RetenueCalculator retenueCalculator
 
 
     ){
        this.calculator = calculator;
-       this.mathUtils = mathUtils;
        this.cotisationCalculator = cotisationCalculator;
-       this.impotCalculator = impotCalculator;
        this.bulletinRepo= bulletinRepo;
        this.employeRepo= employeRepo;
        this.employeService= employeService;
@@ -81,6 +81,7 @@ public class BulletinPaieService {
        this.bulletinTemplateRepository = bulletinTemplate;
        this.elementPaieRepository = elementPaieRepository;
        this.payrollDisplayService = payrollDisplayService;
+       this.retenueCalculator = retenueCalculator;
     }
 
 
@@ -95,10 +96,6 @@ public class BulletinPaieService {
         return userRepository.findByUsername(username)
                 .orElseThrow(() -> new RessourceNotFoundException("User not found: " + username)); // Utilisez RessourceNotFoundException ou UsernameNotFoundException
     }
-
-
-
-
 
 
 
@@ -305,7 +302,7 @@ public class BulletinPaieService {
             System.out.println("\n🎯 Traitement prioritaire IRPP: " + element.getCode());
 
             LigneBulletinPaie ligne = new LigneBulletinPaie();
-            calculerMontantRetenue(ligne, element, config.getFormuleCalculOverride() != null ?
+           retenueCalculator.calculerMontantRetenue(ligne, element, config.getFormuleCalculOverride() != null ?
                             config.getFormuleCalculOverride() : element.getFormuleCalcul(),
                     BigDecimal.ZERO, fiche, Optional.empty(), config);
 
@@ -332,7 +329,7 @@ public class BulletinPaieService {
             System.out.println("\n🎯 Traitement CAC (après IRPP): " + element.getCode());
 
             LigneBulletinPaie ligne = new LigneBulletinPaie();
-            calculerMontantRetenue(ligne, element, config.getFormuleCalculOverride() != null ?
+            retenueCalculator.calculerMontantRetenue(ligne, element, config.getFormuleCalculOverride() != null ?
                             config.getFormuleCalculOverride() : element.getFormuleCalcul(),
                     BigDecimal.ZERO, fiche, Optional.empty(), config);
 
@@ -362,7 +359,7 @@ public class BulletinPaieService {
             Optional<EmployePaieConfig> employeConfig = configs.stream().findFirst();
 
             LigneBulletinPaie ligne = new LigneBulletinPaie();
-            calculerMontantRetenue(ligne, element, config.getFormuleCalculOverride() != null ?
+            retenueCalculator.calculerMontantRetenue(ligne, element, config.getFormuleCalculOverride() != null ?
                             config.getFormuleCalculOverride() : element.getFormuleCalcul(),
                     BigDecimal.ZERO, fiche, employeConfig, config);
 
@@ -464,409 +461,7 @@ public class BulletinPaieService {
         return fiche;
     }
 
-    // 🔧 MÉTHODE AJOUTÉE: Fusion des lignes patronales/salariales
 
-
-
-
-    //Calcule le montant d'une retenue en utilisant CotisationCalculator quand c'est possible
-    private void calculerMontantRetenue(LigneBulletinPaie ligne, ElementPaie element, FormuleCalculType formule, BigDecimal valeur, BulletinPaie fiche, Optional<EmployePaieConfig> employeConfig, TemplateElementPaieConfig config) {
-        String code = element.getCode().toUpperCase();
-        String designation = element.getDesignation() != null ? element.getDesignation().toUpperCase() : "";
-
-        if (element.getCategorie() == CategorieElement.SALAIRE_DE_BASE ||
-                "SALAIRE DE BASE".equals(designation) ||
-                "SALAIRE_DE_BASE".equals(code)) {
-
-            System.out.println("⚠️ SKIP: Salaire de base déjà géré par SalaireCalculator - " + designation);
-            return; // Ne pas traiter ici !
-        }
-
-        BigDecimal montant = BigDecimal.ZERO;
-        BigDecimal baseUtilisee = null;
-        BigDecimal tauxApplique = valeur;
-        String tauxAffiche = null;
-
-
-        // Utiliser CotisationCalculator pour les cotisations spécifiques
-        BigDecimal montantSpecifique = calculerCotisationSpecifique(code, designation, fiche);
-        if (montantSpecifique != null) {
-            System.out.println("Montant calculé via CotisationCalculator pour " + code + ": " + montantSpecifique);
-            montant = montantSpecifique;
-            baseUtilisee = determinerBaseCalcul(element, fiche);
-            tauxApplique = obtenirTauxDepuisConstants(code, designation, element);
-
-            if ("CAC".equalsIgnoreCase(code) || designation.contains("CAC")) {
-                baseUtilisee = impotCalculator.calculIrpp(fiche); // Base = IRPP
-                tauxApplique = PaieConstants.TAUX_CAC; // Taux = 10%
-            } else {
-                baseUtilisee = determinerBaseCalcul(element, fiche);
-                tauxApplique = obtenirTauxDepuisConstants(code, designation, element);
-            }
-
-            if (tauxApplique == null || tauxApplique.compareTo(BigDecimal.ZERO) == 0) {
-                if (valeur != null && valeur.compareTo(BigDecimal.ZERO) > 0) {
-                    tauxApplique = valeur;
-                } else {
-                    tauxApplique = calculerTauxEffectif(montant, baseUtilisee);
-                }
-            }
-        } else {
-
-            switch (formule) {
-                case MONTANT_FIXE:
-                    montant = employeConfig.isPresent() && employeConfig.get().getMontant() != null ?
-                            employeConfig.get().getMontant() :
-                            (config.getMontantDefaut() != null ? config.getMontantDefaut() :
-                                    (element.getTauxDefaut() != null ? element.getTauxDefaut() : BigDecimal.ZERO));
-                    baseUtilisee = null;
-                    tauxApplique = null;
-                    tauxAffiche= null;
-                    break;
-
-                case POURCENTAGE_BASE:
-                    baseUtilisee = determinerBaseCalcul(element, fiche);
-                    tauxApplique = employeConfig.isPresent() && employeConfig.get().getTaux() != null ?
-                            employeConfig.get().getTaux() :
-                            (config.getTauxDefaut() != null ? config.getTauxDefaut() :
-                                    (element.getTauxDefaut() != null ? element.getTauxDefaut() : BigDecimal.ZERO));
-
-                    // Vérifier d'abord les constantes système
-                    BigDecimal tauxConstant = obtenirTauxDepuisConstants(code, designation, element);
-                    if (tauxConstant != null && tauxConstant.compareTo(BigDecimal.ZERO) > 0) {
-                        tauxApplique = tauxConstant;
-                    }
-
-                    montant = baseUtilisee.multiply(tauxApplique);
-                    if (tauxApplique != null) {
-                        tauxAffiche = String.format("%.2f %%", tauxApplique.multiply(BigDecimal.valueOf(100)));
-                    }
-                    break;
-
-                case NOMBRE_BASE_TAUX:
-                    BigDecimal nombre = BigDecimal.ONE; // Par défaut
-                    tauxApplique = employeConfig.isPresent() && employeConfig.get().getTaux() != null ?
-                            employeConfig.get().getTaux() :
-                            (config.getTauxDefaut() != null ? config.getTauxDefaut() :
-                                    (element.getTauxDefaut() != null ? element.getTauxDefaut() : BigDecimal.ZERO));
-
-                    montant = nombre.multiply(tauxApplique);
-                    tauxAffiche = String.format("%.2f %%", tauxApplique.multiply(BigDecimal.valueOf(100)));
-
-                    break;
-
-
-                case TAUX_DEFAUT_X_MONTANT_DEFAUT:
-                    BigDecimal tauxDefaut = config.getTauxDefaut() != null ? config.getTauxDefaut() : element.getTauxDefaut();
-                    BigDecimal montantDefaut = config.getMontantDefaut() != null ? config.getMontantDefaut() : element.getTauxDefaut();
-                    montant = tauxDefaut.multiply(montantDefaut);
-                    tauxApplique = tauxDefaut;
-                    tauxAffiche = String.format("%.2f %%", tauxDefaut.multiply(BigDecimal.valueOf(100)));
-                    baseUtilisee = null;
-                    break;
-
-                case NOMBRE_X_TAUX_DEFAUT_X_MONTANT_DEFAUT:
-                    BigDecimal nombreX = config.getNombreDefaut() != null ? config.getNombreDefaut() : BigDecimal.ONE;
-                    BigDecimal tauxDefautX = config.getTauxDefaut() != null ? config.getTauxDefaut() : element.getTauxDefaut();
-                    BigDecimal montantDefautX = config.getMontantDefaut() != null ? config.getMontantDefaut() : element.getTauxDefaut();
-                    montant = nombreX.multiply(tauxDefautX).multiply(montantDefautX);
-                    tauxApplique = tauxDefautX;
-                    tauxAffiche = String.format("%.2f %%", tauxDefautX.multiply(BigDecimal.valueOf(100)));
-                    baseUtilisee = null;
-                    ligne.setNombre(nombreX); // Remplis le nombre dans la ligne !
-                    break;
-
-
-                case BAREME:
-                    baseUtilisee = determinerBaseCalcul(element, fiche);
-                    montant = calculerMontantBareme(code, fiche);
-                    tauxApplique = null;
-                    break;
-
-                default:
-                    montant = BigDecimal.ZERO;
-                    tauxApplique = BigDecimal.ZERO;
-            }
-        }
-
-        // CORRECTION IMPORTANTE : Définir correctement le type d'élément
-        TypeElementPaie typeElement = determinerTypeElement(element, code, designation);
-
-        ligne.setElementPaie(element);
-        ligne.setNombre(BigDecimal.ONE);
-        ligne.setTauxApplique(tauxApplique);
-        ligne.setMontantCalcul(montant);
-        ligne.setMontantFinal(montant);
-        ligne.setBaseApplique(baseUtilisee);
-        ligne.setType(typeElement);
-        ligne.setTauxAffiche(tauxAffiche);
-        // Marquer les propriétés booléennes selon le type
-        ligne.setEstGain(typeElement == TypeElementPaie.GAIN);
-        ligne.setEstRetenue(typeElement == TypeElementPaie.RETENUE);
-        ligne.setEstChargePatronale(typeElement == TypeElementPaie.CHARGE_PATRONALE);
-
-        if (formule == FormuleCalculType.BAREME) {
-            ligne.setBareme(true);
-        }
-
-        ligne.setFormuleCalcul(formule);
-
-
-        System.out.println("Ligne créée - Code: " + code + ", Montant: " + montant +
-                ", Taux: " + tauxApplique + ", Base: " + baseUtilisee + ", Type: " + typeElement +
-                ", Formule: " + formule + ",TauxAffiche " +tauxAffiche);
-    }
-
-
-    private TypeElementPaie determinerTypeElement(ElementPaie element, String code, String designation) {
-        // Si l'élément a déjà un type défini, l'utiliser
-        if (element.getType() != null) {
-            return element.getType();
-        }
-
-        if (code.contains("SALAIRE_BASE") || code.contains("SALAIRE_BRUT") ||
-                designation.contains("SALAIRE DE BASE") || designation.contains("SALAIRE BRUT") ||
-                element.getCategorie() == CategorieElement.SALAIRE_DE_BASE) {
-            return TypeElementPaie.GAIN;
-        }
-
-        // Déterminer selon le code/désignation
-        if (code.contains("EMPLOYEUR") || code.contains("PATRONAL") ||
-                designation.contains("EMPLOYEUR") || designation.contains("PATRONAL")) {
-            return TypeElementPaie.CHARGE_PATRONALE;
-        }
-
-        // Si c'est une cotisation patronale selon la catégorie
-        if (element.getCategorie() == CategorieElement.COTISATION_PATRONALE) {
-            return TypeElementPaie.CHARGE_PATRONALE;
-        }
-
-        // Par défaut, c'est une retenue salariale
-        return TypeElementPaie.RETENUE;
-    }
-    // Méthode pour récupérer les taux depuis PaieConstants
-    private BigDecimal obtenirTauxDepuisConstants(String code, String designation, ElementPaie element) {
-        // CNPS Vieillesse
-        if ((code.contains("CNPS_VIEILLESSE") || (designation.contains("CNPS") && designation.contains("VIEILLESSE")))) {
-            if (code.contains("EMPLOYEUR") || designation.contains("EMPLOYEUR") || code.contains("PATRONAL") ||
-                    element.getCategorie() == CategorieElement.COTISATION_PATRONALE) {
-                return PaieConstants.TAUX_CNPS_VIEILLESSE_EMPLOYEUR;
-            } else {
-                return PaieConstants.TAUX_CNPS_VIEILLESSE_SALARIE;
-            }
-        }
-
-        // CNPS Allocations Familiales
-        if (code.contains("CNPS_ALLOCATIONS_FAMILIALES") ||
-                code.contains("ALLOCATION_FAMILIALE_CNPS") ||
-                (designation.contains("CNPS") && designation.contains("ALLOCATION"))) {
-            return PaieConstants.TAUX_CNPS_ALLOCATIONS_FAMILIALES;
-        }
-
-        // CNPS Accidents du Travail
-        if (code.contains("CNPS_ACCIDENTS_TRAVAIL") ||
-                code.contains("ACCIDENT_TRAVAIL_CNPS") ||
-                (designation.contains("CNPS") && designation.contains("ACCIDENT"))) {
-            return PaieConstants.TAUX_CNPS_ACCIDENTS_TRAVAIL;
-        }
-
-        // Crédit Foncier
-        if (code.contains("CREDIT_FONCIER")) {
-            if (code.contains("SALARIE") || code.contains("SALARIAL") || designation.contains("SALARI")) {
-                return PaieConstants.TAUX_CREDIT_FONCIER_SALARIE;
-            } else if (code.contains("PATRONAL") || designation.contains("PATRONAL")) {
-                return PaieConstants.TAUX_CREDIT_FONCIER_PATRONAL;
-            }
-        }
-
-        // FNE - Fonds National de l'Emploi
-        if (code.contains("FNE") || (designation.contains("FONDS NATIONAL") && designation.contains("EMPLOI"))) {
-            if (code.contains("SALARIE") || code.contains("SALARIAL") || designation.contains("SALARI")) {
-                return PaieConstants.TAUX_FNE_SALARIE;
-            } else if (code.contains("PATRONAL") || designation.contains("PATRONAL")) {
-                return PaieConstants.TAUX_FNE_PATRONAL;
-            }
-        }
-
-        // CAC - Centimes Additionnels Communaux
-        if ("CAC".equalsIgnoreCase(code) || designation.contains("CAC")) {
-            return PaieConstants.TAUX_CAC;
-        }
-
-        // Pour les barèmes, retourner null (sera géré différemment)
-        if ("IRPP".equalsIgnoreCase(code) || designation.contains("IRPP") ||
-                code.contains("TAXE_COMMUNALE") || designation.contains("TAXE COMMUNALE") ||
-                code.contains("REDEVANCE_AUDIOVISUELLE") || designation.contains("REDEVANCE AUDIOVISUELLE")) {
-            return null;
-        }
-
-        return null; // Aucun taux trouvé dans les constantes
-    }
-    //  Modification de calculerCotisationSpecifique pour gérer les cotisations combinées
-    private BigDecimal calculerCotisationSpecifique(String code, String designation, BulletinPaie fiche) {
-
-        // CAC - Centimes Additionnels Communaux
-        if ("CAC".equalsIgnoreCase(code) || designation.contains("CAC")) {
-            return impotCalculator.calculCac(fiche);
-        }
-
-        if ("200".equals(code) || "IRPP".equalsIgnoreCase(code) || designation.contains("IRPP")) {
-            return impotCalculator.calculIrpp(fiche); // ← Remplacez par la bonne méthode
-        }
-
-        // Taxe communale
-        if (code.contains("TAXE_COMMUNALE") || designation.contains("TAXE COMMUNALE")) {
-            return impotCalculator.calculTaxeCommunal(fiche);
-        }
-
-        // Redevance audiovisuelle
-        if (code.contains("REDEVANCE_AUDIOVISUELLE") || designation.contains("REDEVANCE AUDIOVISUELLE")) {
-            return impotCalculator.calculRedevanceAudioVisuelle(fiche);
-        }
-
-        // 🔧 CNPS Vieillesse - Séparation correcte employeur/salarié
-        if (code.contains("CNPS_VIEILLESSE") || (designation.contains("CNPS") && designation.contains("VIEILLESSE"))) {
-            // Si c'est spécifiquement pour l'employeur
-            if (code.contains("EMPLOYEUR") || designation.contains("EMPLOYEUR") || code.contains("PATRONAL")) {
-                return cotisationCalculator.calculCnpsVieillesseEmployeur(fiche);
-            }
-            // Si c'est spécifiquement pour le salarié
-            else if (code.contains("SALARIE") || designation.contains("SALARIE") || code.contains("SALARIAL")) {
-                return cotisationCalculator.calculCnpsVieillesseSalarie(fiche);
-            }
-            // 🔧 Si c'est générique, déterminer selon la catégorie de l'élément
-            else {
-                ElementPaie element = fiche.getLignesPaie().stream()
-                        .filter(l -> l.getElementPaie().getCode().equals(code))
-                        .findFirst()
-                        .map(LigneBulletinPaie::getElementPaie)
-                        .orElse(null);
-
-                if (element != null) {
-                    if (element.getCategorie() == CategorieElement.COTISATION_PATRONALE) {
-                        return cotisationCalculator.calculCnpsVieillesseEmployeur(fiche);
-                    } else {
-                        return cotisationCalculator.calculCnpsVieillesseSalarie(fiche);
-                    }
-                }
-
-                // Par défaut, retourner la cotisation salariale
-                return cotisationCalculator.calculCnpsVieillesseSalarie(fiche);
-            }
-        }
-
-
-        // Autres cotisations CNPS (restent inchangées)
-        if (code.contains("CNPS_ALLOCATIONS_FAMILIALES") ||
-                code.contains("ALLOCATION_FAMILIALE_CNPS") ||
-                (designation.contains("CNPS") && designation.contains("ALLOCATION"))) {
-            return cotisationCalculator.calculCnpsAllocationsFamiliales(fiche);
-        }
-
-        if (code.contains("CNPS_ACCIDENTS_TRAVAIL") ||
-                code.contains("ACCIDENT_TRAVAIL_CNPS") ||
-                (designation.contains("CNPS") && designation.contains("ACCIDENT"))) {
-            return cotisationCalculator.calculCnpsAccidentsTravail(fiche);
-        }
-
-        // Crédit Foncier
-        if (code.contains("CREDIT_FONCIER_SALARIE") ||
-                code.contains("CREDIT_FONCIER_SALARIAL") ||
-                (designation.contains("CRÉDIT FONCIER") && designation.contains("SALARI"))) {
-            return cotisationCalculator.calculCreditFoncierSalarie(fiche);
-        }
-
-        if (code.contains("CREDIT_FONCIER_PATRONAL") ||
-                (designation.contains("CRÉDIT FONCIER") && designation.contains("PATRONAL"))) {
-            return cotisationCalculator.calculCreditFoncierPatronal(fiche);
-        }
-
-        // Fonds National de l'Emploi
-        if (code.contains("FNE_SALARIE") ||
-                code.contains("FONDS_NATIONAL_EMPLOI") ||
-                (designation.contains("FONDS NATIONAL") && designation.contains("EMPLOI"))) {
-            return cotisationCalculator.calculFneSalaire(fiche);
-        }
-
-        if (code.contains("FNE_PATRONAL") ||
-                (designation.contains("FONDS NATIONAL") && designation.contains("PATRONAL"))) {
-            return cotisationCalculator.calculFnePatronal(fiche);
-        }
-
-        // Totaux globaux
-        if (code.equals("TOTAL_CNPS") || designation.contains("TOTAL") && designation.contains("CNPS")) {
-            return cotisationCalculator.cotisationCnps(fiche);
-        }
-        if (code.equals("TOTAL_CHARGES_PATRONALES") || designation.contains("TOTAL") && designation.contains("CHARGES PATRONALES")) {
-            return cotisationCalculator.calculTotalChargesPatronales(fiche);
-        }
-        if (code.equals("TOTAL_RETENUES_SALARIE") || designation.contains("TOTAL") && designation.contains("RETENUES")) {
-            return cotisationCalculator.calculTotalRetenuesSalaire(fiche);
-        }
-
-        return null; // Aucune cotisation spécifique trouvée
-    }
-
-     //Détermine la base de calcul selon l'élément de paie
-    private BigDecimal determinerBaseCalcul(ElementPaie element, BulletinPaie fiche) {
-        String code = element.getCode().toUpperCase();
-        String designation = element.getDesignation() != null ? element.getDesignation().toUpperCase() : "";
-
-        // CAC se base sur l'IRPP
-        if ("CAC".equalsIgnoreCase(code)) {
-            BigDecimal irppMontant = impotCalculator.calculIrpp(fiche);
-            return irppMontant;
-        }
-
-        if (designation.contains("TAXE COMMUNALE") || code.contains("TAXE_COMMUNALE")) {
-            return fiche.getSalaireBaseInitial() != null ? fiche.getSalaireBaseInitial() : BigDecimal.ZERO;
-        }
-
-        // CNPS se base sur la base CNPS
-        if (designation.contains("CNPS") || code.contains("CNPS")) {
-            return fiche.getBaseCnps() != null ? fiche.getBaseCnps() : BigDecimal.ZERO;
-        }
-
-        // Crédit foncier et FNE se basent sur le salaire imposable
-        if (designation.contains("CRÉDIT FONCIER") || code.contains("CREDIT_FONCIER") ||
-                designation.contains("FONDS NATIONAL") || code.contains("FNE") ||
-                designation.contains("TAXE COMMUNALE") || code.contains("TAXE_COMMUNALE") ||
-                designation.contains("REDEVANCE AUDIOVISUELLE") || code.contains("REDEVANCE_AUDIOVISUELLE")) {
-            return fiche.getSalaireImposable() != null ? fiche.getSalaireImposable() : BigDecimal.ZERO;
-        }
-
-        // IRPP se base sur le salaire imposable
-        if ("IRPP".equalsIgnoreCase(code)) {
-            return fiche.getSalaireImposable() != null ? fiche.getSalaireImposable() : BigDecimal.ZERO;
-        }
-
-        // Par défaut, utiliser la configuration de l'élément
-        return element.isImpacteBaseCnps() && fiche.getBaseCnps() != null
-                ? fiche.getBaseCnps()
-                : fiche.getSalaireImposable() != null ? fiche.getSalaireImposable() : BigDecimal.ZERO;
-    }
-
-    //Calcule le taux effectif basé sur le montant et la base
-
-    private BigDecimal calculerTauxEffectif(BigDecimal montant, BigDecimal base) {
-        if (base == null || base.compareTo(BigDecimal.ZERO) == 0) {
-            return BigDecimal.ZERO;
-        }
-        return montant.divide(base, 4, RoundingMode.HALF_UP);
-    }
-
-    //Calcule le montant pour les éléments en barème
-
-    private BigDecimal calculerMontantBareme(String code, BulletinPaie fiche) {
-        if ("IRPP".equalsIgnoreCase(code)) {
-            return impotCalculator.calculIrpp(fiche);
-        } else if ("TAXE_COMMUNALE".equalsIgnoreCase(code)) {
-            return impotCalculator.calculTaxeCommunal(fiche);
-        } else if ("REDEVANCE_AUDIOVISUELLE".equalsIgnoreCase(code)) {
-            return impotCalculator.calculRedevanceAudioVisuelle(fiche);
-        }
-        return BigDecimal.ZERO;
-    }
 
 
 

@@ -18,39 +18,14 @@ import java.util.Optional;
 public class CotisationCalculator {
 
     private MathUtils mathUtils ;
-    private SalaireCalculator calculator;
-    private ImpotCalculator impotCalculator;
+    private final SalaireCalculator calculator;
+    private final ImpotCalculator impotCalculator;
 
     public  CotisationCalculator (MathUtils mathUtils, SalaireCalculator salaireCalculator, ImpotCalculator impotCalculator){
         this.mathUtils = mathUtils;
         this.calculator = salaireCalculator;
         this.impotCalculator = impotCalculator;
     }
-
-    // calcul  des cotisation sociales
-
-    private  BigDecimal calculMontantParType(BulletinPaie fiche, TypeElementPaie type){
-        if (fiche == null || fiche.getLignesPaie() == null){
-            return BigDecimal.ZERO;
-        }
-        return fiche.getLignesPaie().stream()
-                .filter(ligne -> ligne.getElementPaie() != null &&
-                         ligne.getElementPaie().getType() == type)
-                .map(ligne -> ligne.getMontantFinal() != null ? ligne.getMontantFinal() : BigDecimal.ZERO)
-                .reduce(BigDecimal.ZERO , mathUtils::safeAdd);
-    }
-
-    private  BigDecimal calculerMontantParCategorie (BulletinPaie fiche, CategorieElement categorie) {
-        if (fiche == null || fiche.getLignesPaie() == null) {
-            return BigDecimal.ZERO;
-        }
-        return fiche.getLignesPaie().stream()
-                .filter(ligne -> ligne.getElementPaie() != null &&
-                         ligne.getElementPaie().getCategorie() == categorie)
-                .map (ligne -> ligne.getMontantFinal() != null ? ligne.getMontantFinal() : BigDecimal.ZERO)
-                .reduce(BigDecimal.ZERO, mathUtils::safeAdd);
-    }
-
 
 
     public BigDecimal calculCnpsVieillesseSalarie(BulletinPaie fiche){

@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
+
 public class PdfService {
 
     @Value("${file.upload-dir}")
@@ -41,23 +42,21 @@ public class PdfService {
         try {
             // Logique pour construire l'URL complète du logo ---
             if (bulletinData.getEntreprise() != null && bulletinData.getEntreprise().getLogoUrl() != null && !bulletinData.getEntreprise().getLogoUrl().isEmpty()) {
-                String relativeLogoPath = bulletinData.getEntreprise().getLogoUrl(); // Ex: "/logos/UUID_filename.png"
+                String logoUrl = bulletinData.getEntreprise().getLogoUrl();
 
-                String fileName;
-                if(relativeLogoPath.contains("/logos")) {
-                    fileName = relativeLogoPath.substring(relativeLogoPath.lastIndexOf("/") + 1);
-
-                }else {
-                    fileName = relativeLogoPath;
+                // Si c'est une URL Cloudinary (production), la garder telle quelle
+                if (logoUrl.startsWith("https://res.cloudinary.com")) {
+                    logger.info("URL Cloudinary utilisée pour le PDF : {}", logoUrl);
+                    // Pas de modification nécessaire, OpenHTMLToPDF peut accéder aux URLs HTTPS
                 }
-
-                Path absoluteLogoPath = Paths.get(uploadDir).resolve(fileName);
-
-                String htmlLogoUrl = absoluteLogoPath.toUri().toString();
-                logger.info("URL du logo générée pour le PDF (HTML) : {}", htmlLogoUrl);
-
-                // Met à jour le DTO avec l'URL complète pour que Thymeleaf l'utilise
-                bulletinData.getEntreprise().setLogoUrl(htmlLogoUrl);
+                // Si c'est un chemin local (développement), construire l'URL file://
+                else if (logoUrl.startsWith("/logos/")) {
+                    String fileName = logoUrl.substring(logoUrl.lastIndexOf("/") + 1);
+                    Path absoluteLogoPath = Paths.get(uploadDir).resolve(fileName);
+                    String htmlLogoUrl = absoluteLogoPath.toUri().toString();
+                    logger.info("URL file:// générée pour le PDF : {}", htmlLogoUrl);
+                    bulletinData.getEntreprise().setLogoUrl(htmlLogoUrl);
+                }
             }
 
 
@@ -78,19 +77,21 @@ public class PdfService {
             builder.withHtmlContent(cleanHtml, null); // Le baseUri ici peut rester null car les URLs d'images sont absolues
             builder.toStream(outputStream);
 
-            // Configuration du répertoire de base pour les ressources (CSS si relatifs, etc.)
-            // Note: Pour les images avec file://, la CustomStreamFactory sera utilisée.
-            String baseUriForRelativeResources = Paths.get(uploadDir).getParent().toUri().toString();
-            builder.withUri(baseUriForRelativeResources); // Ex: file:///C:/uploads
+            // Configuration selon l'environnement
+            String logoUrl = bulletinData.getEntreprise() != null ? bulletinData.getEntreprise().getLogoUrl() : null;
 
-            // Configuration pour la gestion des images via le protocole "file"
-            // La CustomStreamFactory gérera toutes les URLs qui commencent par "file://"
-            builder.useProtocolsStreamImplementation(new CustomStreamFactory(), "file");
-
-            logger.info("Base URI configurée pour le rendu PDF (ressources relatives) : {}", baseUriForRelativeResources);
+            if (logoUrl != null && logoUrl.startsWith("file://")) {
+                // Environnement de développement - utiliser CustomStreamFactory
+                String baseUriForRelativeResources = Paths.get(uploadDir).getParent().toUri().toString();
+                builder.withUri(baseUriForRelativeResources);
+                builder.useProtocolsStreamImplementation(new CustomStreamFactory(), "file");
+                logger.info("Configuration PDF pour développement (file://) : {}", baseUriForRelativeResources);
+            } else {
+                // Environnement de production - OpenHTMLToPDF accède directement aux URLs HTTPS
+                logger.info("Configuration PDF pour production (HTTPS Cloudinary)");
+            }
 
             builder.run();
-
             return outputStream.toByteArray();
 
         } catch (Exception e) {
@@ -158,31 +159,37 @@ public class PdfService {
 
 
 
-    public String generateHtmlContentForPdf (BulletinPaieResponseDto bulletinData) {
-
+    public String generateHtmlContentForPdf(BulletinPaieResponseDto bulletinData) {
         BulletinPaieResponseDto dataForHtml = cloneBulletinData(bulletinData);
 
         if (dataForHtml.getEntreprise() != null && dataForHtml.getEntreprise().getLogoUrl() != null && !dataForHtml.getEntreprise().getLogoUrl().isEmpty()) {
             String currentLogoUrl = dataForHtml.getEntreprise().getLogoUrl();
 
             String finalLogoUrl;
-            if (currentLogoUrl.startsWith("file://")) {
-                String fileName = currentLogoUrl.substring(currentLogoUrl.lastIndexOf("/") + 1);
-                finalLogoUrl = "http://localhost:8081/logos/" + fileName; // <-- CHANGEMENT ICI
-            } else if (!currentLogoUrl.startsWith("http://") && !currentLogoUrl.startsWith("https://")) {
-                // Si c'est juste un nom de fichier ou un chemin relatif (ex: /logos/...)
-                // ASSUREZ-VOUS QUE LE CHEMIN /logos/ EST BIEN ABSOLU OU RELATIF À LA RACINE ET PRÉFIXEZ-LE.
-                // Si c'est déjà /logos/UUID_filename.jpg, il suffit d'ajouter le domaine.
-                if (currentLogoUrl.startsWith("/")) {
-                    finalLogoUrl = "http://localhost:8081" + currentLogoUrl; // <-- CHANGEMENT ICI
-                } else {
-                    finalLogoUrl = "http://localhost:8081/logos/" + currentLogoUrl; // <-- CHANGEMENT ICI
-                }
-            } else {
-                finalLogoUrl = currentLogoUrl; // C'est déjà une URL complète HTTP(S)
+
+            // Si c'est déjà une URL Cloudinary (production)
+            if (currentLogoUrl.startsWith("https://res.cloudinary.com")) {
+                finalLogoUrl = currentLogoUrl;
+                logger.info("URL Cloudinary utilisée pour prévisualisation HTML : {}", finalLogoUrl);
             }
+            // Si c'est un chemin local (développement)
+            else if (currentLogoUrl.startsWith("file://")) {
+                String fileName = currentLogoUrl.substring(currentLogoUrl.lastIndexOf("/") + 1);
+                finalLogoUrl = "http://localhost:8081/logos/" + fileName;
+                logger.info("URL locale convertie pour prévisualisation HTML : {}", finalLogoUrl);
+            } else if (!currentLogoUrl.startsWith("http://") && !currentLogoUrl.startsWith("https://")) {
+                // Chemin relatif local
+                if (currentLogoUrl.startsWith("/")) {
+                    finalLogoUrl = "http://localhost:8081" + currentLogoUrl;
+                } else {
+                    finalLogoUrl = "http://localhost:8081/logos/" + currentLogoUrl;
+                }
+                logger.info("URL relative convertie pour prévisualisation HTML : {}", finalLogoUrl);
+            } else {
+                finalLogoUrl = currentLogoUrl;
+            }
+
             dataForHtml.getEntreprise().setLogoUrl(finalLogoUrl);
-            logger.info("URL du logo générée pour le HTML de prévisualisation (context Web via Angular) : {}", dataForHtml.getEntreprise().getLogoUrl());
         }
 
         Context context = new Context();
@@ -191,8 +198,6 @@ public class PdfService {
 
         return templateEngine.process("bulletin-template", context);
     }
-
-
     private BulletinPaieResponseDto cloneBulletinData(BulletinPaieResponseDto original) {
         BulletinPaieResponseDto clone = new BulletinPaieResponseDto();
 

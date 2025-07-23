@@ -12,6 +12,7 @@ import com.hades.paie1.repository.UserRepository;
 import com.hades.paie1.security.JwtTokenProvider;
 import com.hades.paie1.service.AuthService;
 import com.hades.paie1.service.pdf.FileStorageService;
+import com.hades.paie1.service.pdf.UnifiedFileStorageService;
 import jakarta.transaction.Transactional;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -42,6 +43,7 @@ public class AuthController {
     private EntrepriseRepository entrepriseRepository;
     private FileStorageService fileStorageService;
     private AuthService authService;
+    private UnifiedFileStorageService unifiedFileStorageService;
 
     public AuthController (
             AuthenticationManager authenticationManager,
@@ -51,6 +53,7 @@ public class AuthController {
             JwtTokenProvider jwtTokenProvider,
             EntrepriseRepository entrepriseRepository,
             FileStorageService fileStorageService,
+            UnifiedFileStorageService unifiedFileStorageService,
             AuthService authService
             ) {
         this.authenticationManager = authenticationManager;
@@ -61,6 +64,7 @@ public class AuthController {
         this.entrepriseRepository = entrepriseRepository;
         this.fileStorageService = fileStorageService;
         this.authService = authService;
+        this.unifiedFileStorageService = unifiedFileStorageService;
     }
 
     //Endpoint de connexion
@@ -150,7 +154,7 @@ public class AuthController {
                     .build();
 
             if(logoFile != null && !logoFile.isEmpty()){
-                String logoUrl = fileStorageService.saveFile(logoFile);
+                String logoUrl = unifiedFileStorageService.saveFile(logoFile);
                 System.out.println("URL du logo générée par FileStorageService : " + logoUrl);
                 entreprise.setLogoUrl(logoUrl);
             }

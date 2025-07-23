@@ -24,21 +24,18 @@ public class SalaireCalculator {
 
     private final MathUtils mathUtils;
     private final AncienneteService ancienneteService;
-    private final BulletinPaieRepo bulletinPaieRepo; // Pas directement utilisé ici, mais conservé pour l'injection
-    private final EmployeRepository employeRepository; // Pas directement utilisé ici, mais conservé pour l'injection
     private final ElementPaieRepository elementPaieRepository;
 
     public SalaireCalculator(MathUtils mathUtils, AncienneteService ancienneteService,
-                             BulletinPaieRepo bulletinPaieRepo, EmployeRepository employeRepository,
                              ElementPaieRepository elementPaieRepository) {
         this.mathUtils = mathUtils;
         this.ancienneteService = ancienneteService;
-        this.bulletinPaieRepo = bulletinPaieRepo;
-        this.employeRepository = employeRepository;
+
         this.elementPaieRepository = elementPaieRepository; // Injection correcte
     }
 
 
+    //cherche un element de paie existant
     private ElementPaie getOrCreateElementPaie(String designation, TypeElementPaie type, CategorieElement categorie) {
         return elementPaieRepository.findByDesignation(designation)
                 .orElseGet(() -> {

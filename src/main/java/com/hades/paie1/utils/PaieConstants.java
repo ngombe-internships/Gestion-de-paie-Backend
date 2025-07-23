@@ -10,7 +10,6 @@ public class PaieConstants {
     public PaieConstants() {}
 
     // Constante Heure
-    public static final BigDecimal HEURES_NORMALES_MENSUELLES = new BigDecimal("173.3333");
     public static final BigDecimal TAUX_HEURE_SUP1 = new BigDecimal("1.20");
     public static final BigDecimal TAUX_HEURE_SUP2 = new BigDecimal("1.30");
     public static final BigDecimal TAUX_HEURE_SUP3 = new BigDecimal("1.40");
@@ -20,8 +19,6 @@ public class PaieConstants {
     //plafond et seuils corriges
     public  static final BigDecimal PLAFOND_CNPS = new BigDecimal("750000");
     public  static final BigDecimal SEUIL_TAXE_COMMUNALE = new BigDecimal("63323");
-    public  static final BigDecimal SMIG = new BigDecimal("36270");
-    public  static final BigDecimal REDEVANCE_AUDIOVISUELLE = new BigDecimal("1950");
 
 
     // Taux de cotisations sociales - Part salarié CORRIGÉS

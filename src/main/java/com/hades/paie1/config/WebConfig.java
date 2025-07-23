@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import org.springframework.core.env.Environment;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.MediaType;
@@ -24,16 +25,27 @@ public class WebConfig implements WebMvcConfigurer {
 
     @Value("${file.upload-dir}")
     private String uploadDir;
+    private final Environment environment;
+
+    public WebConfig(Environment environment) {
+        this.environment = environment;
+    }
 
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
-        String normalizedUploadDir = uploadDir.replace("\\", "/");
-        registry.addResourceHandler("/logos/**")
-                .addResourceLocations("file:///" + normalizedUploadDir + "/");
+        // Configuration des ressources statiques seulement en développement
+        if (Arrays.asList(environment.getActiveProfiles()).contains("dev")) {
+            if (uploadDir != null && !uploadDir.isEmpty()) {
+                String normalizedUploadDir = uploadDir.replace("\\", "/");
+                registry.addResourceHandler("/logos/**")
+                        .addResourceLocations("file:///" + normalizedUploadDir + "/");
+            }
+        }
+
+        // Ressources statiques communes
         registry.addResourceHandler("/**")
                 .addResourceLocations("classpath:/static", "classpath:/public/", "classpath:/META-INF/resources/");
     }
-
     @Override
     public void configureMessageConverters(List<HttpMessageConverter<?>> converters) {
 

@@ -98,7 +98,6 @@ public class BulletinPaie {
     @Column(name = "total_cotisations_salariales", precision = 15, scale = 2)
     private BigDecimal totalCotisationsSalariales = BigDecimal.ZERO;
 
-
     @Column(name = "salaire_imposable", precision = 15, scale = 2)
     private BigDecimal salaireImposable = BigDecimal.ZERO;
 
