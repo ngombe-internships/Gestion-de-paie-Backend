@@ -238,6 +238,10 @@ public class PdfService {
                 .montantFinal(original.getMontantFinal())
                 .baseApplique(original.getBaseApplique())
                 .formuleCalcul(original.getFormuleCalcul())
+                .tauxAffiche(original.getTauxAffiche())
+                .tauxPatronalAffiche(original.getTauxPatronalAffiche())
+                .montantPatronal(original.getMontantPatronal())
+                .isMerged(original.isMerged())
                 .build();
     }
 

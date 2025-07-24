@@ -42,6 +42,9 @@ public class LigneBulletinPaie {
     @Column(name = "type_ligne")
     private TypeLigne typeLigne;
 
+
+
+
     private String tauxAffiche;
 
     @Column(name = "montant_calcul", precision = 15, scale = 2, nullable = false)
