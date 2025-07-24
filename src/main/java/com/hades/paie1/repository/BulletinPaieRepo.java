@@ -17,7 +17,9 @@ import java.util.Optional;
 public interface BulletinPaieRepo extends JpaRepository <BulletinPaie, Long> {
 
     List<BulletinPaie> findByEmploye (Employe employe);
+    List<BulletinPaie> findByEmployeId(Long employeId);
 
+    List<BulletinPaie> findByEntreprise(Entreprise entreprise);
 
 //    List<BulletinPaie> findByEmployeAndStatusBulletin (Employe employe, List<StatusBulletin> status);
     List<BulletinPaie> findByEmployeAndStatusBulletinIn(Employe employe, List<StatusBulletin> statuses);
@@ -34,6 +36,7 @@ public interface BulletinPaieRepo extends JpaRepository <BulletinPaie, Long> {
             "LEFT JOIN FETCH b.entreprise " +
             "WHERE b.id = :id")
     Optional<BulletinPaie> findByIdWithEverything(@Param("id") Long id);
-
     long countByEntreprise (Entreprise entreprise);
+
+
 }

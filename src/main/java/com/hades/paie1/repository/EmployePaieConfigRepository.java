@@ -23,4 +23,6 @@ public interface EmployePaieConfigRepository extends JpaRepository<EmployePaieCo
             @Param("elementPaieId") Long elementPaieId,
             @Param("periode") LocalDate periode
     );
+
+
 }

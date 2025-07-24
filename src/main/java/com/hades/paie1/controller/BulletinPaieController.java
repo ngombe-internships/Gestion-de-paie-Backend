@@ -330,7 +330,8 @@ public class BulletinPaieController {
             }
 
             // Récupérer l'entité BulletinPaie complète
-            Optional<BulletinPaie> bulletinOpt = bulletinPaieRepo.findByIdWithEverything(id);
+            Optional<BulletinPaie> bulletinOpt = bulletinPaieRepo
+                    .findByIdWithEverything(id);
             if (bulletinOpt.isEmpty()) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
                         .body("<html><body><h1>Bulletin non trouvé</h1></body></html>");

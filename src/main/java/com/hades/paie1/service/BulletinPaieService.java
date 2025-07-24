@@ -116,7 +116,6 @@ public class BulletinPaieService {
         }
 
         if (fiche.getHeuresNormal() == null && employe.getHeuresContractuellesHebdomadaires() != null) {
-            // Ex : heuresContractuellesHebdomadaires * 52 / 12 (moyenne mensuelle)
             BigDecimal heuresMensuelles = employe.getHeuresContractuellesHebdomadaires()
                     .multiply(BigDecimal.valueOf(52))
                     .divide(BigDecimal.valueOf(12), 2, RoundingMode.HALF_UP);
@@ -162,15 +161,14 @@ public class BulletinPaieService {
             if (!config.isActive() || config.getElementPaie().getType() != TypeElementPaie.GAIN) continue;
 
             ElementPaie element = config.getElementPaie();
-            String elementKey = element.getCode() + "_" + element.getType(); // Clé unique
+            Hibernate.initialize(element); // PATCH: initialize ElementPaie
+            String elementKey = element.getCode() + "_" + element.getType();
 
-            // FIX 2: Éviter les doublons ET éviter de retraiter le salaire de base
             if (elementsTraites.contains(elementKey)) {
                 System.out.println("Élément déjà traité : " + element.getCode());
                 continue;
             }
 
-            // NOUVEAU: Vérifier si c'est le salaire de base pour éviter la duplication
             if ("Salaire de Base".equals(element.getDesignation()) ||
                     "SALAIRE_BASE".equals(element.getCode()) ||
                     element.getCategorie() == CategorieElement.SALAIRE_DE_BASE) {
@@ -221,7 +219,6 @@ public class BulletinPaieService {
                     System.out.println("Calcul NOMBRE_BASE_TAUX - Heures: " + heures + ", Taux: " + taux + ", Montant: " + montant);
                     break;
                 case POURCENTAGE_BASE:
-                    // GAIN très rare ici, mais pour homogénéité :
                     BigDecimal base = element.isImpacteBaseCnps() && fiche.getBaseCnps() != null
                             ? fiche.getBaseCnps()
                             : fiche.getSalaireBrut() != null ? fiche.getSalaireBrut() : BigDecimal.ZERO;
@@ -229,7 +226,6 @@ public class BulletinPaieService {
                     break;
             }
 
-            // FIX 3: Vérifier que le montant est > 0 avant d'ajouter
             if (montant.compareTo(BigDecimal.ZERO) > 0) {
                 LigneBulletinPaie ligne = new LigneBulletinPaie();
                 ligne.setElementPaie(element);
@@ -240,6 +236,8 @@ public class BulletinPaieService {
                 ligne.setMontantCalcul(montant);
                 ligne.setMontantFinal(montant);
                 fiche.addLignePaie(ligne);
+
+                Hibernate.initialize(ligne.getElementPaie()); // PATCH: initialize ligne.elementPaie
 
                 System.out.println("Ajout ligne GAIN: " + element.getCode() + ", Montant: " + montant);
             } else {
@@ -263,40 +261,34 @@ public class BulletinPaieService {
             );
         }
 
-        // Calcul des heures supplémentaires
         calculator.calculerHeuresSupplementaires(fiche);
         calculator.calculerHeuresNuit(fiche);
         calculator.calculerHeuresFerie(fiche);
         calculator.calculerPrimeAnciennete(fiche);
 
-        // 🔧 FIX 4: Calcul des bases APRÈS tous les gains
         System.out.println("\n=== CALCUL DES BASES (UNE SEULE FOIS) ===");
         fiche.setSalaireBrut(fiche.getTotalGains());
         System.out.println("Salaire Brut calculé: " + fiche.getSalaireBrut());
 
-        // Calculer la base CNPS une seule fois
         BigDecimal baseCnps = calculator.calculBaseCnps(fiche);
         fiche.setBaseCnps(baseCnps);
         System.out.println("Base CNPS calculée: " + baseCnps);
 
-        // Calculer le salaire imposable une seule fois
         BigDecimal salaireImposable = calculator.calculSalaireImposable(fiche);
         fiche.setSalaireImposable(salaireImposable);
         System.out.println("Salaire Imposable calculé: " + salaireImposable);
 
-        // 2️⃣ BOUCLE 2 : RETENUES & IMPOTS (ORDRE IMPORTANT)
         System.out.println("\n=== DEBUT CALCUL DES RETENUES (ORDRE SPECIFIQUE) ===");
 
-        // ✅ ÉTAPE 1: Calculer d'abord l'IRPP (base pour CAC)
         for (TemplateElementPaieConfig config : template.getElementsConfig()) {
             if (!config.isActive()) continue;
 
             ElementPaie element = config.getElementPaie();
+            Hibernate.initialize(element); // PATCH: initialize ElementPaie
             if (element.getType() == TypeElementPaie.GAIN) continue;
 
             String code = element.getCode().toUpperCase();
 
-            // Traiter UNIQUEMENT l'IRPP dans cette première passe
             if (!"IRPP".equalsIgnoreCase(code) && !code.contains("200")) continue;
 
             String elementKey = element.getCode() + "_" + element.getType();
@@ -306,24 +298,24 @@ public class BulletinPaieService {
             System.out.println("\n🎯 Traitement prioritaire IRPP: " + element.getCode());
 
             LigneBulletinPaie ligne = new LigneBulletinPaie();
-           retenueCalculator.calculerMontantRetenue(ligne, element, config.getFormuleCalculOverride() != null ?
+            retenueCalculator.calculerMontantRetenue(ligne, element, config.getFormuleCalculOverride() != null ?
                             config.getFormuleCalculOverride() : element.getFormuleCalcul(),
                     BigDecimal.ZERO, fiche, Optional.empty(), config);
 
             fiche.addLignePaie(ligne);
+            Hibernate.initialize(ligne.getElementPaie()); // PATCH: initialize ligne.elementPaie
             System.out.println("✅ IRPP ajouté: " + ligne.getMontantFinal());
         }
 
-        // ✅ ÉTAPE 2: Calculer ensuite CAC (qui dépend de l'IRPP)
         for (TemplateElementPaieConfig config : template.getElementsConfig()) {
             if (!config.isActive()) continue;
 
             ElementPaie element = config.getElementPaie();
+            Hibernate.initialize(element); // PATCH: initialize ElementPaie
             if (element.getType() == TypeElementPaie.GAIN) continue;
 
             String code = element.getCode().toUpperCase();
 
-            // Traiter UNIQUEMENT CAC dans cette deuxième passe
             if (!"CAC".equalsIgnoreCase(code)) continue;
 
             String elementKey = element.getCode() + "_" + element.getType();
@@ -338,14 +330,15 @@ public class BulletinPaieService {
                     BigDecimal.ZERO, fiche, Optional.empty(), config);
 
             fiche.addLignePaie(ligne);
+            Hibernate.initialize(ligne.getElementPaie()); // PATCH: initialize ligne.elementPaie
             System.out.println("✅ CAC ajouté: " + ligne.getMontantFinal());
         }
 
-        // ✅ ÉTAPE 3: Calculer toutes les autres retenues
         for (TemplateElementPaieConfig config : template.getElementsConfig()) {
             if (!config.isActive()) continue;
 
             ElementPaie element = config.getElementPaie();
+            Hibernate.initialize(element); // PATCH: initialize ElementPaie
             if (element.getType() == TypeElementPaie.GAIN) continue;
 
             String elementKey = element.getCode() + "_" + element.getType();
@@ -368,68 +361,47 @@ public class BulletinPaieService {
                     BigDecimal.ZERO, fiche, employeConfig, config);
 
             fiche.addLignePaie(ligne);
+            Hibernate.initialize(ligne.getElementPaie()); // PATCH: initialize ligne.elementPaie
             System.out.println("✅ Ajout ligne RETENUE: " + element.getCode() + ", Montant: " + ligne.getMontantFinal());
         }
 
-        // 🔧 FIX : Calcul des totaux finaux CORRECTS
         System.out.println("\n=== CALCUL DES TOTAUX FINAUX CORRIGES ===");
 
-       // Total des GAINS (correct)
         fiche.setTotalGains(fiche.getLignesPaie().stream()
                 .filter(l -> l.getElementPaie().getType() == TypeElementPaie.GAIN)
                 .map(LigneBulletinPaie::getMontantFinal)
                 .reduce(BigDecimal.ZERO, BigDecimal::add));
-
-       // Salaire Brut = Total des gains (correct)
         fiche.setSalaireBrut(fiche.getTotalGains());
-
-       // Total COTISATIONS SALARIALES seulement (correct)
         fiche.setTotalCotisationsSalariales(fiche.getLignesPaie().stream()
                 .filter(l -> l.getElementPaie().getCategorie() == CategorieElement.COTISATION_SALARIALE)
                 .map(LigneBulletinPaie::getMontantFinal)
                 .reduce(BigDecimal.ZERO, BigDecimal::add));
-
-       // Total IMPÔTS seulement (correct)
         fiche.setTotalImpots(fiche.getLignesPaie().stream()
                 .filter(l -> l.getElementPaie().getCategorie() == CategorieElement.IMPOT_SUR_REVENU ||
                         l.getElementPaie().getCategorie() == CategorieElement.IMPOT)
                 .map(LigneBulletinPaie::getMontantFinal)
                 .reduce(BigDecimal.ZERO, BigDecimal::add));
-        // ✅ FIX PRINCIPAL : Total RETENUES SALARIALES = Cotisations + Impôts + Autres retenues
         BigDecimal totalRetenues = fiche.getLignesPaie().stream()
                 .filter(l -> l.getElementPaie().getType() == TypeElementPaie.RETENUE)
                 .map(LigneBulletinPaie::getMontantFinal)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         fiche.setTotalRetenuesSalariales(totalRetenues);
 
-        // Charges patronales (correct)
         fiche.setTotalChargesPatronales(fiche.getLignesPaie().stream()
                 .filter(l -> l.getElementPaie().getCategorie() == CategorieElement.COTISATION_PATRONALE ||
                         l.getElementPaie().getType() == TypeElementPaie.CHARGE_PATRONALE)
                 .map(LigneBulletinPaie::getMontantFinal)
                 .reduce(BigDecimal.ZERO, BigDecimal::add));
 
-        // ✅ NOUVEAU : Calcul de la cotisation CNPS totale (salariale + patronale)
         System.out.println("\n=== CALCUL COTISATION CNPS TOTALE ===");
         BigDecimal cotisationCnpsCalculee = cotisationCalculator.cotisationCnps(fiche);
         fiche.setCotisationCnps(cotisationCnpsCalculee);
         System.out.println("Cotisation CNPS totale calculée: " + cotisationCnpsCalculee);
 
-       // ✅ CALCULS FINAUX CORRECTS :
-       // Salaire Net avant impôt = Salaire Brut - Cotisations Salariales
         fiche.setSalaireNetAvantImpot(fiche.getSalaireBrut().subtract(fiche.getTotalCotisationsSalariales()));
-
-       // Salaire Net à payer = Salaire Net avant impôt - Impôts
         fiche.setSalaireNetAPayer(fiche.getSalaireNetAvantImpot().subtract(fiche.getTotalImpots()));
-
-
-      // Coût total employeur = Salaire Brut + Charges patronales
         fiche.setCoutTotalEmployeur(fiche.getSalaireBrut().add(fiche.getTotalChargesPatronales()));
 
-
-
-
-      // 5. DEBUG - Ajoutez ces logs pour vérifier :
         System.out.println("=== VERIFICATION FINALE ===");
         System.out.println("Nombre de lignes GAIN: " + fiche.getLignesPaie().stream()
                 .filter(l -> l.getElementPaie().getType() == TypeElementPaie.GAIN).count());
@@ -456,16 +428,24 @@ public class BulletinPaieService {
         System.out.println("Salaire Net à payer: " + fiche.getSalaireNetAPayer());
         System.out.println("Coût total employeur: " + fiche.getCoutTotalEmployeur());
 
-
         fiche.setStatusBulletin(StatusBulletin.GÉNÉRÉ);
         fiche.setDateCreationBulletin(LocalDate.now());
         fiche.setAnnee(LocalDate.now().getYear());
         fiche.setMois(LocalDate.now().getMonth().getDisplayName(TextStyle.FULL, Locale.FRENCH));
 
+        // PATCH: INITIALISATION LAZY POUR TOUTES LES ENTITÉS UTILES AVANT SÉRIALISATION
+        Hibernate.initialize(fiche.getLignesPaie());
+        for (LigneBulletinPaie ligne : fiche.getLignesPaie()) {
+            Hibernate.initialize(ligne.getElementPaie());
+        }
+        Hibernate.initialize(fiche.getEmploye());
+        if (fiche.getEmploye() != null) {
+            Hibernate.initialize(fiche.getEmploye().getEntreprise());
+        }
+        Hibernate.initialize(fiche.getEntreprise());
+
         return fiche;
     }
-
-
 
 
 

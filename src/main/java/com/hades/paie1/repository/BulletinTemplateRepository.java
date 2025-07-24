@@ -16,4 +16,10 @@ public interface BulletinTemplateRepository  extends JpaRepository<BulletinTempl
         Optional<BulletinTemplate> findByEntrepriseAndIsDefaultTrueWithElements(@Param("entreprise") Entreprise entreprise);
         List<BulletinTemplate> findByEntreprise(Entreprise entreprise);
 
+        @Query("SELECT DISTINCT t FROM BulletinTemplate t " +
+                "LEFT JOIN FETCH t.elementsConfig ec " +
+                "LEFT JOIN FETCH ec.elementPaie ep " +
+                "WHERE t.entreprise = :entreprise AND t.isDefault = true")
+        Optional<BulletinTemplate> findByEntrepriseAndIsDefaultWithElementsAndDetails(@Param("entreprise") Entreprise entreprise);
+
 }
