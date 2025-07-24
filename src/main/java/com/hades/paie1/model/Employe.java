@@ -96,6 +96,7 @@ public class Employe {
     @JoinColumn(name = "entreprise_id", nullable = false)
    // @JsonBackReference("employe-entreprise")
     @JsonIdentityReference(alwaysAsId = true)
+    @JsonIdentityInfo(generator = ObjectIdGenerators.PropertyGenerator.class, property = "id")
     private Entreprise entreprise;
 
 
@@ -115,6 +116,7 @@ public class Employe {
 
     @OneToMany(mappedBy = "employe")
    // @JsonManagedReference("employe-avantages")
+    @JsonIdentityInfo(generator = ObjectIdGenerators.PropertyGenerator.class, property = "id")
     private List<EmployeAvantageNature> avantagesNature = new ArrayList<>();
 
 
