@@ -433,16 +433,8 @@ public class BulletinPaieService {
         fiche.setAnnee(LocalDate.now().getYear());
         fiche.setMois(LocalDate.now().getMonth().getDisplayName(TextStyle.FULL, Locale.FRENCH));
 
-        // PATCH: INITIALISATION LAZY POUR TOUTES LES ENTITÉS UTILES AVANT SÉRIALISATION
-        Hibernate.initialize(fiche.getLignesPaie());
-        for (LigneBulletinPaie ligne : fiche.getLignesPaie()) {
-            Hibernate.initialize(ligne.getElementPaie());
-        }
-        Hibernate.initialize(fiche.getEmploye());
-        if (fiche.getEmploye() != null) {
-            Hibernate.initialize(fiche.getEmploye().getEntreprise());
-        }
-        Hibernate.initialize(fiche.getEntreprise());
+
+
 
         return fiche;
     }
@@ -581,18 +573,31 @@ public class BulletinPaieService {
     public BulletinPaieResponseDto calculateBulletin(BulletinPaieCreateDto dto) {
         BulletinPaie fiche = mapCreateDtoToEntity(dto);
         BulletinPaie calculBulletin = calculBulletin(fiche);
+        initializeBulletinPaie(calculBulletin);
         return convertToDto(calculBulletin);
     }
 
+    private void initializeBulletinPaie(BulletinPaie fiche) {
+        Hibernate.initialize(fiche.getLignesPaie());
+        for (LigneBulletinPaie ligne : fiche.getLignesPaie()) {
+            Hibernate.initialize(ligne.getElementPaie());
+        }
+        Hibernate.initialize(fiche.getEmploye());
+        if (fiche.getEmploye() != null) {
+            Hibernate.initialize(fiche.getEmploye().getEntreprise());
+        }
+        Hibernate.initialize(fiche.getEntreprise());
+    }
 
     //Methode Crud
     @Transactional
-    public BulletinPaieResponseDto saveBulletinPaie (BulletinPaieCreateDto dto){
-
+    //bulletin save
+    public BulletinPaieResponseDto saveBulletinPaie(BulletinPaieCreateDto dto) {
         BulletinPaie fiche = mapCreateDtoToEntity(dto);
-        BulletinPaie calculatedAndFilledBulletin = calculBulletin(fiche);
-        BulletinPaie savedBulletin = bulletinRepo.save(calculatedAndFilledBulletin);
-        return  convertToDto(savedBulletin);
+        BulletinPaie calculBulletin = calculBulletin(fiche);
+        BulletinPaie saved = bulletinRepo.save(calculBulletin);
+        initializeBulletinPaie(saved);
+        return convertToDto(saved);
     }
 
     @Transactional
