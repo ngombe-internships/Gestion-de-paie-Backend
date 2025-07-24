@@ -43,10 +43,7 @@ public class Entreprise {
     @Column(nullable = false)
     private LocalDate dateCreation;
 
-    @Lob
-    @Basic(fetch = FetchType.LAZY)
     @Column(name = "logo")
-    @JsonIgnore
     private String logoUrl;
 
 

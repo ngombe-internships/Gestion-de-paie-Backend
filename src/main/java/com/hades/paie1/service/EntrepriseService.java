@@ -5,6 +5,7 @@ import com.hades.paie1.dto.EntrepriseDto;
 import com.hades.paie1.exception.RessourceNotFoundException;
 import com.hades.paie1.model.Entreprise;
 import com.hades.paie1.repository.EntrepriseRepository;
+import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
@@ -37,12 +38,13 @@ public class EntrepriseService {
                 .build();
     }
 
+    @Transactional
     public EntrepriseDto getEntrepriseById(Long id) {
         Entreprise entreprise = entrepriseRepository.findById(id)
                 .orElseThrow(()-> new RessourceNotFoundException("Entreprise non trouve avec l'id : " +id));
         return convertTodo(entreprise);
     }
-
+    @Transactional
     public List <EmployeurListDto> getAllEntreprises(){
 
         List<Entreprise> entreprises = entrepriseRepository.findAllWithEmployeurPrincipalLoaded(Sort.by(Sort.Direction.ASC,"dateCreation"));

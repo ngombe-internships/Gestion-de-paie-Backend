@@ -388,7 +388,7 @@ public class BulletinPaieController {
     @GetMapping("/test-cloudinary")
     public ResponseEntity<String> testCloudinary() {
         try {
-            var url = new java.net.URL("https://res.cloudinary.com/dfurjzy3b/image/upload/v1753283262/company_logos/ecbfa5aa-c951-47c9-be74-dcb44896f464_wampserver-wamp5-T6st57.jpg.jpg");
+            var url = new java.net.URL("https://res.cloudinary.com/dfurjzy3b/image/upload/v1753283262/company_logos/ecbfa5aa-c951-47c9-be74-dcb44896f464_wampserver-wamp5-T6st57.jpg");
             var conn = url.openConnection();
             conn.setConnectTimeout(5000);
             conn.setReadTimeout(5000);
