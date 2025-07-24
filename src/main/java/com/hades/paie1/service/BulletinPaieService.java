@@ -12,6 +12,7 @@ import com.hades.paie1.service.calculators.SalaireCalculator;
 import com.hades.paie1.utils.MathUtils;
 import com.hades.paie1.utils.PaieConstants;
 import jakarta.transaction.Transactional;
+import org.hibernate.Hibernate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.access.AccessDeniedException;
@@ -136,8 +137,11 @@ public class BulletinPaieService {
         fiche.setEntreprise(entreprise);
         fiche.clearLignesPaie(); // Nettoyer AVANT de recalculer
 
-        BulletinTemplate template = bulletinTemplateRepository.findByEntrepriseAndIsDefaultTrue(entreprise)
+        BulletinTemplate template = bulletinTemplateRepository.findByEntrepriseAndIsDefaultTrueWithElements(entreprise)
                 .orElseThrow(() -> new RessourceNotFoundException("Aucun template par défaut"));
+
+        // Force l'initialisation de la collection LAZY
+        Hibernate.initialize(template.getElementsConfig());
 
         LocalDate periodePourConfig = fiche.getDateDebutPeriode() != null ? fiche.getDateDebutPeriode() : LocalDate.now();
 
@@ -463,31 +467,6 @@ public class BulletinPaieService {
 
 
 
-    public BulletinPaie mapCreateDtoToEntity(BulletinPaieCreateDto dto) {
-        Employe employe = employeRepo.findById(dto.getEmployeId())
-                .orElseThrow(() -> new RessourceNotFoundException("Employé non trouvé avec l'ID : " + dto.getEmployeId()));
-        Entreprise entreprise = entrepriseRepository.findById(dto.getEntrepriseId())
-                .orElseThrow(() -> new RessourceNotFoundException("Entreprise non trouvée avec l'ID : " + dto.getEntrepriseId()));
-
-        BulletinPaie fiche = new BulletinPaie();
-        fiche.setEmploye(employe);
-        fiche.setEntreprise(entreprise);
-        fiche.setHeuresSup(dto.getHeuresSup());
-        fiche.setHeuresFerie(dto.getHeuresFerie());
-        fiche.setHeuresNuit(dto.getHeuresNuit());
-        fiche.setDatePaiement(dto.getDatePaiement());
-        fiche.setMethodePaiement(dto.getMethodePaiement());
-        // Ajoute ici les autres champs nécessaires si besoin
-
-        return fiche;
-    }
-
-    public BulletinPaieResponseDto calculateBulletin(BulletinPaieCreateDto dto) {
-        BulletinPaie fiche = mapCreateDtoToEntity(dto);
-        BulletinPaie calculBulletin = calculBulletin(fiche);
-        return convertToDto(calculBulletin);
-    }
-
 
 
 
@@ -598,6 +577,33 @@ public class BulletinPaieService {
                 .formuleCalcul(ligne.getFormuleCalcul())
                 .build();
     }
+
+
+    public BulletinPaie mapCreateDtoToEntity(BulletinPaieCreateDto dto) {
+        Employe employe = employeRepo.findById(dto.getEmployeId())
+                .orElseThrow(() -> new RessourceNotFoundException("Employé non trouvé avec l'ID : " + dto.getEmployeId()));
+        Entreprise entreprise = entrepriseRepository.findById(dto.getEntrepriseId())
+                .orElseThrow(() -> new RessourceNotFoundException("Entreprise non trouvée avec l'ID : " + dto.getEntrepriseId()));
+
+        BulletinPaie fiche = new BulletinPaie();
+        fiche.setEmploye(employe);
+        fiche.setEntreprise(entreprise);
+        fiche.setHeuresSup(dto.getHeuresSup());
+        fiche.setHeuresFerie(dto.getHeuresFerie());
+        fiche.setHeuresNuit(dto.getHeuresNuit());
+        fiche.setDatePaiement(dto.getDatePaiement());
+        fiche.setMethodePaiement(dto.getMethodePaiement());
+        // Ajoute ici les autres champs nécessaires si besoin
+
+        return fiche;
+    }
+
+    public BulletinPaieResponseDto calculateBulletin(BulletinPaieCreateDto dto) {
+        BulletinPaie fiche = mapCreateDtoToEntity(dto);
+        BulletinPaie calculBulletin = calculBulletin(fiche);
+        return convertToDto(calculBulletin);
+    }
+
 
     //Methode Crud
     @Transactional
