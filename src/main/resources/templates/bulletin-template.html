@@ -460,11 +460,9 @@
 
     <div class="company-header">
         <div class="company-logo">
-<!--            <img th:if="${bulletin.entreprise != null and bulletin.entreprise.logoUrl != null}"-->
-<!--                 th:src="${bulletin.entreprise.logoUrl}"-->
-<!--                 -->
-<!--                 alt="Logo Entreprise" >-->
-            <div>URL LOGO : <span th:text="${bulletin.entreprise.logoUrl}"></span></div>
+            <img th:if="${bulletin.entreprise != null and bulletin.entreprise.logoUrl != null}"
+                 th:src="${bulletin.entreprise.logoUrl}"
+                 alt="Logo Entreprise" style="max-width: 100%; max-height: 70px;" />
         </div>
 
         <div class="company-info">

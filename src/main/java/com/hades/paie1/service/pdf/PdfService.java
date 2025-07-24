@@ -165,6 +165,8 @@ public class PdfService {
             htmlData.getEntreprise().setLogoUrl(processedLogoUrl);
         }
 
+        // Juste avant la génération HTML/PDF
+        logger.info("LOGO URL utilisée pour PDF/HTML: {}", htmlData.getEntreprise().getLogoUrl());
         Context context = new Context();
         context.setVariable("bulletin", htmlData);
         context.setVariable("isPreview", true);
