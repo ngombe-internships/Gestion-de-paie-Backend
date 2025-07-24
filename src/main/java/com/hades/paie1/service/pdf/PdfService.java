@@ -144,6 +144,7 @@ public class PdfService {
                 // Environnement de production - OpenHTMLToPDF accède directement aux URLs HTTPS
                 logger.info("Configuration PDF pour production (HTTPS Cloudinary)");
             }
+            logger.info("URL logo envoyée au template/pdf: {}", pdfData.getEntreprise().getLogoUrl());
 
             builder.run();
             return outputStream.toByteArray();
