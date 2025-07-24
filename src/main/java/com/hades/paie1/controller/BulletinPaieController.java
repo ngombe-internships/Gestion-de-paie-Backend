@@ -7,6 +7,7 @@ import com.hades.paie1.dto.BulletinPaieResponseDto;
 import com.hades.paie1.model.BulletinPaie;
 import com.hades.paie1.model.Employe;
 import com.hades.paie1.model.Entreprise;
+import com.hades.paie1.repository.BulletinPaieRepo;
 import com.hades.paie1.repository.EmployeRepository;
 import com.hades.paie1.repository.EntrepriseRepository;
 import com.hades.paie1.service.BulletinPaieService;
@@ -34,16 +35,21 @@ public class BulletinPaieController {
     private PdfService pdfService;
     private EmployeRepository employeRepository;
     private EntrepriseRepository entrepriseRepository;
+
+    private BulletinPaieRepo bulletinPaieRepo;
     private static final Logger logger = LoggerFactory.getLogger(PdfService.class);
 
     public BulletinPaieController(BulletinPaieService bulletinPaieService,
                                   PdfService pdf,
                                   EmployeRepository employeRepository,
-                                  EntrepriseRepository entrepriseRepository) {
+                                  EntrepriseRepository entrepriseRepository,
+                                  BulletinPaieRepo bulletinPaieRepo
+    ) {
         this.bulletinPaieService = bulletinPaieService;
         this.pdfService = pdf;
         this.employeRepository = employeRepository;
         this.entrepriseRepository = entrepriseRepository;
+        this.bulletinPaieRepo = bulletinPaieRepo;
     }
 
 
@@ -318,62 +324,48 @@ public class BulletinPaieController {
         logger.info("Début de la génération HTML pour le bulletin ID: {}", id);
 
         try {
-            // Étape 1 : Vérifier que l'ID est valide
             if (id == null || id <= 0) {
-                logger.error("ID invalide: {}", id);
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                         .body("<html><body><h1>ID invalide</h1></body></html>");
             }
 
-            // Étape 2 : Récupérer le bulletin
-            logger.info("Récupération du bulletin avec ID: {}", id);
-            Optional<BulletinPaieResponseDto> bulletinOptional = bulletinPaieService.getBulletinPaieById(id);
-
-            if (bulletinOptional.isEmpty()) {
-                logger.error("Bulletin non trouvé avec l'ID: {}", id);
+            // Récupérer l'entité BulletinPaie complète
+            Optional<BulletinPaie> bulletinOpt = bulletinPaieRepo.findByIdWithEverything(id);
+            if (bulletinOpt.isEmpty()) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
                         .body("<html><body><h1>Bulletin non trouvé</h1></body></html>");
             }
+            BulletinPaie bulletin = bulletinOpt.get();
 
-            BulletinPaieResponseDto bulletinData = bulletinOptional.get();
-            logger.info("Bulletin récupéré avec succès: {}", bulletinData.getId());
+            // 🔥 Recalculer le bulletin si besoin (optionnel si déjà calculé à l'enregistrement)
+            BulletinPaie bulletinCalcule = bulletinPaieService.calculBulletin(bulletin);
 
-            // Étape 3 : Vérifier les données essentielles
+            // Mapper vers DTO à jour
+            BulletinPaieResponseDto bulletinData = bulletinPaieService.convertToDto(bulletinCalcule);
+
             if (bulletinData.getEmploye() == null) {
-                logger.error("Données d'employé manquantes pour le bulletin: {}", id);
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                         .body("<html><body><h1>Données d'employé manquantes</h1></body></html>");
             }
 
-            // Étape 4 : Générer le HTML
-            logger.info("Génération du HTML pour le bulletin: {}", id);
             String html = pdfService.generateHtmlContentForPdf(bulletinData);
 
             if (html == null || html.trim().isEmpty()) {
-                logger.error("HTML généré vide pour le bulletin: {}", id);
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                         .body("<html><body><h1>Erreur lors de la génération HTML</h1></body></html>");
             }
 
-            logger.info("HTML généré avec succès pour le bulletin: {}", id);
             return ResponseEntity.ok()
                     .contentType(MediaType.TEXT_HTML)
                     .body(html);
 
         } catch (Exception e) {
             logger.error("Erreur lors de la génération du HTML pour le bulletin {}: {}", id, e.getMessage(), e);
-
-            // Log détaillé de l'erreur
-            logger.error("Type d'erreur: {}", e.getClass().getSimpleName());
-            logger.error("Message d'erreur: {}", e.getMessage());
-            logger.error("Stack trace: ", e);
-
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("<html><body><h1>Erreur lors de la génération du HTML</h1><p>" +
                             e.getMessage() + "</p></body></html>");
         }
     }
-
 
 
 
