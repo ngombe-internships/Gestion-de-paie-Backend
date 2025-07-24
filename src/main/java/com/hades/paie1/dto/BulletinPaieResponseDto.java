@@ -1,10 +1,7 @@
 package com.hades.paie1.dto;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.annotation.JsonProperty;
-
 import com.hades.paie1.enum1.StatusBulletin;
-import com.hades.paie1.model.BulletinPaie;
 import lombok.Data;
 
 import java.math.BigDecimal;
@@ -15,23 +12,27 @@ import java.util.List;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class BulletinPaieResponseDto {
     private Long id;
+    private BigDecimal salaireBaseInitial;
     private BigDecimal tauxHoraire;
     private BigDecimal heuresNormal;
-
+    private BigDecimal heuresSup;
+    private BigDecimal heuresNuit;
+    private BigDecimal heuresFerie;
+    private BigDecimal primeAnciennete;
+    private BigDecimal avancesSurSalaires;
 
     private BigDecimal totalGains;
     private BigDecimal salaireBrut;
-    private BigDecimal baseCnps;
     private BigDecimal salaireImposable;
-    private BigDecimal avancesSurSalaires;
+    private BigDecimal baseCnps;
+    private BigDecimal totalRetenuesSalariales;
     private BigDecimal totalImpots;
-    private BigDecimal totalRetenuesSalariales; // Somme de toutes les retenues salariales
-    private BigDecimal totalChargesPatronales; // Somme de toutes les charges patronales
-    private BigDecimal salaireNetAPayer;
+    private BigDecimal totalChargesPatronales;
     private BigDecimal cotisationCnps;
     private BigDecimal coutTotalEmployeur;
-
-    // Informations générales du bulletin
+    private BigDecimal salaireNetAPayer;
+    private BigDecimal salaireNetAvantImpot;
+    // Informations générales
     private LocalDate datePaiement;
     private StatusBulletin statusBulletin;
     private LocalDate dateCreationBulletin;
@@ -42,12 +43,6 @@ public class BulletinPaieResponseDto {
     private EntrepriseDto entreprise;
     private EmployeResponseDto employe;
 
-    // Liste dynamique des lignes de paie ***
+    // Lignes dynamiques du bulletin
     private List<LignePaieDto> lignesPaie;
 }
-
-
-
-
-
-

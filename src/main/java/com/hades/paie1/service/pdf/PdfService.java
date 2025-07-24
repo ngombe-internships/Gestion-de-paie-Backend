@@ -15,6 +15,7 @@ import org.thymeleaf.context.Context;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -172,55 +173,61 @@ public class PdfService {
 
     // Méthode améliorée de clonage avec logging
     private BulletinPaieResponseDto cloneBulletinData(BulletinPaieResponseDto original) {
-        logger.debug("Clonage des données du bulletin ID: {}", original.getId());
-
         BulletinPaieResponseDto clone = new BulletinPaieResponseDto();
 
-        // Copier tous les champs primitifs et String
         clone.setId(original.getId());
-        clone.setTauxHoraire(original.getTauxHoraire());
-        clone.setHeuresNormal(original.getHeuresNormal());
-        clone.setSalaireBrut(original.getSalaireBrut());
-        clone.setSalaireImposable(original.getSalaireImposable());
-        clone.setBaseCnps(original.getBaseCnps());
-        clone.setCoutTotalEmployeur(original.getCoutTotalEmployeur());
-        clone.setCotisationCnps(original.getCotisationCnps());
-        clone.setPeriodePaie(original.getPeriodePaie());
-        clone.setDateCreationBulletin(original.getDateCreationBulletin());
-        clone.setStatusBulletin(original.getStatusBulletin());
+        clone.setSalaireBaseInitial(nvl(original.getSalaireBaseInitial()));
+        clone.setTauxHoraire(nvl(original.getTauxHoraire()));
+        clone.setHeuresNormal(nvl(original.getHeuresNormal()));
+        clone.setHeuresSup(nvl(original.getHeuresSup()));
+        clone.setHeuresNuit(nvl(original.getHeuresNuit()));
+        clone.setHeuresFerie(nvl(original.getHeuresFerie()));
+        clone.setPrimeAnciennete(nvl(original.getPrimeAnciennete()));
+        clone.setAvancesSurSalaires(nvl(original.getAvancesSurSalaires()));
+
+        clone.setTotalGains(nvl(original.getTotalGains()));
+        clone.setSalaireBrut(nvl(original.getSalaireBrut()));
+        clone.setSalaireImposable(nvl(original.getSalaireImposable()));
+        clone.setBaseCnps(nvl(original.getBaseCnps()));
+        clone.setTotalRetenuesSalariales(nvl(original.getTotalRetenuesSalariales()));
+        clone.setTotalImpots(nvl(original.getTotalImpots()));
+        clone.setTotalChargesPatronales(nvl(original.getTotalChargesPatronales()));
+        clone.setCotisationCnps(nvl(original.getCotisationCnps()));
+        clone.setCoutTotalEmployeur(nvl(original.getCoutTotalEmployeur()));
+        clone.setSalaireNetAPayer(nvl(original.getSalaireNetAPayer()));
+        clone.setSalaireNetAvantImpot(nvl(original.getSalaireNetAvantImpot()));
+
         clone.setDatePaiement(original.getDatePaiement());
+        clone.setStatusBulletin(original.getStatusBulletin());
+        clone.setDateCreationBulletin(original.getDateCreationBulletin());
+        clone.setPeriodePaie(original.getPeriodePaie());
         clone.setMethodePaiement(original.getMethodePaiement());
 
-        // Cloner l'employé
+        if (original.getEntreprise() != null) {
+            EntrepriseDto entreprise = new EntrepriseDto();
+            entreprise.setId(original.getEntreprise().getId());
+            entreprise.setNom(original.getEntreprise().getNom());
+            entreprise.setNumeroSiret(original.getEntreprise().getNumeroSiret());
+            entreprise.setAdresseEntreprise(original.getEntreprise().getAdresseEntreprise());
+            entreprise.setTelephoneEntreprise(original.getEntreprise().getTelephoneEntreprise());
+            entreprise.setEmailEntreprise(original.getEntreprise().getEmailEntreprise());
+            entreprise.setLogoUrl(original.getEntreprise().getLogoUrl());
+            clone.setEntreprise(entreprise);
+        }
         if (original.getEmploye() != null) {
             clone.setEmploye(original.getEmploye());
         }
-
-        // Cloner l'entreprise (deep copy pour éviter les modifications)
-        if (original.getEntreprise() != null) {
-            EntrepriseDto clonedEntreprise = new EntrepriseDto();
-            clonedEntreprise.setId(original.getEntreprise().getId());
-            clonedEntreprise.setNom(original.getEntreprise().getNom());
-            clonedEntreprise.setNumeroSiret(original.getEntreprise().getNumeroSiret());
-            clonedEntreprise.setAdresseEntreprise(original.getEntreprise().getAdresseEntreprise());
-            clonedEntreprise.setTelephoneEntreprise(original.getEntreprise().getTelephoneEntreprise());
-            clonedEntreprise.setEmailEntreprise(original.getEntreprise().getEmailEntreprise());
-            clonedEntreprise.setLogoUrl(original.getEntreprise().getLogoUrl());
-            clone.setEntreprise(clonedEntreprise);
-        }
-
-        // Cloner les lignes de paie
         if (original.getLignesPaie() != null) {
             List<LignePaieDto> lignesPaieClonees = original.getLignesPaie().stream()
                     .map(this::cloneLignePaieDto)
                     .collect(Collectors.toList());
             clone.setLignesPaie(lignesPaieClonees);
         }
-
-        logger.debug("Clonage terminé pour le bulletin ID: {}", clone.getId());
         return clone;
     }
-
+    private static BigDecimal nvl(BigDecimal val) {
+        return val != null ? val : BigDecimal.ZERO;
+    }
     private LignePaieDto cloneLignePaieDto(LignePaieDto original) {
         return LignePaieDto.builder()
                 .designation(original.getDesignation())

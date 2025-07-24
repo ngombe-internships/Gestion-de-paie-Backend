@@ -445,23 +445,31 @@ public class BulletinPaieService {
 
     public BulletinPaieResponseDto convertToDto(BulletinPaie bulletinPaie) {
         BulletinPaieResponseDto dto = new BulletinPaieResponseDto();
-        dto.setId(bulletinPaie.getId());
-        dto.setTauxHoraire(bulletinPaie.getTauxHoraireInitial());
-        dto.setHeuresNormal(bulletinPaie.getHeuresNormal());
 
-        // Mapping des totaux principaux (qui sont déjà agrégés dans l'entité BulletinPaie)
-        dto.setTotalGains(bulletinPaie.getTotalGains());
-        dto.setSalaireBrut(bulletinPaie.getSalaireBrut());
-        dto.setBaseCnps(bulletinPaie.getBaseCnps());
-        dto.setSalaireImposable(bulletinPaie.getSalaireImposable());
-        dto.setAvancesSurSalaires(bulletinPaie.getAvancesSurSalaires()); // Assurez-vous que ceci est géré comme une ligne de retenue si possible
-        dto.setTotalImpots(bulletinPaie.getTotalImpots());
-        dto.setTotalRetenuesSalariales(bulletinPaie.getTotalRetenuesSalariales());
-        dto.setTotalChargesPatronales(bulletinPaie.getTotalChargesPatronales());
-        dto.setSalaireNetAPayer(bulletinPaie.getSalaireNetAPayer());
-        dto.setCoutTotalEmployeur(bulletinPaie.getCoutTotalEmployeur());
-        dto.setCotisationCnps(bulletinPaie.getCotisationCnps());
-        // Informations générales du bulletin
+        dto.setId(bulletinPaie.getId());
+        dto.setSalaireBaseInitial(nvl(bulletinPaie.getSalaireBaseInitial()));
+        dto.setTauxHoraire(nvl(bulletinPaie.getTauxHoraireInitial()));
+        dto.setHeuresNormal(nvl(bulletinPaie.getHeuresNormal()));
+        dto.setHeuresSup(nvl(bulletinPaie.getHeuresSup()));
+        dto.setHeuresNuit(nvl(bulletinPaie.getHeuresNuit()));
+        dto.setHeuresFerie(nvl(bulletinPaie.getHeuresFerie()));
+        dto.setPrimeAnciennete(nvl(bulletinPaie.getPrimeAnciennete()));
+        dto.setAvancesSurSalaires(nvl(bulletinPaie.getAvancesSurSalaires()));
+
+        // Totaux principaux (toujours BigDecimal.ZERO si null)
+        dto.setTotalGains(nvl(bulletinPaie.getTotalGains()));
+        dto.setSalaireBrut(nvl(bulletinPaie.getSalaireBrut()));
+        dto.setSalaireImposable(nvl(bulletinPaie.getSalaireImposable()));
+        dto.setBaseCnps(nvl(bulletinPaie.getBaseCnps()));
+        dto.setTotalRetenuesSalariales(nvl(bulletinPaie.getTotalRetenuesSalariales()));
+        dto.setTotalImpots(nvl(bulletinPaie.getTotalImpots()));
+        dto.setTotalChargesPatronales(nvl(bulletinPaie.getTotalChargesPatronales()));
+        dto.setCotisationCnps(nvl(bulletinPaie.getCotisationCnps()));
+        dto.setCoutTotalEmployeur(nvl(bulletinPaie.getCoutTotalEmployeur()));
+        dto.setSalaireNetAPayer(nvl(bulletinPaie.getSalaireNetAPayer()));
+        dto.setSalaireNetAvantImpot(nvl(bulletinPaie.getSalaireNetAvantImpot()));
+
+        // Infos générales
         dto.setDatePaiement(bulletinPaie.getDatePaiement());
         dto.setStatusBulletin(bulletinPaie.getStatusBulletin());
         dto.setDateCreationBulletin(bulletinPaie.getDateCreationBulletin());
@@ -471,15 +479,14 @@ public class BulletinPaieService {
         } else {
             dto.setPeriodePaie("N/A");
         }
-
-        if(bulletinPaie.getMethodePaiement() != null) {
+        if (bulletinPaie.getMethodePaiement() != null) {
             dto.setMethodePaiement(bulletinPaie.getMethodePaiement().getDisplayValue());
         } else {
-            dto.setMethodePaiement("Non specifiee");
+            dto.setMethodePaiement("Non spécifiée");
         }
 
-        // Mapping des objets complexes
-        if(bulletinPaie.getEntreprise() != null){
+        // Entreprise
+        if (bulletinPaie.getEntreprise() != null) {
             EntrepriseDto entrepriseDto = new EntrepriseDto();
             entrepriseDto.setId(bulletinPaie.getEntreprise().getId());
             entrepriseDto.setNom(bulletinPaie.getEntreprise().getNom());
@@ -491,22 +498,21 @@ public class BulletinPaieService {
             dto.setEntreprise(entrepriseDto);
         }
 
+        // Employé
         if (bulletinPaie.getEmploye() != null) {
             EmployeResponseDto employeDto = employeService.convertToDto(bulletinPaie.getEmploye());
             dto.setEmploye(employeDto);
         }
 
-        // *** MAPPING DES LIGNES DE PAIE DYNAMIQUES ***
-        // Récupérez les lignes brutes (celles de l'entité BulletinPaie)
+        // Lignes de paie dynamiques
         List<LigneBulletinPaie> lignesBrutes = bulletinPaie.getLignesPaie();
-
-        // Appelez le PayrollDisplayService pour préparer les lignes (y compris la fusion)
         List<LignePaieDto> lignesPourAffichage = payrollDisplayService.prepareLignesPaieForDisplay(lignesBrutes);
-
-        // Définissez les lignes préparées dans votre DTO de réponse
         dto.setLignesPaie(lignesPourAffichage);
 
         return dto;
+    }
+    private static BigDecimal nvl(BigDecimal val) {
+        return val != null ? val : BigDecimal.ZERO;
     }
 
     // Nouvelle méthode pour convertir une LigneBulletinPaie en LignePaieDto
