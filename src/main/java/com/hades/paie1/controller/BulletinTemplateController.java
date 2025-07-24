@@ -77,4 +77,19 @@ public class BulletinTemplateController {
         bulletinTemplateService.setDefaultTemplate(id);
         return ResponseEntity.ok().build();
     }
+
+    @GetMapping("/default")
+    public ResponseEntity<BulletinTemplateDto> getDefaultGlobalTemplate() {
+        BulletinTemplateDto defaultTemplate = bulletinTemplateService.getDefaultGlobalTemplate();
+        if (defaultTemplate == null) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok(defaultTemplate);
+    }
+
+    @PostMapping("/duplicate-default/{entrepriseId}")
+    public ResponseEntity<BulletinTemplateDto> duplicateDefaultTemplateToEntreprise(@PathVariable Long entrepriseId) {
+        BulletinTemplateDto duplicated = bulletinTemplateService.duplicateDefaultTemplateToEntreprise(entrepriseId);
+        return new ResponseEntity<>(duplicated, HttpStatus.CREATED);
+    }
 }

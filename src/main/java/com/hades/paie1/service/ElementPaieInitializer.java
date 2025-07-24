@@ -3,7 +3,10 @@ package com.hades.paie1.service;
 import com.hades.paie1.enum1.CategorieElement;
 import com.hades.paie1.enum1.FormuleCalculType;
 import com.hades.paie1.enum1.TypeElementPaie;
+import com.hades.paie1.model.BulletinTemplate;
 import com.hades.paie1.model.ElementPaie;
+import com.hades.paie1.model.TemplateElementPaieConfig;
+import com.hades.paie1.repository.BulletinTemplateRepository;
 import com.hades.paie1.repository.ElementPaieRepository;
 import jakarta.annotation.PostConstruct;
 import jakarta.transaction.Transactional;
@@ -19,14 +22,17 @@ import java.util.stream.Collectors;
 public class ElementPaieInitializer {
     private final ElementPaieRepository elementPaieRepository;
     private static final Logger logger = LoggerFactory.getLogger(ElementPaieInitializer.class);
-
-    public ElementPaieInitializer(ElementPaieRepository elementPaieRepository) {
+    private final BulletinTemplateRepository bulletinTemplateRepository;
+    public ElementPaieInitializer(ElementPaieRepository elementPaieRepository,
+                                  BulletinTemplateRepository bulletinTemplateRepository) {
         this.elementPaieRepository = elementPaieRepository;
+        this.bulletinTemplateRepository = bulletinTemplateRepository;
     }
 
     @PostConstruct
     public void init() {
         createElements();
+        createDefaultTemplateIfNotExists();
     }
 
     @Transactional
@@ -319,4 +325,38 @@ public class ElementPaieInitializer {
             logger.error("Erreur lors de la création de l'élément {}: {}", designation, e.getMessage());
         }
     }
+
+    private void createDefaultTemplateIfNotExists(){
+
+        boolean exists = bulletinTemplateRepository.findAll().stream()
+                .anyMatch(t -> t.isDefault() && t.getEntreprise() == null);
+        if (exists) {
+            logger.info("Le template par défaut existe déjà.");
+            return;
+        }
+        BulletinTemplate defaultTemplate = new BulletinTemplate();
+        defaultTemplate.setNom("Template par défaut");
+        defaultTemplate.setDefault(true);
+        defaultTemplate.setEntreprise(null); // Non associé à une entreprise
+
+        List<ElementPaie> allElements = elementPaieRepository.findAll();
+        int ordre = 0;
+        for (ElementPaie ep : allElements) {
+            TemplateElementPaieConfig config = TemplateElementPaieConfig.builder()
+                    .bulletinTemplate(defaultTemplate)
+                    .elementPaie(ep)
+                    .isActive(true)
+                    .formuleCalculOverride(ep.getFormuleCalcul())
+                    .tauxDefaut(ep.getTauxDefaut())
+                    .montantDefaut(ep.getMontantDefaut())
+                    .nombreDefaut(ep.getNombreDefaut())
+                    .affichageOrdre(ordre++)
+                    .build();
+            defaultTemplate.getElementsConfig().add(config);
+        }
+        bulletinTemplateRepository.save(defaultTemplate);
+        logger.info("Le template par défaut a été créé avec succès.");
+    }
 }
+
+

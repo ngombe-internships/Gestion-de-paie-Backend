@@ -11,6 +11,7 @@ import com.hades.paie1.repository.EntrepriseRepository;
 import com.hades.paie1.repository.UserRepository;
 import com.hades.paie1.security.JwtTokenProvider;
 import com.hades.paie1.service.AuthService;
+import com.hades.paie1.service.BulletinTemplateService;
 import com.hades.paie1.service.pdf.FileStorageService;
 import com.hades.paie1.service.pdf.UnifiedFileStorageService;
 import jakarta.transaction.Transactional;
@@ -45,6 +46,7 @@ public class AuthController {
     private AuthService authService;
     private UnifiedFileStorageService unifiedFileStorageService;
 
+    private BulletinTemplateService bulletinTemplateService;
     public AuthController (
             AuthenticationManager authenticationManager,
             UserRepository userRepository,
@@ -54,7 +56,8 @@ public class AuthController {
             EntrepriseRepository entrepriseRepository,
             FileStorageService fileStorageService,
             UnifiedFileStorageService unifiedFileStorageService,
-            AuthService authService
+            AuthService authService,
+            BulletinTemplateService bulletinTemplateService
             ) {
         this.authenticationManager = authenticationManager;
         this.userRepository = userRepository;
@@ -65,6 +68,7 @@ public class AuthController {
         this.fileStorageService = fileStorageService;
         this.authService = authService;
         this.unifiedFileStorageService = unifiedFileStorageService;
+        this.bulletinTemplateService = bulletinTemplateService;
     }
 
     //Endpoint de connexion
@@ -160,7 +164,7 @@ public class AuthController {
             }
 
             Entreprise savedEntreprise = entrepriseRepository.save(entreprise);
-
+            bulletinTemplateService.createDefaultTemplateForEntreprise(savedEntreprise);
             User employeurUser = User.builder()
                     .username(createDto.getUsername())
                     .password(passwordEncoder.encode(createDto.getPassword()))

@@ -109,14 +109,20 @@ public class PdfService {
             // Cloner les données pour éviter de modifier l'original
             BulletinPaieResponseDto pdfData = cloneBulletinData(bulletinData);
 
+            logger.info("Valeur logoUrl brute avant traitement pour PDF: {}", pdfData.getEntreprise() != null ? pdfData.getEntreprise().getLogoUrl() : "null");
+
+
             // Traiter l'URL du logo pour la génération PDF
             if (pdfData.getEntreprise() != null && pdfData.getEntreprise().getLogoUrl() != null) {
                 String processedLogoUrl = processLogoUrl(pdfData.getEntreprise().getLogoUrl(), true);
+                logger.info("Valeur logoUrl APRES processLogoUrl (PDF): {}", processedLogoUrl);
                 pdfData.getEntreprise().setLogoUrl(processedLogoUrl);
             }
 
             Context context = new Context();
             context.setVariable("bulletin", pdfData);
+
+            logger.info("Valeur logoUrl envoyée au template HTML PDF: {}", pdfData.getEntreprise() != null ? pdfData.getEntreprise().getLogoUrl() : "null");
 
             String html = templateEngine.process("bulletin-template", context);
 
@@ -159,14 +165,22 @@ public class PdfService {
         // Cloner les données pour éviter de modifier l'original
         BulletinPaieResponseDto htmlData = cloneBulletinData(bulletinData);
 
+        // 1️⃣ Après le clonage du DTO
+        logger.info("Valeur logoUrl brute avant traitement pour HTML Preview: {}",
+                htmlData.getEntreprise() != null ? htmlData.getEntreprise().getLogoUrl() : "null");
+
         // Traiter l'URL du logo pour la prévisualisation HTML
         if (htmlData.getEntreprise() != null && htmlData.getEntreprise().getLogoUrl() != null) {
             String processedLogoUrl = processLogoUrl(htmlData.getEntreprise().getLogoUrl(), false);
+            logger.info("Valeur logoUrl APRES processLogoUrl (HTML Preview): {}", processedLogoUrl);
+
             htmlData.getEntreprise().setLogoUrl(processedLogoUrl);
         }
 
         // Juste avant la génération HTML/PDF
-        logger.info("LOGO URL utilisée pour PDF/HTML: {}", htmlData.getEntreprise().getLogoUrl());
+        logger.info("Valeur logoUrl envoyée au template HTML Preview: {}",
+                htmlData.getEntreprise() != null ? htmlData.getEntreprise().getLogoUrl() : "null");
+
         Context context = new Context();
         context.setVariable("bulletin", htmlData);
         context.setVariable("isPreview", true);

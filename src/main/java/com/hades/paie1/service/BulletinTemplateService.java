@@ -403,4 +403,75 @@ public class BulletinTemplateService {
         return dto;
     }
 
+    // Appelle cette méthode lors de la création d'une entreprise
+    @Transactional
+    public BulletinTemplate createDefaultTemplateForEntreprise(Entreprise entreprise) {
+        // On récupère le template global par défaut
+        BulletinTemplate defaultTemplate = bulletinTemplateRepository.findAll().stream()
+                .filter(t -> t.isDefault() && t.getEntreprise() == null)
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException("Le template global par défaut n'existe pas !"));
+
+        BulletinTemplate entrepriseTemplate = new BulletinTemplate();
+        entrepriseTemplate.setNom("Bulletin de " + entreprise.getNom());
+        entrepriseTemplate.setEntreprise(entreprise);
+        entrepriseTemplate.setDefault(true);
+
+        // Duplication profonde de la config
+        for (TemplateElementPaieConfig config : defaultTemplate.getElementsConfig()) {
+            TemplateElementPaieConfig newConfig = TemplateElementPaieConfig.builder()
+                    .bulletinTemplate(entrepriseTemplate)
+                    .elementPaie(config.getElementPaie())
+                    .isActive(config.isActive())
+                    .formuleCalculOverride(config.getFormuleCalculOverride())
+                    .tauxDefaut(config.getTauxDefaut())
+                    .montantDefaut(config.getMontantDefaut())
+                    .nombreDefaut(config.getNombreDefaut())
+                    .affichageOrdre(config.getAffichageOrdre())
+                    .build();
+            entrepriseTemplate.getElementsConfig().add(newConfig);
+        }
+        return bulletinTemplateRepository.save(entrepriseTemplate);
+    }
+
+    public BulletinTemplateDto getDefaultGlobalTemplate() {
+        BulletinTemplate defaultTemplate = bulletinTemplateRepository.findAll().stream()
+                .filter(t -> t.isDefault() && t.getEntreprise() == null)
+                .findFirst()
+                .orElse(null);
+        return defaultTemplate != null ? convertToDto(defaultTemplate) : null;
+    }
+
+
+    @Transactional
+    public BulletinTemplateDto duplicateDefaultTemplateToEntreprise(Long entrepriseId) {
+        Entreprise entreprise = entrepriseRepository.findById(entrepriseId)
+                .orElseThrow(() -> new RessourceNotFoundException("Entreprise non trouvée avec id : " + entrepriseId));
+
+        BulletinTemplate defaultTemplate = bulletinTemplateRepository.findAll().stream()
+                .filter(t -> t.isDefault() && t.getEntreprise() == null)
+                .findFirst()
+                .orElseThrow(() -> new RessourceNotFoundException("Template par défaut global non trouvé"));
+
+        BulletinTemplate entrepriseTemplate = new BulletinTemplate();
+        entrepriseTemplate.setNom("Bulletin de " + entreprise.getNom());
+        entrepriseTemplate.setEntreprise(entreprise);
+        entrepriseTemplate.setDefault(true);
+
+        for (TemplateElementPaieConfig config : defaultTemplate.getElementsConfig()) {
+            TemplateElementPaieConfig newConfig = TemplateElementPaieConfig.builder()
+                    .bulletinTemplate(entrepriseTemplate)
+                    .elementPaie(config.getElementPaie())
+                    .isActive(config.isActive())
+                    .formuleCalculOverride(config.getFormuleCalculOverride())
+                    .tauxDefaut(config.getTauxDefaut())
+                    .montantDefaut(config.getMontantDefaut())
+                    .nombreDefaut(config.getNombreDefaut())
+                    .affichageOrdre(config.getAffichageOrdre())
+                    .build();
+            entrepriseTemplate.getElementsConfig().add(newConfig);
+        }
+        BulletinTemplate saved = bulletinTemplateRepository.save(entrepriseTemplate);
+        return convertToDto(saved);
+    }
 }
