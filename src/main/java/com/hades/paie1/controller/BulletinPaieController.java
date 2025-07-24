@@ -52,45 +52,25 @@ public class BulletinPaieController {
     public ResponseEntity<ApiResponse<BulletinPaieResponseDto>> calculerBulletin1(
             @RequestBody BulletinPaieCreateDto ficheDto
     ) {
-        try {
-            logger.debug("Données reçues pour le calcul : {}", ficheDto);
-
-            Employe employe = employeRepository.findById(ficheDto.getEmployeId()).orElseThrow();
-            Entreprise entreprise = entrepriseRepository.findById(ficheDto.getEntrepriseId()).orElseThrow();
-
-            BulletinPaie fiche = new BulletinPaie();
-            fiche.setEmploye(employe);
-            fiche.setEntreprise(entreprise);
-            fiche.setHeuresSup(ficheDto.getHeuresSup());
-            fiche.setHeuresFerie(ficheDto.getHeuresFerie());
-            fiche.setHeuresNuit(ficheDto.getHeuresNuit());
-            fiche.setDatePaiement(ficheDto.getDatePaiement());
-            fiche.setMethodePaiement(ficheDto.getMethodePaiement());
-
-            BulletinPaie calculBulletin = bulletinPaieService.calculBulletin(fiche);
-            BulletinPaieResponseDto responseDto = bulletinPaieService.convertToDto(calculBulletin);
-
-            ApiResponse<BulletinPaieResponseDto> response = new ApiResponse<>(
-                    "Bulletin de paie calcule avec succes",
-                    responseDto,
-                    HttpStatus.OK
-            );
-
-            return ResponseEntity.ok()
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .body(response);
-        } catch (Exception e) {
-            logger.error("Erreur lors du calcul du bulletin : ", e);
-            throw e;
-        }
+        BulletinPaieResponseDto responseDto = bulletinPaieService.calculateBulletin(ficheDto);
+        ApiResponse<BulletinPaieResponseDto> response = new ApiResponse<>(
+                "Bulletin de paie calcule avec succes",
+                responseDto,
+                HttpStatus.OK
+        );
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(response);
     }
 
 
     // cree un bulletin et le sauvegarde
     @PreAuthorize("hasRole('ADMIN') or hasRole('EMPLOYEUR')")
     @PostMapping("/create")
-    public ResponseEntity<ApiResponse<BulletinPaieResponseDto>> createBulletin(@RequestBody BulletinPaie fiche) {
-        BulletinPaieResponseDto bulletinCalcule = bulletinPaieService.saveBulletinPaie(fiche);
+    public ResponseEntity<ApiResponse<BulletinPaieResponseDto>> createBulletin(
+            @RequestBody BulletinPaieCreateDto dto
+    ) {
+        BulletinPaieResponseDto bulletinCalcule = bulletinPaieService.saveBulletinPaie(dto);
         ApiResponse<BulletinPaieResponseDto> response = new ApiResponse<>(
                 "Bulletin de paie calcule  et sauvegarde avec succes",
                 bulletinCalcule,

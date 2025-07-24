@@ -463,6 +463,32 @@ public class BulletinPaieService {
 
 
 
+    public BulletinPaie mapCreateDtoToEntity(BulletinPaieCreateDto dto) {
+        Employe employe = employeRepo.findById(dto.getEmployeId())
+                .orElseThrow(() -> new RessourceNotFoundException("Employé non trouvé avec l'ID : " + dto.getEmployeId()));
+        Entreprise entreprise = entrepriseRepository.findById(dto.getEntrepriseId())
+                .orElseThrow(() -> new RessourceNotFoundException("Entreprise non trouvée avec l'ID : " + dto.getEntrepriseId()));
+
+        BulletinPaie fiche = new BulletinPaie();
+        fiche.setEmploye(employe);
+        fiche.setEntreprise(entreprise);
+        fiche.setHeuresSup(dto.getHeuresSup());
+        fiche.setHeuresFerie(dto.getHeuresFerie());
+        fiche.setHeuresNuit(dto.getHeuresNuit());
+        fiche.setDatePaiement(dto.getDatePaiement());
+        fiche.setMethodePaiement(dto.getMethodePaiement());
+        // Ajoute ici les autres champs nécessaires si besoin
+
+        return fiche;
+    }
+
+    public BulletinPaieResponseDto calculateBulletin(BulletinPaieCreateDto dto) {
+        BulletinPaie fiche = mapCreateDtoToEntity(dto);
+        BulletinPaie calculBulletin = calculBulletin(fiche);
+        return convertToDto(calculBulletin);
+    }
+
+
 
 
 
@@ -575,8 +601,9 @@ public class BulletinPaieService {
 
     //Methode Crud
     @Transactional
-    public BulletinPaieResponseDto saveBulletinPaie (BulletinPaie fiche){
+    public BulletinPaieResponseDto saveBulletinPaie (BulletinPaieCreateDto dto){
 
+        BulletinPaie fiche = mapCreateDtoToEntity(dto);
         BulletinPaie calculatedAndFilledBulletin = calculBulletin(fiche);
         BulletinPaie savedBulletin = bulletinRepo.save(calculatedAndFilledBulletin);
         return  convertToDto(savedBulletin);
@@ -1127,10 +1154,6 @@ public class BulletinPaieService {
 
 
 
-
-
-
-
     public BulletinPaieResponseDto updateBulletinPaie (Long id, BulletinPaie updatedBulletinPaie){
 
         BulletinPaie existingBulletinPaie = bulletinRepo.findById(id)
@@ -1158,4 +1181,8 @@ public class BulletinPaieService {
 
         return convertToDto(savedBulletin);
     }
+
+
+
+
 }
