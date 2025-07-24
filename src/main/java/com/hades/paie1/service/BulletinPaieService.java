@@ -570,6 +570,7 @@ public class BulletinPaieService {
         return fiche;
     }
 
+    @Transactional
     public BulletinPaieResponseDto calculateBulletin(BulletinPaieCreateDto dto) {
         BulletinPaie fiche = mapCreateDtoToEntity(dto);
         BulletinPaie calculBulletin = calculBulletin(fiche);

@@ -338,11 +338,11 @@ public class BulletinPaieController {
             }
             BulletinPaie bulletin = bulletinOpt.get();
 
-            // 🔥 Recalculer le bulletin si besoin (optionnel si déjà calculé à l'enregistrement)
-            BulletinPaie bulletinCalcule = bulletinPaieService.calculBulletin(bulletin);
+            // ❌ SUPPRIME cette ligne : pas de recalcul !
+            // BulletinPaie bulletinCalcule = bulletinPaieService.calculBulletin(bulletin);
 
-            // Mapper vers DTO à jour
-            BulletinPaieResponseDto bulletinData = bulletinPaieService.convertToDto(bulletinCalcule);
+            // Mapper vers DTO à jour (valeurs stockées)
+            BulletinPaieResponseDto bulletinData = bulletinPaieService.convertToDto(bulletin);
 
             if (bulletinData.getEmploye() == null) {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST)
@@ -367,8 +367,6 @@ public class BulletinPaieController {
                             e.getMessage() + "</p></body></html>");
         }
     }
-
-
 
 
     @GetMapping("/count")
