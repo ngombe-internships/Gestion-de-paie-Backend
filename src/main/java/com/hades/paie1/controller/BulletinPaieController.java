@@ -1,9 +1,14 @@
 package com.hades.paie1.controller;
 
 import com.hades.paie1.dto.ApiResponse;
+import com.hades.paie1.dto.BulletinPaieCreateDto;
 import com.hades.paie1.dto.BulletinPaieEmployeurDto;
 import com.hades.paie1.dto.BulletinPaieResponseDto;
 import com.hades.paie1.model.BulletinPaie;
+import com.hades.paie1.model.Employe;
+import com.hades.paie1.model.Entreprise;
+import com.hades.paie1.repository.EmployeRepository;
+import com.hades.paie1.repository.EntrepriseRepository;
 import com.hades.paie1.service.BulletinPaieService;
 import com.hades.paie1.service.pdf.PdfService;
 import org.slf4j.Logger;
@@ -27,21 +32,41 @@ public class BulletinPaieController {
 
     private BulletinPaieService bulletinPaieService;
     private PdfService pdfService;
+    private EmployeRepository employeRepository;
+    private EntrepriseRepository entrepriseRepository;
     private static final Logger logger = LoggerFactory.getLogger(PdfService.class);
 
-    public BulletinPaieController(BulletinPaieService bulletinPaieService, PdfService pdf) {
+    public BulletinPaieController(BulletinPaieService bulletinPaieService,
+                                  PdfService pdf,
+                                  EmployeRepository employeRepository,
+                                  EntrepriseRepository entrepriseRepository) {
         this.bulletinPaieService = bulletinPaieService;
         this.pdfService = pdf;
+        this.employeRepository = employeRepository;
+        this.entrepriseRepository = entrepriseRepository;
     }
 
 
     //cree bulletin avec  info de employe
     @PostMapping(value = "/calculate1")
     public ResponseEntity<ApiResponse<BulletinPaieResponseDto>> calculerBulletin1(
-            @RequestBody BulletinPaie fiche
+            @RequestBody BulletinPaieCreateDto ficheDto
     ) {
         try {
-            logger.debug("Données reçues pour le calcul : {}", fiche);
+            logger.debug("Données reçues pour le calcul : {}", ficheDto);
+
+            Employe employe = employeRepository.findById(ficheDto.getEmployeId()).orElseThrow();
+            Entreprise entreprise = entrepriseRepository.findById(ficheDto.getEntrepriseId()).orElseThrow();
+
+            BulletinPaie fiche = new BulletinPaie();
+            fiche.setEmploye(employe);
+            fiche.setEntreprise(entreprise);
+            fiche.setHeuresSup(ficheDto.getHeuresSup());
+            fiche.setHeuresFerie(ficheDto.getHeuresFerie());
+            fiche.setHeuresNuit(ficheDto.getHeuresNuit());
+            fiche.setDatePaiement(ficheDto.getDatePaiement());
+            fiche.setMethodePaiement(ficheDto.getMethodePaiement());
+
             BulletinPaie calculBulletin = bulletinPaieService.calculBulletin(fiche);
             BulletinPaieResponseDto responseDto = bulletinPaieService.convertToDto(calculBulletin);
 
