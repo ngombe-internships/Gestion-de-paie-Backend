@@ -25,7 +25,7 @@ public class BulletinTemplate {
 
     // L'entreprise à laquelle ce template est associé
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "entreprise_id", nullable = false)
+    @JoinColumn(name = "entreprise_id", nullable = true)
     //@JsonBackReference("entreprise-templates")
     @JsonIdentityReference(alwaysAsId = true)
     private Entreprise entreprise;
