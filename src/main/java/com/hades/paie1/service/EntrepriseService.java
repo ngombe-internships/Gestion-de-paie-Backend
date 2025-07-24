@@ -5,27 +5,47 @@ import com.hades.paie1.dto.EntrepriseDto;
 import com.hades.paie1.exception.RessourceNotFoundException;
 import com.hades.paie1.model.Entreprise;
 import com.hades.paie1.repository.EntrepriseRepository;
-import jakarta.transaction.Transactional;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Sort;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
+@Transactional
 public class EntrepriseService {
+
     private final EntrepriseRepository entrepriseRepository;
 
-    @Autowired
-    public EntrepriseService (EntrepriseRepository entrepriseRepository) {
+    public EntrepriseService(EntrepriseRepository entrepriseRepository) {
         this.entrepriseRepository = entrepriseRepository;
     }
 
-    private EntrepriseDto convertTodo (Entreprise entreprise) {
-        if (entreprise == null) {
-            return null;
+    @Transactional(readOnly = true)
+    public List<EmployeurListDto> getAllEntreprises() {
+        return entrepriseRepository.findAll().stream()
+                .map(this::convertToEmployeurListDto)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public EntrepriseDto getEntrepriseById(Long id) {
+        Entreprise entreprise = entrepriseRepository.findById(id)
+                .orElseThrow(() -> new RessourceNotFoundException("Entreprise non trouvée avec l'ID: " + id));
+
+        return convertToEntrepriseDto(entreprise);
+    }
+
+    private EntrepriseDto convertToEntrepriseDto(Entreprise entreprise) {
+        String logoUrl = null;
+        try {
+            // Accès sécurisé au LOB
+            logoUrl = entreprise.getLogoUrl();
+        } catch (Exception e) {
+            System.err.println("Erreur d'accès au logoUrl pour l'entreprise " + entreprise.getId() + ": " + e.getMessage());
         }
+
         return EntrepriseDto.builder()
                 .id(entreprise.getId())
                 .nom(entreprise.getNom())
@@ -33,37 +53,24 @@ public class EntrepriseService {
                 .emailEntreprise(entreprise.getEmailEntreprise())
                 .telephoneEntreprise(entreprise.getTelephoneEntreprise())
                 .numeroSiret(entreprise.getNumeroSiret())
+                .logoUrl(logoUrl)
                 .dateCreation(entreprise.getDateCreation())
-                .logoUrl(entreprise.getLogoUrl())
+                .employeurPrincipalId(entreprise.getEmployeurPrincipal() != null ?
+                        entreprise.getEmployeurPrincipal().getId() : null)
+                .employeurPrincipalUsername(entreprise.getEmployeurPrincipal() != null ?
+                        entreprise.getEmployeurPrincipal().getUsername() : null)
+                .standardHeuresHebdomadaires(entreprise.getStandardHeuresHebdomadaires())
+                .standardJoursOuvrablesHebdomadaires(entreprise.getStandardJoursOuvrablesHebdomadaires())
                 .build();
     }
 
-    @Transactional
-    public EntrepriseDto getEntrepriseById(Long id) {
-        Entreprise entreprise = entrepriseRepository.findById(id)
-                .orElseThrow(()-> new RessourceNotFoundException("Entreprise non trouve avec l'id : " +id));
-        return convertTodo(entreprise);
+    private EmployeurListDto convertToEmployeurListDto(Entreprise entreprise) {
+        return EmployeurListDto.builder()
+                .entrepriseId(entreprise.getId())
+                .nomEntreprise(entreprise.getNom())
+                .dateCreationEntreprise(entreprise.getDateCreation())
+                .usernameEmployeur(entreprise.getEmployeurPrincipal() != null ?
+                        entreprise.getEmployeurPrincipal().getUsername() : null)
+                .build();
     }
-    @Transactional
-    public List <EmployeurListDto> getAllEntreprises(){
-
-        List<Entreprise> entreprises = entrepriseRepository.findAllWithEmployeurPrincipalLoaded(Sort.by(Sort.Direction.ASC,"dateCreation"));
-
-              return   entreprises.stream()
-                      .map(entreprise -> {
-                    String usernameEmployeur = "N/A";
-                    if(entreprise.getEmployeurPrincipal() != null){
-                        usernameEmployeur = entreprise.getEmployeurPrincipal().getUsername();
-                    }
-                    return EmployeurListDto.builder()
-                            .entrepriseId(entreprise.getId())
-                            .nomEntreprise(entreprise.getNom())
-                            .usernameEmployeur(usernameEmployeur)
-                            .dateCreationEntreprise(entreprise.getDateCreation())
-                            .build();
-                })
-                .collect(Collectors.toList());
-    }
-
-
 }

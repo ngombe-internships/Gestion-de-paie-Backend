@@ -44,7 +44,18 @@ public class Entreprise {
     private LocalDate dateCreation;
 
     @Column(name = "logo")
+    @Basic(fetch = FetchType.LAZY)
     private String logoUrl;
+
+    // Méthode utilitaire pour accéder au logoUrl de manière sécurisée
+    public String getLogoUrlSafe() {
+        try {
+            return this.logoUrl;
+        } catch (Exception e) {
+            System.err.println("Erreur d'accès au logoUrl: " + e.getMessage());
+            return null;
+        }
+    }
 
 
 
