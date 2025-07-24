@@ -591,7 +591,6 @@ public class BulletinPaieService {
 
     //Methode Crud
     @Transactional
-    //bulletin save
     public BulletinPaieResponseDto saveBulletinPaie(BulletinPaieCreateDto dto) {
         BulletinPaie fiche = mapCreateDtoToEntity(dto);
         BulletinPaie calculBulletin = calculBulletin(fiche);
