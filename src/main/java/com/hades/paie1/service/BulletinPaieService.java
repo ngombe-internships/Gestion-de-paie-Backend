@@ -607,7 +607,7 @@ public class BulletinPaieService {
                 .collect(Collectors.toList());
     }
 
-    //pour gerer afficher en fonction  des roles
+    //pour gerer afficher en fonction  des role
     @Transactional
     public BulletinPaieResponseDto getBulletinById(Long id) {
         BulletinPaie bulletin = bulletinRepo.findById(id)
