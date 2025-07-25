@@ -47,27 +47,8 @@ public class Entreprise {
     @Basic(fetch = FetchType.LAZY)
     private String logoUrl;
 
-    // Méthode utilitaire pour accéder au logoUrl de manière sécurisée
-    public String getLogoUrlSafe() {
-        try {
-            return this.logoUrl;
-        } catch (Exception e) {
-            System.err.println("Erreur d'accès au logoUrl: " + e.getMessage());
-            return null;
-        }
-    }
 
 
-
-    //nouveau
-//    @Column(name="latitude_entreprise")
-//    private Double latitudeEntreprise;
-//
-//    @Column(name="longitude_entreprise")
-//    private Double longitudeEntreprise;
-//
-//    @Column(name="radius_tolerance_meters")
-//    private Integer radiusToleranceMeters;
 
     @Column(name = "standard_heures_hebdomadaires", precision = 5, scale = 2)
     private BigDecimal standardHeuresHebdomadaires;
@@ -106,8 +87,11 @@ public class Entreprise {
     private BulletinTemplate defaultBulletinTemplate;
 
 
-    @OneToMany(mappedBy = "entreprise", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+
+    @OneToMany(mappedBy = "entreprise", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
     private List<BulletinTemplate> bulletinTemplates = new ArrayList<>();
 
 
+}
 }
