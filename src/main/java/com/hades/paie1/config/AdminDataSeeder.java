@@ -36,20 +36,6 @@ public class AdminDataSeeder implements CommandLineRunner {
             System.out.println("Un utilisateur ADMIN existe deja. Pas de creation d'utilisateur par defaut. ");
         }
 
-//        // --- POUR LA CRÉATION DE L'EMPLOYEUR (pour les tests) ---
-//        if (userRepository.findByRole(Role.EMPLOYEUR).isEmpty()) {
-//            System.out.println("Aucun utilisateur EMPLOYEUR trouve. Creation de l'utilisteur EMPLOYEUR par defaut...");
-//            User employeurUser = User.builder()
-//                    .username("employeur") // Nom d'utilisateur pour le compte EMPLOYEUR
-//                    .password(passwordEncoder.encode("employeurpass")) // Mot de passe
-//                    .role(Role.EMPLOYEUR) // Assigne le rôle EMPLOYEUR
-//                    .employe(null) // Laissez null si le champ 'employe' est nullable dans User
-//                    .build();
-//            userRepository.save(employeurUser);
-//            System.out.println("Utilisateur EMPLOYEUR 'employeur' cree avec succes !");
-//        } else {
-//            System.out.println("Un utilisateur EMPLOYEUR existe deja. Pas de creation d'utilisateur par defaut.");
-//        }
 
     }
 }

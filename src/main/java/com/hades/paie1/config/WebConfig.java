@@ -5,9 +5,9 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import org.springframework.core.env.Environment;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.env.Environment;
 import org.springframework.http.MediaType;
 import org.springframework.http.converter.ByteArrayHttpMessageConverter;
 import org.springframework.http.converter.HttpMessageConverter;
@@ -20,7 +20,6 @@ import java.util.Arrays;
 import java.util.List;
 
 @Configuration
-@EnableWebMvc
 public class WebConfig implements WebMvcConfigurer {
 
     @Value("${file.upload-dir}")
@@ -46,22 +45,33 @@ public class WebConfig implements WebMvcConfigurer {
         registry.addResourceHandler("/**")
                 .addResourceLocations("classpath:/static", "classpath:/public/", "classpath:/META-INF/resources/");
     }
+
+    // UTILISE LE OBJECTMAPPER EXISTANT DE JACKSONCONFIG
     @Override
-    public void configureMessageConverters(List<HttpMessageConverter<?>> converters) {
+    public void extendMessageConverters(List<HttpMessageConverter<?>> converters) {
+        // Trouver le convertisseur JSON existant et le configurer
+        for (HttpMessageConverter<?> converter : converters) {
+            if (converter instanceof MappingJackson2HttpMessageConverter) {
+                MappingJackson2HttpMessageConverter jsonConverter = (MappingJackson2HttpMessageConverter) converter;
 
-        // AJOUT DU CONVERTISSEUR STRING POUR HTML - SOLUTION PRINCIPALE
-        StringHttpMessageConverter stringConverter = new StringHttpMessageConverter(StandardCharsets.UTF_8);
-        stringConverter.setSupportedMediaTypes(Arrays.asList(
-                MediaType.TEXT_HTML,
-                MediaType.TEXT_PLAIN,
-                MediaType.APPLICATION_JSON, // Garder JSON pour compatibilité
-                new MediaType("text", "html", StandardCharsets.UTF_8),
-                new MediaType("text", "plain", StandardCharsets.UTF_8)
-        ));
-        // Ajouter le convertisseur String en PREMIER pour qu'il soit prioritaire
-        converters.add(0, stringConverter);
+                // Configuration ObjectMapper SANS CRÉER UN NOUVEAU BEAN
+                ObjectMapper objectMapper = jsonConverter.getObjectMapper();
+                objectMapper.registerModule(new JavaTimeModule());
+                objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+                objectMapper.configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false);
+                objectMapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
+                objectMapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
 
-        // Convertisseur pour les bytes (PDF, images, etc.)
+                // S'assurer que JSON supporte UTF-8
+                jsonConverter.setSupportedMediaTypes(Arrays.asList(
+                        MediaType.APPLICATION_JSON,
+                        new MediaType("application", "json", StandardCharsets.UTF_8)
+                ));
+                break;
+            }
+        }
+
+        // Ajouter le convertisseur pour les fichiers PDF/Images
         ByteArrayHttpMessageConverter byteArrayConverter = new ByteArrayHttpMessageConverter();
         byteArrayConverter.setSupportedMediaTypes(Arrays.asList(
                 MediaType.APPLICATION_PDF,
@@ -71,22 +81,20 @@ public class WebConfig implements WebMvcConfigurer {
         ));
         converters.add(byteArrayConverter);
 
-        // Convertisseur JSON
-        MappingJackson2HttpMessageConverter jsonConverter = new MappingJackson2HttpMessageConverter();
-        jsonConverter.setSupportedMediaTypes(Arrays.asList(
-                MediaType.APPLICATION_JSON,
-                new MediaType("application", "json", StandardCharsets.UTF_8)
-        ));
-
-        // Configuration de l'ObjectMapper pour JSON
-        ObjectMapper objectMapper = new ObjectMapper();
-        objectMapper.registerModule(new JavaTimeModule());
-        objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-        objectMapper.configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false);
-        objectMapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
-
-        jsonConverter.setObjectMapper(objectMapper);
-        converters.add(jsonConverter);
+        // Configurer le convertisseur String pour UTF-8 (SANS JSON)
+        for (HttpMessageConverter<?> converter : converters) {
+            if (converter instanceof StringHttpMessageConverter) {
+                StringHttpMessageConverter stringConverter = (StringHttpMessageConverter) converter;
+                stringConverter.setSupportedMediaTypes(Arrays.asList(
+                        MediaType.TEXT_HTML,
+                        MediaType.TEXT_PLAIN,
+                        new MediaType("text", "html", StandardCharsets.UTF_8),
+                        new MediaType("text", "plain", StandardCharsets.UTF_8)
+                        // PAS DE APPLICATION_JSON ici !
+                ));
+                break;
+            }
+        }
     }
 
     @Override
@@ -97,8 +105,10 @@ public class WebConfig implements WebMvcConfigurer {
                 .parameterName("mediaType")
                 .ignoreAcceptHeader(false)
                 .useRegisteredExtensionsOnly(false)
-                .mediaType("html", MediaType.TEXT_HTML)  // AJOUT DU SUPPORT HTML
+                .mediaType("html", MediaType.TEXT_HTML)
                 .mediaType("pdf", MediaType.APPLICATION_PDF)
                 .mediaType("json", MediaType.APPLICATION_JSON);
     }
+
+    // PAS DE BEAN OBJECTMAPPER ICI - IL EXISTE DÉJÀ DANS JACKSONCONFIG
 }

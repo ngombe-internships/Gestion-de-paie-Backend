@@ -3,6 +3,7 @@ package com.hades.paie1.config;
 import com.hades.paie1.security.JwtAuthentificationFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile; // Import Profile
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
@@ -23,11 +24,12 @@ import java.util.Arrays;
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
-public class SecurityConfig {
+@Profile("prod") // This config applies ONLY to the 'prod' profile
+public class SecurityConfigProd { // Renamed to avoid conflict
 
     private final JwtAuthentificationFilter jwtAuthentificationFilter;
 
-    public SecurityConfig(JwtAuthentificationFilter jwtAuthentificationFilter){
+    public SecurityConfigProd(JwtAuthentificationFilter jwtAuthentificationFilter){
         this.jwtAuthentificationFilter = jwtAuthentificationFilter;
     }
 
@@ -47,26 +49,7 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .cors(Customizer.withDefaults())
                 .authorizeHttpRequests(authorize -> authorize
-                        // === ENDPOINTS SWAGGER/OPENAPI - COMPLÈTEMENT PUBLICS ===
-                        .requestMatchers(
-                                "/swagger-ui/**",
-                                "/swagger-ui.html",
-                                "/v3/api-docs/**",
-                                "/v3/api-docs",
-                                "/v3/api-docs.yaml",
-                                "/swagger-resources/**",
-                                "/swagger-resources",
-                                "/configuration/ui",
-                                "/configuration/security",
-                                "/webjars/**",
-                                "/favicon.ico",
-                                "/error",
-                                // Ajout des endpoints manquants pour Swagger UI
-                                "/swagger-ui/index.html",
-                                "/swagger-ui/swagger-ui-bundle.js",
-                                "/swagger-ui/swagger-ui-standalone-preset.js",
-                                "/swagger-ui/swagger-ui.css"
-                        ).permitAll()
+                        // === NO SWAGGER ENDPOINTS PERMITTED HERE ===
 
                         // === ENDPOINTS PUBLICS DE L'APP ===
                         .requestMatchers("/api/auth/login").permitAll()
@@ -84,7 +67,6 @@ public class SecurityConfig {
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
 
-        // Ajouter le filtre JWT SEULEMENT après les endpoints publics
         http.addFilterBefore(jwtAuthentificationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

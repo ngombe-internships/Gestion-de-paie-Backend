@@ -20,6 +20,8 @@ public class JacksonConfig {
         mapper.configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false);
 
         mapper.enable(SerializationFeature.WRITE_SELF_REFERENCES_AS_NULL);
+
+
         return mapper;
     }
 }
