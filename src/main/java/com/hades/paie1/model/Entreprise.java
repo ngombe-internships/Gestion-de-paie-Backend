@@ -93,5 +93,5 @@ public class Entreprise {
     private List<BulletinTemplate> bulletinTemplates = new ArrayList<>();
 
 
-}
+
 }
