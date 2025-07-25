@@ -21,6 +21,7 @@ public class GlobalExceptionHandler {
         });
 
         ApiResponse<Map<String, String>> response = new ApiResponse<>(
+
                 "Erreur de validation",
                 errors,
                 HttpStatus.BAD_REQUEST
@@ -32,12 +33,25 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(RessourceNotFoundException.class)
     public ResponseEntity<ApiResponse<Void>> handleRessourceNotFound(RessourceNotFoundException ex) {
         ApiResponse<Void> response = new ApiResponse<>(
+
                 ex.getMessage(),
                 null,
                 HttpStatus.NOT_FOUND
         );
 
         return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
+    }
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ApiResponse<Void>> handleOtherExceptions(Exception ex) {
+        ApiResponse<Void> response = new ApiResponse<>(
+
+                "Erreur interne: " + ex.getMessage(),
+                null,
+                HttpStatus.INTERNAL_SERVER_ERROR
+        );
+
+        return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
     @ExceptionHandler(IllegalArgumentException.class)
@@ -49,20 +63,4 @@ public class GlobalExceptionHandler {
         );
         return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
     }
-
-    // TEMPORAIREMENT COMMENTÉ POUR DEBUG SWAGGER
-    /*
-    @ExceptionHandler(Exception.class)
-    public ResponseEntity<ApiResponse<Void>> handleOtherExceptions(Exception ex) {
-        ex.printStackTrace();
-
-        ApiResponse<Void> response = new ApiResponse<>(
-                "Erreur interne du serveur",
-                null,
-                HttpStatus.INTERNAL_SERVER_ERROR
-        );
-
-        return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
-    }
-    */
 }

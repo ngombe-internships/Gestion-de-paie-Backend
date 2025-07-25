@@ -10,8 +10,12 @@ import org.springframework.security.config.annotation.method.configuration.Enabl
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.core.userdetails.User;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
@@ -25,66 +29,37 @@ import java.util.Arrays;
 @EnableMethodSecurity
 public class SecurityConfig {
 
-    private final JwtAuthentificationFilter jwtAuthentificationFilter;
+    private JwtAuthentificationFilter jwtAuthentificationFilter;
 
     public SecurityConfig(JwtAuthentificationFilter jwtAuthentificationFilter){
         this.jwtAuthentificationFilter = jwtAuthentificationFilter;
     }
 
+
     @Bean
     public static PasswordEncoder passwordEncoder(){
         return new BCryptPasswordEncoder();
     }
-
     @Bean
-    public AuthenticationManager authenticationManager(AuthenticationConfiguration authenticationConfiguration) throws Exception{
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration authenticationConfiguration) throws  Exception{
         return authenticationConfiguration.getAuthenticationManager();
     }
-
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain (HttpSecurity http) throws Exception {
         http
                 .csrf(csrf -> csrf.disable())
                 .cors(Customizer.withDefaults())
-                .authorizeHttpRequests(authorize -> authorize
-                        // === ENDPOINTS SWAGGER/OPENAPI - COMPLÈTEMENT PUBLICS ===
-                        .requestMatchers(
-                                "/swagger-ui/**",
-                                "/swagger-ui.html",
-                                "/v3/api-docs/**",
-                                "/v3/api-docs",
-                                "/v3/api-docs.yaml",
-                                "/swagger-resources/**",
-                                "/swagger-resources",
-                                "/configuration/ui",
-                                "/configuration/security",
-                                "/webjars/**",
-                                "/favicon.ico",
-                                "/error",
-                                // Ajout des endpoints manquants pour Swagger UI
-                                "/swagger-ui/index.html",
-                                "/swagger-ui/swagger-ui-bundle.js",
-                                "/swagger-ui/swagger-ui-standalone-preset.js",
-                                "/swagger-ui/swagger-ui.css"
-                        ).permitAll()
-
-                        // === ENDPOINTS PUBLICS DE L'APP ===
+                .authorizeHttpRequests( authorize -> authorize
                         .requestMatchers("/api/auth/login").permitAll()
-                        .requestMatchers("/logos/**").permitAll()
-
-                        // === ENDPOINTS PROTÉGÉS ===
                         .requestMatchers("/api/auth/register/employee").authenticated()
                         .requestMatchers("/api/auth/register/employer").authenticated()
                         .requestMatchers("/api/bulletins/**").authenticated()
                         .requestMatchers("/api/employes/**").authenticated()
-                        .requestMatchers("/api/templates/**").authenticated()
-
-                        // === TOUT LE RESTE NÉCESSITE UNE AUTHENTIFICATION ===
+                        .requestMatchers("/logos/**").permitAll()
                         .anyRequest().authenticated()
-                )
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
 
-        // Ajouter le filtre JWT SEULEMENT après les endpoints publics
+                )
+          .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
         http.addFilterBefore(jwtAuthentificationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
@@ -93,9 +68,9 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOriginPatterns(Arrays.asList("*"));
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
-        configuration.setAllowedHeaders(Arrays.asList("*"));
+        configuration.setAllowedOrigins(Arrays.asList("https://gestion-paie-frontend.vercel.app","http://localhost:4200"));
+        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT","DELETE","PATCH" ,"OPTIONS"));
+        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type"));
         configuration.setAllowCredentials(true);
         configuration.setMaxAge(3600L);
 
@@ -103,4 +78,32 @@ public class SecurityConfig {
         source.registerCorsConfiguration("/**", configuration);
         return source;
     }
+
+
+
+
+//    @Bean
+//    public UserDetailsService userDetailsService() {
+//        PasswordEncoder encoder = passwordEncoder();
+//
+//        UserDetails adminUser = User.builder()
+//                .username("admin")
+//                .password(encoder.encode("adminpass"))
+//                .roles("ADMIN")
+//                .build();
+//
+//        UserDetails employeUser = User.builder()
+//                .username("1")
+//                .password(encoder.encode("test"))
+//                .roles("EMPLOYE")
+//                .build();
+//        UserDetails employeUser2 = User.builder()
+//                .username("2")
+//                .password (encoder.encode("test2"))
+//                .roles("EMPLOYE")
+//                .build();
+//
+//        return new InMemoryUserDetailsManager(adminUser, employeUser,employeUser2);
+//    }
+
 }
