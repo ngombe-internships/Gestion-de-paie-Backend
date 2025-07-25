@@ -415,7 +415,10 @@ public class BulletinTemplateService {
         BulletinTemplate entrepriseTemplate = new BulletinTemplate();
         entrepriseTemplate.setNom("Bulletin de " + entreprise.getNom());
         entrepriseTemplate.setEntreprise(entreprise);
-        entrepriseTemplate.setDefault(true);
+
+        boolean hasDefault = entreprise.getBulletinTemplates().stream()
+                .anyMatch(BulletinTemplate::isDefault);
+        entrepriseTemplate.setDefault(!hasDefault);
 
         // Duplication profonde de la config
         for (TemplateElementPaieConfig config : defaultTemplate.getElementsConfig()) {
@@ -456,7 +459,11 @@ public class BulletinTemplateService {
         BulletinTemplate entrepriseTemplate = new BulletinTemplate();
         entrepriseTemplate.setNom("Bulletin de " + entreprise.getNom());
         entrepriseTemplate.setEntreprise(entreprise);
-        entrepriseTemplate.setDefault(true);
+
+        // -- ICI ON REGARDE S'IL Y A DEJA UN TEMPLATE PAR DEFAUT POUR L'ENTREPRISE
+        boolean hasDefault = entreprise.getBulletinTemplates().stream()
+                .anyMatch(BulletinTemplate::isDefault);
+        entrepriseTemplate.setDefault(!hasDefault);
 
         for (TemplateElementPaieConfig config : defaultTemplate.getElementsConfig()) {
             TemplateElementPaieConfig newConfig = TemplateElementPaieConfig.builder()
