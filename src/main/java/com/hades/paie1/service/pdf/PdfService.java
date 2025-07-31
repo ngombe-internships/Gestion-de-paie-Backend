@@ -219,6 +219,7 @@ public class PdfService {
         clone.setDateCreationBulletin(original.getDateCreationBulletin());
         clone.setPeriodePaie(original.getPeriodePaie());
         clone.setMethodePaiement(original.getMethodePaiement());
+        clone.setLogoEntrepriseSnapshot(original.getLogoEntrepriseSnapshot());
 
         if (original.getEntreprise() != null) {
             EntrepriseDto entreprise = new EntrepriseDto();
