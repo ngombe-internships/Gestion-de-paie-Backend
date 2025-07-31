@@ -143,6 +143,9 @@ public class BulletinPaie {
     private BigDecimal avancesSurSalaires;
 
 
+    @Column(name = "logo_entreprise_snapshot")
+    private String logoEntrepriseSnapshot;
+
 
     public void addLignePaie(LigneBulletinPaie ligne) {
         this.lignesPaie.add(ligne);

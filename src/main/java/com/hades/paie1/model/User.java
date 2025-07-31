@@ -32,6 +32,8 @@ public class User {
     @ColumnDefault("'EMPLOYE'")
     private Role role;
 
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    private PasswordResetToken passwordResetToken;
 
 
 
@@ -45,4 +47,6 @@ public class User {
     //@JsonBackReference("user-entreprise")
     @JsonIdentityReference(alwaysAsId = true)
     private Entreprise entreprise;
+
+
 }

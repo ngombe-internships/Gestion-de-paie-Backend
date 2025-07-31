@@ -33,24 +33,25 @@ import java.util.stream.Collectors;
 @Service
 public class BulletinPaieService {
 
-    public BulletinPaieRepo bulletinRepo;
-    private EmployeRepository employeRepo;
+    public final  BulletinPaieRepo bulletinRepo;
+    private final  EmployeRepository employeRepo;
 
-    private CotisationCalculator cotisationCalculator;
+    private final  CotisationCalculator cotisationCalculator;
 
-    private SalaireCalculator calculator;
+    private final  SalaireCalculator calculator;
 
-    private  EmployeService employeService;
-    private UserRepository userRepository;
-    private EntrepriseRepository entrepriseRepository;
-    private EmployePaieConfigRepository employePaieConfigRepo;
-    private BulletinTemplateRepository bulletinTemplateRepository;
-    private TemplateElementPaieConfigRepository templateRepository;
+    private  final  EmployeService employeService;
+    private  final UserRepository userRepository;
+    private  final EntrepriseRepository entrepriseRepository;
+    private final EmployePaieConfigRepository employePaieConfigRepo;
+    private final BulletinTemplateRepository bulletinTemplateRepository;
+    private final TemplateElementPaieConfigRepository templateRepository;
 
-    private ElementPaieRepository elementPaieRepository;
-    private PayrollDisplayService payrollDisplayService;
+    private final ElementPaieRepository elementPaieRepository;
+    private final PayrollDisplayService payrollDisplayService;
 
-    private RetenueCalculator retenueCalculator;
+    private final RetenueCalculator retenueCalculator;
+    private final AuditLogService auditLogService;
     private static final Logger logger = LoggerFactory.getLogger(BulletinPaieService.class);
 
     public BulletinPaieService (
@@ -66,7 +67,8 @@ public class BulletinPaieService {
             BulletinTemplateRepository bulletinTemplate,
             ElementPaieRepository elementPaieRepository,
             PayrollDisplayService payrollDisplayService,
-            RetenueCalculator retenueCalculator
+            RetenueCalculator retenueCalculator,
+            AuditLogService auditLogService
 
 
     ){
@@ -83,6 +85,7 @@ public class BulletinPaieService {
        this.elementPaieRepository = elementPaieRepository;
        this.payrollDisplayService = payrollDisplayService;
        this.retenueCalculator = retenueCalculator;
+       this.auditLogService = auditLogService;
     }
 
 
@@ -134,6 +137,7 @@ public class BulletinPaieService {
 
         fiche.setEmploye(employe);
         fiche.setEntreprise(entreprise);
+        fiche.setLogoEntrepriseSnapshot(entreprise.getLogoUrl());
         fiche.clearLignesPaie(); // Nettoyer AVANT de recalculer
 
         BulletinTemplate template = bulletinTemplateRepository.findByEntrepriseAndIsDefaultTrueWithElements(entreprise)
@@ -439,10 +443,6 @@ public class BulletinPaieService {
         return fiche;
     }
 
-
-
-
-
     public BulletinPaieResponseDto convertToDto(BulletinPaie bulletinPaie) {
         BulletinPaieResponseDto dto = new BulletinPaieResponseDto();
 
@@ -468,7 +468,7 @@ public class BulletinPaieService {
         dto.setCoutTotalEmployeur(nvl(bulletinPaie.getCoutTotalEmployeur()));
         dto.setSalaireNetAPayer(nvl(bulletinPaie.getSalaireNetAPayer()));
         dto.setSalaireNetAvantImpot(nvl(bulletinPaie.getSalaireNetAvantImpot()));
-
+        dto.setLogoEntrepriseSnapshot(bulletinPaie.getLogoEntrepriseSnapshot());
         // Infos générales
         dto.setDatePaiement(bulletinPaie.getDatePaiement());
         dto.setStatusBulletin(bulletinPaie.getStatusBulletin());
@@ -603,6 +603,14 @@ public class BulletinPaieService {
         BulletinPaie calculBulletin = calculBulletin(fiche);
         BulletinPaie saved = bulletinRepo.save(calculBulletin);
         initializeBulletinPaie(saved);
+        auditLogService.logAction(
+                "GENERATE_BULLETIN_PAIE",
+                "BulletinPaie",
+                fiche.getId(),
+                auditLogService.getCurrentUsername(),
+                "Génération du bulletin de paie pour l'employé "
+                        + fiche.getEmploye().getPrenom() + " " + fiche.getEmploye().getNom()
+        );
         return convertToDto(saved);
     }
 

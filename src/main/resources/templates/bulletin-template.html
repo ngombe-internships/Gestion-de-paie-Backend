@@ -460,8 +460,7 @@
 
     <div class="company-header">
         <div class="company-logo">
-            <img th:if="${bulletin.entreprise != null and bulletin.entreprise.logoUrl != null}"
-                 th:src="${bulletin.entreprise.logoUrl}"
+            <img th:src="${bulletin.logoEntrepriseSnapshot != null ? bulletin.logoEntrepriseSnapshot : (bulletin.entreprise.logoUrl != null ? bulletin.entreprise.logoUrl : '')}"
                  alt="Logo Entreprise" style="max-width: 100%; max-height: 70px;" />
         </div>
 

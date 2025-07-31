@@ -7,6 +7,7 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Data
 @NoArgsConstructor
@@ -24,6 +25,8 @@ public class EntrepriseDto {
 
     private Long employeurPrincipalId;
     private String employeurPrincipalUsername;
+    private LocalDateTime dateCreationSysteme;
+    private LocalDateTime dateDerniereMiseAJour;
 
     //nouveau
 //    private Double latitudeEntreprise;
@@ -32,5 +35,7 @@ public class EntrepriseDto {
     private BigDecimal standardHeuresHebdomadaires;
     private Integer standardJoursOuvrablesHebdomadaires;
 
+    private boolean active;
+    private int nombreEmployes;
 
 }

@@ -38,6 +38,7 @@ public class BulletinPaieResponseDto {
     private LocalDate dateCreationBulletin;
     private String periodePaie;
     private String methodePaiement;
+    private String logoEntrepriseSnapshot;
 
     // Objets liés
     private EntrepriseDto entreprise;

@@ -25,15 +25,18 @@ public class BulletinTemplateService {
     private final BulletinTemplateRepository bulletinTemplateRepository;
     private final EntrepriseRepository entrepriseRepository;
     private final ElementPaieRepository elementPaieRepository;
+    private final AuditLogService auditLogService;
 
     private static final Logger logger = LoggerFactory.getLogger(BulletinPaieService.class);
 
     public BulletinTemplateService(BulletinTemplateRepository bulletinTemplateRepository,
                                    EntrepriseRepository entrepriseRepository,
-                                   ElementPaieRepository elementPaieRepository) {
+                                   ElementPaieRepository elementPaieRepository,
+                                   AuditLogService auditLogService) {
         this.bulletinTemplateRepository = bulletinTemplateRepository;
         this.entrepriseRepository = entrepriseRepository;
         this.elementPaieRepository = elementPaieRepository;
+        this.auditLogService = auditLogService;
     }
 
     // --- Méthodes de conversion Entité -> DTO ---
@@ -185,6 +188,14 @@ public class BulletinTemplateService {
         }
 
         BulletinTemplate createdTemplate = bulletinTemplateRepository.save(newTemplate);
+        // Après save dans createBulletinTemplate
+        auditLogService.logAction(
+                "CREATE_BULLETIN_TEMPLATE",
+                "BulletinTemplate",
+                createdTemplate.getId(),
+                auditLogService.getCurrentUsername(),
+                "Création d'un template bulletin pour entreprise " + entreprise.getNom()
+        );
         return convertToDto(createdTemplate);
     }
 
@@ -283,6 +294,13 @@ public class BulletinTemplateService {
         }
 
         BulletinTemplate savedTemplate = bulletinTemplateRepository.save(existingTemplate);
+        auditLogService.logAction(
+                "UPDATE_BULLETIN_TEMPLATE",
+                "BulletinTemplate",
+                savedTemplate.getId(),
+                auditLogService.getCurrentUsername(),
+                "Mise à jour du template bulletin"
+        );
         return convertToDto(savedTemplate);
     }
 
@@ -292,7 +310,15 @@ public class BulletinTemplateService {
 
         templateToDelete.getElementsConfig().clear();
         bulletinTemplateRepository.save(templateToDelete);
+
         bulletinTemplateRepository.delete(templateToDelete);
+        auditLogService.logAction(
+                "DELETE_BULLETIN_TEMPLATE",
+                "BulletinTemplate",
+                id,
+                auditLogService.getCurrentUsername(),
+                "Suppression du template bulletin (id=" + id + ")"
+        );
     }
 
     @Transactional

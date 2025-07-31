@@ -26,5 +26,6 @@ public interface EntrepriseRepository extends JpaRepository<Entreprise, Long> {
 
     // Pour la liste, éviter de charger les LOB
 
+    Optional<Entreprise> findByEmailEntreprise(String emailEntreprise);
 
 }

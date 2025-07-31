@@ -19,7 +19,7 @@ import java.util.Optional;
 @CrossOrigin(origins = "http://localhost:4200")
 public class EmployeController {
 
-    private EmployeService employeService;
+    private  final  EmployeService employeService;
 
     public EmployeController(EmployeService employeService) {
         this.employeService = employeService;

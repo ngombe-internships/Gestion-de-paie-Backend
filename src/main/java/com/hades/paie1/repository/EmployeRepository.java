@@ -5,6 +5,8 @@ import com.hades.paie1.model.Entreprise;
 import com.hades.paie1.model.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 import java.util.Optional;
@@ -27,4 +29,8 @@ public interface EmployeRepository extends JpaRepository<Employe , Long > , JpaS
 
     long countByEntreprise (Entreprise entreprise);
 
+    Optional<Employe> findByEmail(String email);
+
+    @Query("SELECT e.id FROM Employe e WHERE e.entreprise.id = :entrepriseId")
+    List<Long> findIdsByEntrepriseId(@Param("entrepriseId") Long entrepriseId);
 }

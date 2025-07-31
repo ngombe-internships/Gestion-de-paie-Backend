@@ -32,16 +32,19 @@ import java.util.stream.Collectors;
 @Service
 public class EmployeService {
 
-    private EmployeRepository employeRepo;
-    private UserRepository userRepository;
+    private   final EmployeRepository employeRepo;
+    private  final  UserRepository userRepository;
 
-    private AncienneteService ancienneteService;
+    private  final  AncienneteService ancienneteService;
+    private final AuditLogService auditLogService;
+
 
     private static  final Logger logger = LoggerFactory.getLogger(EmployeService.class);
-    public EmployeService (EmployeRepository employeRepo, UserRepository userRepository, AncienneteService ancienneteService){
+    public EmployeService (EmployeRepository employeRepo, UserRepository userRepository, AncienneteService ancienneteService, AuditLogService auditLogService){
         this.employeRepo = employeRepo;
         this.userRepository = userRepository;
         this.ancienneteService = ancienneteService;
+        this.auditLogService = auditLogService;
     }
 
 
@@ -154,7 +157,16 @@ public class EmployeService {
 
        Employe savedEmploye = employeRepo.save(employe);
 
+       auditLogService.logAction(
+                "CREATE_EMPLOYE",
+                "Employe",
+                savedEmploye.getId(),
+                getAuthenticatedUser().getUsername(),
+                "Création de l'employé " + savedEmploye.getNom()
+        );
+
        return convertToDto(savedEmploye);
+
     }
 
     @Transactional
@@ -221,6 +233,13 @@ public class EmployeService {
 
         Employe savedEmploye = employeRepo.save(existingEmploye);
 
+        auditLogService.logAction(
+                "UPDATE_EMPLOYE",
+                "Employe",
+                savedEmploye.getId(),
+                getAuthenticatedUser().getUsername(),
+                "Mise à jour de l'employé " + savedEmploye.getNom()
+        );
         return convertToDto(savedEmploye);
     }
 
@@ -301,6 +320,13 @@ public class EmployeService {
             throw new AccessDeniedException("Un employé n'est pas autorisé à supprimer des employés.");
         }
 
+        auditLogService.logAction(
+                "DELETE_EMPLOYE",
+                "Employe",
+                employeToDelete.getId(),
+                getAuthenticatedUser().getUsername(),
+                "Suppression de l'employé " + employeToDelete.getNom()
+        );
         employeRepo.delete(employeToDelete);
     }
 

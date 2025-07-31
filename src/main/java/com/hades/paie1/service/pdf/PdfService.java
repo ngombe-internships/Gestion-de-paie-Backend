@@ -229,6 +229,7 @@ public class PdfService {
             entreprise.setTelephoneEntreprise(original.getEntreprise().getTelephoneEntreprise());
             entreprise.setEmailEntreprise(original.getEntreprise().getEmailEntreprise());
             entreprise.setLogoUrl(original.getEntreprise().getLogoUrl());
+
             clone.setEntreprise(entreprise);
         }
         if (original.getEmploye() != null) {

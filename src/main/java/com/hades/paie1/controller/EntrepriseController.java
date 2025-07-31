@@ -4,20 +4,22 @@ import com.hades.paie1.dto.ApiResponse;
 
 import com.hades.paie1.dto.EmployeurListDto;
 import com.hades.paie1.dto.EntrepriseDto;
+import com.hades.paie1.dto.EntrepriseUpdateDto;
 import com.hades.paie1.exception.RessourceNotFoundException;
 import com.hades.paie1.model.Entreprise;
 import com.hades.paie1.repository.EntrepriseRepository;
 import com.hades.paie1.service.EntrepriseService;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -25,34 +27,99 @@ import java.util.stream.Collectors;
 @RequestMapping("/api/admin/entreprises")
 public class EntrepriseController {
 
-
-
     private final EntrepriseService entrepriseService;
-    public EntrepriseController (EntrepriseService entrepriseService) {
+
+    public EntrepriseController(EntrepriseService entrepriseService) {
         this.entrepriseService = entrepriseService;
     }
+
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<List<EmployeurListDto>>> getEmployersList() {
-       List<EmployeurListDto> entreprises = entrepriseService.getAllEntreprises();
-       ApiResponse<List<EmployeurListDto>> response = new ApiResponse<>(
-               "Liste de toute les entreprise",
-               entreprises,
-               HttpStatus.OK
-       );
-       return new ResponseEntity<>(response, HttpStatus.OK);
-    }
-
-    @GetMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ApiResponse<EntrepriseDto>> getEntrepriseDetails(@PathVariable Long id) {
-        EntrepriseDto entreprise = entrepriseService.getEntrepriseById(id);
-
-        ApiResponse<EntrepriseDto> response = new ApiResponse<>(
-                "Détails de l'entreprise récupérés avec succès",
-                entreprise,
+        List<EmployeurListDto> entreprises = entrepriseService.getAllEntreprises();
+        ApiResponse<List<EmployeurListDto>> response = new ApiResponse<>(
+                "Liste de toutes les entreprises",
+                entreprises,
                 HttpStatus.OK
         );
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
+
+    @GetMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")  // Permettre aux employeurs de voir leur entreprise
+    public ResponseEntity<ApiResponse<EntrepriseDto>> getEntrepriseById(@PathVariable Long id) {
+        try {
+            EntrepriseDto entreprise = entrepriseService.getEntrepriseDtoById(id);
+            return new ResponseEntity<>(
+                    new ApiResponse<>("Détails de l'entreprise récupérés avec succès.", entreprise, HttpStatus.OK),
+                    HttpStatus.OK
+            );
+        } catch (RessourceNotFoundException e) {
+            return new ResponseEntity<>(
+                    new ApiResponse<>(e.getMessage(), null, HttpStatus.NOT_FOUND),
+                    HttpStatus.NOT_FOUND
+            );
+        } catch (Exception e) {
+            return new ResponseEntity<>(
+                    new ApiResponse<>("Erreur inattendue lors de la récupération de l'entreprise : " + e.getMessage(), null, HttpStatus.INTERNAL_SERVER_ERROR),
+                    HttpStatus.INTERNAL_SERVER_ERROR
+            );
+        }
+    }
+
+    @PatchMapping("/{id}/status")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<String>> toggleEntrepriseStatus(@PathVariable Long id, @RequestParam boolean active) {
+        try {
+            entrepriseService.setEntrepriseActiveStatus(id, active);
+            String message = active ? "Entreprise activée avec succès." : "Entreprise désactivée avec succès.";
+            return new ResponseEntity<>(
+                    new ApiResponse<>(message, null, HttpStatus.OK),
+                    HttpStatus.OK
+            );
+        } catch (RessourceNotFoundException e) {
+            return new ResponseEntity<>(
+                    new ApiResponse<>(e.getMessage(), null, HttpStatus.NOT_FOUND), // Correction: NOT_FOUND au lieu de NO_CONTENT
+                    HttpStatus.NOT_FOUND
+            );
+        } catch (Exception e) {
+            return new ResponseEntity<>(
+                    new ApiResponse<>("Erreur lors de la mise à jour du statut de l'entreprise: " + e.getMessage(), null, HttpStatus.INTERNAL_SERVER_ERROR),
+                    HttpStatus.INTERNAL_SERVER_ERROR
+            );
+        }
+    }
+
+    // Endpoint pour modification complète par ADMIN
+    @PutMapping(value = "/{id}", consumes = {MediaType.MULTIPART_FORM_DATA_VALUE})
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<EntrepriseDto>> updateEntrepriseByAdmin(
+            @PathVariable Long id,
+            @RequestPart("entreprise") EntrepriseDto entrepriseDto,
+            @RequestPart(value = "logo", required = false) MultipartFile logoFile) {
+        try {
+            EntrepriseDto updatedEntreprise = entrepriseService.updateEntrepriseByAdmin(id, entrepriseDto, logoFile);
+            return new ResponseEntity<>(
+                    new ApiResponse<>("Informations de l'entreprise mises à jour par l'admin avec succès.", updatedEntreprise, HttpStatus.OK),
+                    HttpStatus.OK
+            );
+        } catch (RessourceNotFoundException e) {
+            return new ResponseEntity<>(
+                    new ApiResponse<>(e.getMessage(), null, HttpStatus.NOT_FOUND),
+                    HttpStatus.NOT_FOUND
+            );
+        } catch (IOException e) {
+            return new ResponseEntity<>(
+                    new ApiResponse<>("Erreur lors du traitement du logo : " + e.getMessage(), null, HttpStatus.INTERNAL_SERVER_ERROR),
+                    HttpStatus.INTERNAL_SERVER_ERROR
+            );
+        } catch (Exception e) {
+            return new ResponseEntity<>(
+                    new ApiResponse<>("Erreur inattendue lors de la mise à jour de l'entreprise : " + e.getMessage(), null, HttpStatus.INTERNAL_SERVER_ERROR),
+                    HttpStatus.INTERNAL_SERVER_ERROR
+            );
+        }
+    }
+
+
 }

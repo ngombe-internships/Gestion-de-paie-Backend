@@ -14,9 +14,11 @@ import java.util.stream.Collectors;
 @Service
 public class ElementPaieService {
     private final ElementPaieRepository elementPaieRepository;
+    private final AuditLogService auditLogService;
 
-    public ElementPaieService(ElementPaieRepository elementPaieRepository) {
+    public ElementPaieService(ElementPaieRepository elementPaieRepository, AuditLogService auditLogService) {
         this.elementPaieRepository = elementPaieRepository;
+        this.auditLogService = auditLogService;
     }
 
     private ElementPaieDto convertToDto(ElementPaie elementPaie) {
@@ -82,6 +84,13 @@ public class ElementPaieService {
     @Transactional
     public ElementPaieDto createElementPaie(ElementPaie elementPaie) { // Accepte toujours l'entité de l'extérieur pour l'instant
         ElementPaie createdElement = elementPaieRepository.save(elementPaie);
+        auditLogService.logAction(
+                "CREATE_ELEMENT_PAIE",
+                "ElementPaie",
+                createdElement.getId(),
+                auditLogService.getCurrentUsername(),
+                "Création de l'élément de paie " + createdElement.getDesignation()
+        );
         return convertToDto(createdElement); // Retourne le DTO
     }
 
@@ -107,6 +116,13 @@ public class ElementPaieService {
         existingElementPaie.setImpacteNetAPayer(updatedElementPaie.isImpacteNetAPayer());
 
         ElementPaie savedElement = elementPaieRepository.save(existingElementPaie);
+        auditLogService.logAction(
+                "DELETE_ELEMENT_PAIE",
+                "ElementPaie",
+                id,
+                auditLogService.getCurrentUsername(),
+                "Suppression de l'élément de paie (id=" + id + ")"
+        );
         return convertToDto(savedElement); // Retourne le DTO
     }
 

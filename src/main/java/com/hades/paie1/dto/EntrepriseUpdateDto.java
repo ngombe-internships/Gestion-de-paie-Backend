@@ -1,17 +1,19 @@
 package com.hades.paie1.dto;
 
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
-
-import java.time.LocalDate;
+import lombok.NoArgsConstructor;
 
 @Data
-public class EntrepriseResponseDto {
-    private Long id;
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class EntrepriseUpdateDto {
+
     private String nom;
     private String adresseEntreprise;
     private String emailEntreprise;
     private String telephoneEntreprise;
-    private String numeroSiret;
-    private LocalDate dateCreation;
     private String logoUrl;
 }

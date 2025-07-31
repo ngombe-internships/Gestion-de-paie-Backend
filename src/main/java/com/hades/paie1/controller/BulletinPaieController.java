@@ -31,12 +31,12 @@ import java.util.Optional;
 
 public class BulletinPaieController {
 
-    private BulletinPaieService bulletinPaieService;
-    private PdfService pdfService;
-    private EmployeRepository employeRepository;
-    private EntrepriseRepository entrepriseRepository;
+    private  final BulletinPaieService bulletinPaieService;
+    private  final PdfService pdfService;
+    private final  EmployeRepository employeRepository;
+    private  final EntrepriseRepository entrepriseRepository;
 
-    private BulletinPaieRepo bulletinPaieRepo;
+    private final  BulletinPaieRepo bulletinPaieRepo;
     private static final Logger logger = LoggerFactory.getLogger(PdfService.class);
 
     public BulletinPaieController(BulletinPaieService bulletinPaieService,
@@ -382,23 +382,6 @@ public class BulletinPaieController {
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
-
-
-
-    @GetMapping("/test-cloudinary")
-    public ResponseEntity<String> testCloudinary() {
-        try {
-            var url = new java.net.URL("https://res.cloudinary.com/dfurjzy3b/image/upload/v1753283262/company_logos/ecbfa5aa-c951-47c9-be74-dcb44896f464_wampserver-wamp5-T6st57.jpg");
-            var conn = url.openConnection();
-            conn.setConnectTimeout(5000);
-            conn.setReadTimeout(5000);
-            conn.connect();
-            int code = ((java.net.HttpURLConnection) conn).getResponseCode();
-            return ResponseEntity.ok("HTTP code: " + code);
-        } catch (Exception e) {
-            return ResponseEntity.status(500).body("Erreur: " + e.getMessage());
-        }
-    }
 
 
 

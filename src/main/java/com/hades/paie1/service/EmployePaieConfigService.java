@@ -24,13 +24,16 @@ public class EmployePaieConfigService {
     private final EmployePaieConfigRepository employePaieConfigRepository;
     private final EmployeRepository employeRepository;
     private final ElementPaieRepository elementPaieRepository;
+    private final AuditLogService auditLogService;
 
     public EmployePaieConfigService(EmployePaieConfigRepository employePaieConfigRepository,
                                     EmployeRepository employeRepository,
-                                    ElementPaieRepository elementPaieRepository) {
+                                    ElementPaieRepository elementPaieRepository,
+                                    AuditLogService auditLogService) {
         this.employePaieConfigRepository = employePaieConfigRepository;
         this.employeRepository = employeRepository;
         this.elementPaieRepository = elementPaieRepository;
+        this.auditLogService = auditLogService;
     }
 
 
@@ -113,6 +116,15 @@ public class EmployePaieConfigService {
         newConfig.setDateDebut(newConfig.getDateDebut() != null ? newConfig.getDateDebut() : LocalDate.now());
 
         EmployePaieConfig createdConfig = employePaieConfigRepository.save(newConfig);
+
+        auditLogService.logAction(
+                "CREATE_EMPLOYE_PAIE_CONFIG",
+                "EmployePaieConfig",
+                createdConfig.getId(),
+                auditLogService.getCurrentUsername(),
+                "Création d'une configuration de paie pour l'employé id=" + employeId
+        );
+
         return convertToDto(createdConfig); // Convertir en DTO avant de retourner
     }
 
@@ -126,6 +138,13 @@ public class EmployePaieConfigService {
         existingConfig.setDateFin(updatedConfig.getDateFin());
 
         EmployePaieConfig savedConfig = employePaieConfigRepository.save(existingConfig);
+        auditLogService.logAction(
+                "UPDATE_EMPLOYE_PAIE_CONFIG",
+                "EmployePaieConfig",
+                savedConfig.getId(),
+                auditLogService.getCurrentUsername(),
+                "Mise à jour d'une configuration de paie pour l'employé id=" + savedConfig.getEmploye().getId()
+        );
         return convertToDto(savedConfig); // Convertir en DTO avant de retourner
     }
 
@@ -134,5 +153,12 @@ public class EmployePaieConfigService {
             throw new RessourceNotFoundException("EmployePaieConfig non trouvé avec id : " + id);
         }
         employePaieConfigRepository.deleteById(id);
+        auditLogService.logAction(
+                "DELETE_EMPLOYE_PAIE_CONFIG",
+                "EmployePaieConfig",
+                id,
+                auditLogService.getCurrentUsername(),
+                "Suppression d'une configuration de paie employé id=" + id
+        );
     }
 }
