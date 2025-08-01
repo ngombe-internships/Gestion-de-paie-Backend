@@ -81,7 +81,6 @@ public class Entreprise {
 
 
     @OneToMany(mappedBy = "entreprise", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-  //  @JsonManagedReference("employe-entreprise")
     @JsonIdentityReference(alwaysAsId = true)
     @JsonIdentityInfo(generator = ObjectIdGenerators.PropertyGenerator.class, property = "id")
     private List <Employe> employes = new ArrayList<>();

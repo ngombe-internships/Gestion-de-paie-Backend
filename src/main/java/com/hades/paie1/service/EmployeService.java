@@ -86,9 +86,6 @@ public class EmployeService {
                .salaireBase(dto.getSalaireBase())
                .build();
 
-
-
-
     }
 
     // Methode pour convertir Entite Employe en Employe Respose
@@ -96,7 +93,6 @@ public class EmployeService {
         if(employe == null){
             return null;
         }
-
         return EmployeResponseDto.builder()
                 .id(employe.getId())
                 .matricule(employe.getMatricule())
@@ -149,7 +145,6 @@ public class EmployeService {
        if(employeDto.getEmail() != null && employeRepo.existsByEmail(employeDto.getEmail())){
            throw new RessourceNotFoundException("Email deja utilise");
        }
-
 
        Employe employe = convertToEntity(employeDto);
 

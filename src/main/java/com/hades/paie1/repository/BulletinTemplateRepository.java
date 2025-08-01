@@ -14,6 +14,7 @@ import java.util.Optional;
 public interface BulletinTemplateRepository  extends JpaRepository<BulletinTemplate, Long> {
         @Query("SELECT t FROM BulletinTemplate t LEFT JOIN FETCH t.elementsConfig WHERE t.entreprise = :entreprise AND t.isDefault = true")
         Optional<BulletinTemplate> findByEntrepriseAndIsDefaultTrueWithElements(@Param("entreprise") Entreprise entreprise);
+
         List<BulletinTemplate> findByEntreprise(Entreprise entreprise);
 
         @Query("SELECT DISTINCT t FROM BulletinTemplate t " +

@@ -17,7 +17,7 @@ public interface EmployeRepository extends JpaRepository<Employe , Long > , JpaS
     boolean existsByMatricule (String matricule);
 
     boolean existsByNumeroCnps(String nCnps);
-    boolean existsByNiu (String niu);
+    boolean  existsByNiu (String niu);
 
     boolean existsByEmail (String email);
 
