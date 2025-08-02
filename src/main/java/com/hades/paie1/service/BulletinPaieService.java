@@ -15,6 +15,9 @@ import jakarta.transaction.Transactional;
 import org.hibernate.Hibernate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -766,39 +769,28 @@ public class BulletinPaieService {
     }
 
     @Transactional
-    public List<BulletinPaieEmployeurDto> getBulletinsForEmployer() {
+    public Page<BulletinPaieEmployeurDto> getBulletinsForEmployerPaginated(
+            int page, int size, String searchTerm, List<StatusBulletin> statuts
+    ) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String currentUsername = authentication.getName();
         User currentUser = userRepository.findByUsername(currentUsername)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found: " + currentUsername));
-
-        if (currentUser.getRole() != Role.EMPLOYEUR) {
-            throw new AccessDeniedException("Only employers can view their company's bulletins.");
-        }
-
         Entreprise entreprise = currentUser.getEntreprise();
-        if (entreprise == null) {
-            throw new IllegalStateException("Authenticated employer is not associated with an enterprise.");
+
+        Pageable pageable = PageRequest.of(page, size);
+
+        Page<BulletinPaie> bulletinsPage;
+
+        if (searchTerm != null && !searchTerm.trim().isEmpty()) {
+            bulletinsPage = bulletinRepo.findByEntrepriseAndStatusBulletinInAndEmploye_NomContainingIgnoreCaseOrEmploye_PrenomContainingIgnoreCaseOrEmploye_MatriculeContainingIgnoreCaseOrderByDateCreationBulletinDesc(
+                    entreprise, statuts, searchTerm, searchTerm, searchTerm, pageable
+            );
+        } else {
+            bulletinsPage = bulletinRepo.findByEntrepriseAndStatusBulletinInOrderByDateCreationBulletinDesc(entreprise, statuts, pageable);
         }
 
-        // Récupérez les bulletins de la base de données, triés par date de création
-        List<BulletinPaie> bulletins = bulletinRepo.findByEntrepriseOrderByDateCreationBulletinDesc(entreprise);
-
-        //  Tri avec Map inline
-        Map<StatusBulletin, Integer> statusOrder = Map.of(
-                StatusBulletin.VALIDÉ, 1,
-                StatusBulletin.GÉNÉRÉ, 2,
-                StatusBulletin.ENVOYÉ, 3,
-                StatusBulletin.ARCHIVÉ, 4,
-                StatusBulletin.ANNULÉ, 5
-        );
-
-        bulletins.sort(Comparator.comparing((BulletinPaie b) -> statusOrder.getOrDefault(b.getStatusBulletin(), 6))
-                .thenComparing(BulletinPaie::getDateCreationBulletin, Comparator.reverseOrder()));
-
-        return bulletins.stream()
-                .map(this::convertToEmployeurDto)
-                .collect(Collectors.toList());
+        return bulletinsPage.map(this::convertToEmployeurDto);
     }
 
 

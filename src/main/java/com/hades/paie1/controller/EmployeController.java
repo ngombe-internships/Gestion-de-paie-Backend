@@ -6,6 +6,7 @@ import com.hades.paie1.dto.EmployeCreateDto;
 import com.hades.paie1.dto.EmployeResponseDto;
 import com.hades.paie1.service.EmployeService;
 import jakarta.validation.Valid;
+import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -82,19 +83,33 @@ public class EmployeController {
     }
 
 
+
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN','EMPLOYEUR') ")
-    public ResponseEntity<ApiResponse<List<EmployeResponseDto>>> getAllEmploye(){
-
-        List<EmployeResponseDto> employe = employeService.getAllEmploye();
-        ApiResponse<List<EmployeResponseDto>> response = new ApiResponse<>(
-                "Liste de tous les Employes",
-                employe,
+    public ResponseEntity<ApiResponse<Page<EmployeResponseDto>>> getAllEmploye(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+        Page<EmployeResponseDto> employes = employeService.getAllEmploye(page, size);
+        ApiResponse<Page<EmployeResponseDto>> response = new ApiResponse<>(
+                "Liste paginée des employés",
+                employes,
                 HttpStatus.OK
         );
-        return new ResponseEntity<>(response,HttpStatus.OK);
+        return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
+    @GetMapping("/all")
+    @PreAuthorize("hasAnyRole('ADMIN','EMPLOYEUR')")
+    public ResponseEntity<ApiResponse<List<EmployeResponseDto>>> getAllEmployeForRegister() {
+        List<EmployeResponseDto> employes = employeService.getAllEmployeForRegister();
+        ApiResponse<List<EmployeResponseDto>> response = new ApiResponse<>(
+                "Liste complète des employés pour inscription",
+                employes,
+                HttpStatus.OK
+        );
+        return ResponseEntity.ok(response);
+    }
 
     @GetMapping("/my-profile")
     @PreAuthorize("hasRole('EMPLOYE')")

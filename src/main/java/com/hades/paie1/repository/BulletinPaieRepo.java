@@ -4,6 +4,8 @@ import com.hades.paie1.enum1.StatusBulletin;
 import com.hades.paie1.model.BulletinPaie;
 import com.hades.paie1.model.Employe;
 import com.hades.paie1.model.Entreprise;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -38,5 +40,13 @@ public interface BulletinPaieRepo extends JpaRepository <BulletinPaie, Long> {
     Optional<BulletinPaie> findByIdWithEverything(@Param("id") Long id);
     long countByEntreprise (Entreprise entreprise);
 
+    Page<BulletinPaie> findByEntrepriseOrderByDateCreationBulletinDesc(Entreprise entreprise, Pageable pageable);
 
+    Page<BulletinPaie> findByEntrepriseAndStatusBulletinInOrderByDateCreationBulletinDesc(
+            Entreprise entreprise, List<StatusBulletin> statuts, Pageable pageable
+    );
+
+    Page<BulletinPaie> findByEntrepriseAndStatusBulletinInAndEmploye_NomContainingIgnoreCaseOrEmploye_PrenomContainingIgnoreCaseOrEmploye_MatriculeContainingIgnoreCaseOrderByDateCreationBulletinDesc(
+            Entreprise entreprise, List<StatusBulletin> statuts, String nom, String prenom, String matricule, Pageable pageable
+    );
 }

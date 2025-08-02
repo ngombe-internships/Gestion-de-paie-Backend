@@ -4,6 +4,7 @@ import com.hades.paie1.dto.ApiResponse;
 import com.hades.paie1.dto.BulletinPaieCreateDto;
 import com.hades.paie1.dto.BulletinPaieEmployeurDto;
 import com.hades.paie1.dto.BulletinPaieResponseDto;
+import com.hades.paie1.enum1.StatusBulletin;
 import com.hades.paie1.model.BulletinPaie;
 import com.hades.paie1.model.Employe;
 import com.hades.paie1.model.Entreprise;
@@ -14,6 +15,7 @@ import com.hades.paie1.service.BulletinPaieService;
 import com.hades.paie1.service.pdf.PdfService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.Page;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -23,6 +25,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
@@ -162,23 +165,21 @@ public class BulletinPaieController {
     }
 
 
-    @GetMapping("/employeur")
-    @PreAuthorize("hasRole('EMPLOYEUR')")
-    public ResponseEntity<ApiResponse<List<BulletinPaieEmployeurDto>>> getBulletinsForEmployeur(
-            @RequestParam (required = false) String searchTerm) {
-        List<BulletinPaieEmployeurDto> bulletins;
-
-        if(searchTerm != null && !searchTerm.trim().isEmpty()){
-            bulletins = bulletinPaieService.searchBulletinsForEmployer(searchTerm);
-        } else {
-            bulletins = bulletinPaieService.getBulletinsForEmployer();
+    @GetMapping("/employeur/paginated")
+    public ResponseEntity<ApiResponse<Page<BulletinPaieEmployeurDto>>> getBulletinsForEmployeurPaginated(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) String search, // Recherche globale (nom/prénom/matricule)
+            @RequestParam(required = false) List<StatusBulletin> statuts // Statuts à filtrer (ex: GENERE,VALIDE,ENVOYE)
+    ) {
+        // Par défaut si aucun statut n'est précisé, on montre les "actifs"
+        if (statuts == null || statuts.isEmpty()) {
+            statuts = Arrays.asList(StatusBulletin.GÉNÉRÉ, StatusBulletin.VALIDÉ, StatusBulletin.ENVOYÉ);
         }
-        ApiResponse<List<BulletinPaieEmployeurDto>> response = new ApiResponse<>(
-                "Liste des bulletins de paie de votre entreprise",
-                bulletins,
-                HttpStatus.OK
-        );
-        return new ResponseEntity<>(response, HttpStatus.OK);
+        Page<BulletinPaieEmployeurDto> bulletinsPage = bulletinPaieService.getBulletinsForEmployerPaginated(page, size, search, statuts);
+
+        ApiResponse<Page<BulletinPaieEmployeurDto>> response = new ApiResponse<>("Liste paginée récupérée", bulletinsPage,HttpStatus.OK);
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/my-bulletins")

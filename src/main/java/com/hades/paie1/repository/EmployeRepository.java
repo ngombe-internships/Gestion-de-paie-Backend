@@ -3,6 +3,8 @@ package com.hades.paie1.repository;
 import com.hades.paie1.model.Employe;
 import com.hades.paie1.model.Entreprise;
 import com.hades.paie1.model.User;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
@@ -23,7 +25,7 @@ public interface EmployeRepository extends JpaRepository<Employe , Long > , JpaS
 
     Optional<Employe> findByMatricule(String matricule);
 
-    List <Employe> findByEntreprise (Entreprise entreprise);
+    List<Employe> findByEntreprise(Entreprise entreprise);
 
     Optional <Employe> findByUser (User user);
 
@@ -33,4 +35,8 @@ public interface EmployeRepository extends JpaRepository<Employe , Long > , JpaS
 
     @Query("SELECT e.id FROM Employe e WHERE e.entreprise.id = :entrepriseId")
     List<Long> findIdsByEntrepriseId(@Param("entrepriseId") Long entrepriseId);
+
+
+    Page<Employe> findByEntrepriseOrderById(Entreprise entreprise, Pageable pageable);
+
 }

@@ -7,13 +7,18 @@ import com.hades.paie1.exception.RessourceNotFoundException;
 import com.hades.paie1.model.Entreprise;
 import com.hades.paie1.repository.EntrepriseRepository;
 import com.hades.paie1.service.pdf.UnifiedFileStorageService;
+import jakarta.persistence.criteria.Join;
+import jakarta.persistence.criteria.JoinType;
+import jakarta.persistence.criteria.Predicate;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -35,6 +40,12 @@ public class EntrepriseService {
         return entrepriseRepository.findAll().stream()
                 .map(this::convertToEmployeurListDto)
                 .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public Page<EmployeurListDto> getAllEntreprisesFiltered(String nomEntreprise, String usernameEmployeur, String status, Pageable pageable) {
+        return entrepriseRepository.findByFilters(nomEntreprise, usernameEmployeur, status, pageable)
+                .map(this::convertToEmployeurListDto);
     }
 
     @Transactional(readOnly = true)
@@ -181,6 +192,58 @@ public class EntrepriseService {
                 "Mise à jour des infos de l'entreprise"
         );
         return convertToEntrepriseDto(updatedEntreprise);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<EmployeurListDto> searchEntreprises(
+            String nomEntreprise, String usernameEmployeur, Boolean active,
+            Pageable pageable
+    ) {
+        Specification<Entreprise> spec = (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+
+            if (nomEntreprise != null && !nomEntreprise.trim().isEmpty()) {
+                predicates.add(cb.like(cb.lower(root.get("nom")), "%" + nomEntreprise.toLowerCase().trim() + "%"));
+            }
+
+            if (usernameEmployeur != null && !usernameEmployeur.trim().isEmpty()) {
+                Join<Object, Object> employeurJoin = root.join("employeurPrincipal", JoinType.LEFT);
+                predicates.add(cb.like(cb.lower(employeurJoin.get("username")), "%" + usernameEmployeur.toLowerCase().trim() + "%"));
+            }
+
+            if (active != null) {
+                predicates.add(cb.equal(root.get("active"), active));
+            }
+
+            System.out.println("Recherche - nomEntreprise: " + nomEntreprise + ", usernameEmployeur: " + usernameEmployeur + ", active: " + active);
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
+
+        Page<Entreprise> page = entrepriseRepository.findAll(spec, pageable);
+        return page.map(this::convertToEmployeurListDto);
+    }
+
+    public Map<String, Long> countActifsInactifs(String nomEntreprise, String usernameEmployeur) {
+        Specification<Entreprise> spec = (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+            if (nomEntreprise != null && !nomEntreprise.trim().isEmpty()) {
+                predicates.add(cb.like(cb.lower(root.get("nom")), "%" + nomEntreprise.toLowerCase().trim() + "%"));
+            }
+            if (usernameEmployeur != null && !usernameEmployeur.trim().isEmpty()) {
+                Join<Object, Object> employeurJoin = root.join("employeurPrincipal", JoinType.LEFT);
+                predicates.add(cb.like(cb.lower(employeurJoin.get("username")), "%" + usernameEmployeur.toLowerCase().trim() + "%"));
+            }
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
+
+        long actifs = entrepriseRepository.count(Specification.where(spec).and((root, query, cb) -> cb.equal(root.get("active"), true)));
+        long inactifs = entrepriseRepository.count(Specification.where(spec).and((root, query, cb) -> cb.equal(root.get("active"), false)));
+        System.out.println("actifs=" + actifs + ", inactifs=" + inactifs); // <-- Ajoute ce log
+
+        Map<String, Long> result = new HashMap<>();
+        result.put("actifs", actifs);
+        result.put("inactifs", inactifs);
+        return result;
     }
 
 

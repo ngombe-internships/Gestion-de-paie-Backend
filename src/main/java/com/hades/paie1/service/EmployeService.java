@@ -15,6 +15,10 @@ import jakarta.persistence.criteria.Predicate;
 import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -240,19 +244,17 @@ public class EmployeService {
 
 
 
-    public List<EmployeResponseDto> getAllEmploye() { // Cette méthode n'a pas de searchTerm en paramètre
+
+    public List<EmployeResponseDto> getAllEmploye() {
         User currentUser = getAuthenticatedUser();
         List<Employe> employes;
 
         if (currentUser.getRole() == Role.ADMIN) {
-
             employes = employeRepo.findAll();
         } else if (currentUser.getRole() == Role.EMPLOYEUR) {
             if (currentUser.getEntreprise() == null) {
-
                 employes = Collections.emptyList();
             } else {
-
                 employes = employeRepo.findByEntreprise(currentUser.getEntreprise());
             }
         } else if (currentUser.getRole() == Role.EMPLOYE) {
@@ -265,10 +267,46 @@ public class EmployeService {
             employes = Collections.emptyList();
         }
 
-
         return employes.stream()
                 .map(this::convertToDto)
                 .collect(Collectors.toList());
+    }
+
+    public List<EmployeResponseDto> getAllEmployeForRegister() {
+        return getAllEmploye();
+    }
+
+    public Page<EmployeResponseDto> getAllEmploye(int page, int size) { // Cette méthode n'a pas de searchTerm en paramètre
+        User currentUser = getAuthenticatedUser();
+        Pageable pageable = PageRequest.of(page,size);
+        Page<Employe> employes;
+
+        if (currentUser.getRole() == Role.ADMIN) {
+
+            employes = employeRepo.findAll(pageable);
+        } else if (currentUser.getRole() == Role.EMPLOYEUR) {
+            if (currentUser.getEntreprise() == null) {
+
+                employes = Page.empty(pageable);
+            } else {
+
+                employes = employeRepo.findByEntrepriseOrderById(currentUser.getEntreprise(),pageable);
+            }
+        } else if (currentUser.getRole() == Role.EMPLOYE) {
+            if (currentUser.getEmploye() != null && currentUser.getEmploye().getEntreprise() != null) {
+                Employe employe = employeRepo.findByUser(currentUser).orElse(null);
+                List<Employe> employeList = employe != null ? List.of(employe) : Collections.emptyList();
+
+                employes = new PageImpl<>(employeList,pageable,employeList.size());
+            } else {
+                employes = Page.empty(pageable);
+            }
+        } else {
+            employes = Page.empty(pageable);
+        }
+
+
+        return employes.map(this::convertToDto);
     }
 
     @Transactional

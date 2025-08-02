@@ -3,8 +3,11 @@ package com.hades.paie1.controller;
 import com.hades.paie1.dto.EmployePaieConfigDto;
 import com.hades.paie1.model.EmployePaieConfig;
 import com.hades.paie1.service.EmployePaieConfigService;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -22,6 +25,13 @@ public class EmployePaieConfigController {
     @GetMapping
     public ResponseEntity<List<EmployePaieConfigDto>> getAllEmployePaieConfigs() {
         List<EmployePaieConfigDto> configs = employePaieConfigService.getAllEmployePaieConfigs();
+        return ResponseEntity.ok(configs);
+    }
+
+    @GetMapping("/my-company")
+    @PreAuthorize("hasRole('EMPLOYEUR')")
+    public ResponseEntity<List<EmployePaieConfigDto>> getMyCompanyEmployePaieConfigs() {
+        List<EmployePaieConfigDto> configs = employePaieConfigService.getEmployePaieConfigsForAuthenticatedEmployer();
         return ResponseEntity.ok(configs);
     }
 
@@ -58,5 +68,21 @@ public class EmployePaieConfigController {
     public ResponseEntity<Void> deleteEmployePaieConfig(@PathVariable Long id) {
         employePaieConfigService.deleteEmployePaieConfig(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/my-company/search")
+    @PreAuthorize("hasRole('EMPLOYEUR')")
+    public ResponseEntity<Page<EmployePaieConfigDto>> searchConfigsForMyCompany(
+            @RequestParam(required = false) Long employeId,
+            @RequestParam(required = false) Long elementPaieId,
+            @RequestParam(defaultValue = "all") String status, // "active" ou "all"
+            @RequestParam(required = false) String searchTerm,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+        Page<EmployePaieConfigDto> result = employePaieConfigService.searchConfigsForAuthenticatedEmployer(
+                employeId, elementPaieId, status, searchTerm, PageRequest.of(page, size)
+        );
+        return ResponseEntity.ok(result);
     }
 }

@@ -11,6 +11,9 @@ import com.hades.paie1.repository.EntrepriseRepository;
 import com.hades.paie1.service.EntrepriseService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -21,6 +24,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @RestController
@@ -33,17 +37,7 @@ public class EntrepriseController {
         this.entrepriseService = entrepriseService;
     }
 
-    @GetMapping
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ApiResponse<List<EmployeurListDto>>> getEmployersList() {
-        List<EmployeurListDto> entreprises = entrepriseService.getAllEntreprises();
-        ApiResponse<List<EmployeurListDto>> response = new ApiResponse<>(
-                "Liste de toutes les entreprises",
-                entreprises,
-                HttpStatus.OK
-        );
-        return new ResponseEntity<>(response, HttpStatus.OK);
-    }
+
 
     @GetMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")  // Permettre aux employeurs de voir leur entreprise
@@ -119,6 +113,36 @@ public class EntrepriseController {
                     HttpStatus.INTERNAL_SERVER_ERROR
             );
         }
+    }
+
+
+    @GetMapping
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<Page<EmployeurListDto>>> getEmployersList1(
+            @RequestParam(defaultValue = "") String nomEntreprise,
+            @RequestParam(defaultValue = "") String usernameEmployeur,
+            @RequestParam(required = false) Boolean active,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by("nom").ascending());
+        Page<EmployeurListDto> entreprises = entrepriseService.searchEntreprises(nomEntreprise, usernameEmployeur, active, pageable);
+        ApiResponse<Page<EmployeurListDto>> response = new ApiResponse<>(
+                "Liste filtrée et paginée",
+                entreprises,
+                HttpStatus.OK
+        );
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/count")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Map<String, Long>> getEmployeurCounts(
+            @RequestParam(defaultValue = "") String nomEntreprise,
+            @RequestParam(defaultValue = "") String usernameEmployeur
+    ) {
+        Map<String, Long> result = entrepriseService.countActifsInactifs(nomEntreprise, usernameEmployeur);
+        return ResponseEntity.ok(result);
     }
 
 

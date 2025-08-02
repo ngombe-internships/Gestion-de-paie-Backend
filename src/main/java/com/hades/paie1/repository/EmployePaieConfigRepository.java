@@ -3,13 +3,14 @@ package com.hades.paie1.repository;
 import com.hades.paie1.model.Employe;
 import com.hades.paie1.model.EmployePaieConfig;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
 import java.util.List;
 
-public interface EmployePaieConfigRepository extends JpaRepository<EmployePaieConfig , Long> {
+public interface EmployePaieConfigRepository extends JpaRepository<EmployePaieConfig , Long>, JpaSpecificationExecutor<EmployePaieConfig> {
 
     List<EmployePaieConfig> findByEmploye(Employe employe);
 
@@ -23,6 +24,8 @@ public interface EmployePaieConfigRepository extends JpaRepository<EmployePaieCo
             @Param("elementPaieId") Long elementPaieId,
             @Param("periode") LocalDate periode
     );
+
+    List<EmployePaieConfig> findByEmployeIn(List<Employe> employes);
 
 
 }

@@ -3,15 +3,23 @@ package com.hades.paie1.service;
 import com.hades.paie1.dto.ElementPaieDto;
 import com.hades.paie1.dto.EmployePaieConfigDto;
 import com.hades.paie1.dto.EmployeResponseDto;
+import com.hades.paie1.enum1.Role;
 import com.hades.paie1.exception.RessourceNotFoundException;
-import com.hades.paie1.model.ElementPaie;
-import com.hades.paie1.model.Employe;
-import com.hades.paie1.model.EmployePaieConfig;
+import com.hades.paie1.model.*;
 import com.hades.paie1.repository.ElementPaieRepository;
 import com.hades.paie1.repository.EmployePaieConfigRepository;
 import com.hades.paie1.repository.EmployeRepository;
+import com.hades.paie1.repository.UserRepository;
 import jakarta.transaction.Transactional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
+
 
 import java.time.LocalDate;
 import java.util.List;
@@ -25,15 +33,18 @@ public class EmployePaieConfigService {
     private final EmployeRepository employeRepository;
     private final ElementPaieRepository elementPaieRepository;
     private final AuditLogService auditLogService;
+    private final UserRepository userRepository;
 
     public EmployePaieConfigService(EmployePaieConfigRepository employePaieConfigRepository,
                                     EmployeRepository employeRepository,
                                     ElementPaieRepository elementPaieRepository,
-                                    AuditLogService auditLogService) {
+                                    AuditLogService auditLogService,
+                                    UserRepository userRepository) {
         this.employePaieConfigRepository = employePaieConfigRepository;
         this.employeRepository = employeRepository;
         this.elementPaieRepository = elementPaieRepository;
         this.auditLogService = auditLogService;
+        this.userRepository = userRepository;
     }
 
 
@@ -77,6 +88,38 @@ public class EmployePaieConfigService {
         }
         return dto;
     }
+
+    public List<EmployePaieConfigDto> getEmployePaieConfigsForAuthenticatedEmployer() {
+        // 1. Récupère l'utilisateur connecté
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String username = authentication.getName();
+
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found: " + username));
+
+        // 2. Vérifie qu'il est EMPLOYEUR
+        if (user.getRole() != Role.EMPLOYEUR) {
+            throw new AccessDeniedException("Seul un employeur peut voir les configs de ses employés.");
+        }
+
+        // 3. Récupère son entreprise
+        Entreprise entreprise = user.getEntreprise();
+        if (entreprise == null) {
+            throw new IllegalStateException("Employeur sans entreprise.");
+        }
+
+        // 4. Récupère tous les employés de cette entreprise
+        List<Employe> employes = employeRepository.findByEntreprise(entreprise);
+
+        // 5. Récupère toutes les configs liées à ces employés
+        List<EmployePaieConfig> configs = employePaieConfigRepository.findByEmployeIn(employes);
+
+        // 6. Convertit en DTO
+        return configs.stream()
+                .map(this::convertToDto)
+                .collect(Collectors.toList());
+    }
+
     public List<EmployePaieConfigDto> getAllEmployePaieConfigs() {
         List<EmployePaieConfig> configs = employePaieConfigRepository.findAll();
 
@@ -160,5 +203,75 @@ public class EmployePaieConfigService {
                 auditLogService.getCurrentUsername(),
                 "Suppression d'une configuration de paie employé id=" + id
         );
+    }
+
+    public Page<EmployePaieConfigDto> searchConfigsForAuthenticatedEmployer(
+            Long employeId,
+            Long elementPaieId,
+            String status, // "active" ou "all"
+            String searchTerm,
+            Pageable pageable
+    ) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String username = authentication.getName();
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found: " + username));
+        if (user.getRole() != Role.EMPLOYEUR) {
+            throw new AccessDeniedException("Seul un employeur peut voir les configs de ses employés.");
+        }
+        Entreprise entreprise = user.getEntreprise();
+        if (entreprise == null) {
+            throw new IllegalStateException("Employeur sans entreprise.");
+        }
+
+        Specification<EmployePaieConfig> spec = (root, query, cb) -> {
+            var predicates = cb.conjunction();
+
+            // Filtre sur les employés de l'entreprise
+            var employeJoin = root.join("employe");
+            predicates = cb.and(predicates, cb.equal(employeJoin.get("entreprise"), entreprise));
+
+            // Filtre employé
+            if (employeId != null) {
+                predicates = cb.and(predicates, cb.equal(employeJoin.get("id"), employeId));
+            }
+
+            // Filtre élément paie
+            if (elementPaieId != null) {
+                var elementJoin = root.join("elementPaie");
+                predicates = cb.and(predicates, cb.equal(elementJoin.get("id"), elementPaieId));
+            }
+
+            // Filtre statut
+            if ("active".equalsIgnoreCase(status)) {
+                var today = LocalDate.now();
+                predicates = cb.and(
+                        predicates,
+                        cb.lessThanOrEqualTo(root.get("dateDebut"), today),
+                        cb.or(
+                                cb.isNull(root.get("dateFin")),
+                                cb.greaterThanOrEqualTo(root.get("dateFin"), today)
+                        )
+                );
+            }
+
+            // Filtre recherche
+            if (searchTerm != null && !searchTerm.trim().isEmpty()) {
+                String likeTerm = "%" + searchTerm.trim().toLowerCase() + "%";
+                predicates = cb.and(predicates,
+                        cb.or(
+                                cb.like(cb.lower(employeJoin.get("nom")), likeTerm),
+                                cb.like(cb.lower(employeJoin.get("prenom")), likeTerm),
+                                cb.like(cb.lower(employeJoin.get("matricule")), likeTerm)
+                                // tu peux ajouter d'autres champs ici
+                        )
+                );
+            }
+
+            return predicates;
+        };
+
+        Page<EmployePaieConfig> page = employePaieConfigRepository.findAll(spec, pageable);
+        return page.map(this::convertToDto);
     }
 }
