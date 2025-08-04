@@ -6,6 +6,8 @@ import com.hades.paie1.model.AuditLog;
 import com.hades.paie1.repository.AuditLogRepository;
 import com.hades.paie1.service.AuditLogService;
 
+import com.hades.paie1.service.email.MailLogService;
+import com.hades.paie1.service.pdf.PdfExportService;
 import com.hades.paie1.utils.AuditLogSpecification;
 import jakarta.mail.MessagingException;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,6 +17,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -22,6 +25,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 @RestController
@@ -30,10 +34,10 @@ public class AuditLogController {
 
     @Autowired
     private AuditLogService auditLogService;
-//    @Autowired
-//    private PdfExportService pdfExportService;
-//    @Autowired
-//    private MailLogService mailService;
+    @Autowired
+    private PdfExportService pdfExportService;
+    @Autowired
+    private MailLogService mailService;
 
 
     @GetMapping
@@ -49,30 +53,41 @@ public class AuditLogController {
     }
 
 
-//    @PostMapping("/pdf")
-//    public ResponseEntity<byte[]> exportAuditLogsPdf(@RequestBody PdfExportRequestDto request)
-//            throws IOException, MessagingException {
-//
-//        // Convertir les strings en LocalDateTime
-//        LocalDateTime from = LocalDateTime.parse(request.getFrom() + "T00:00:00");
-//        LocalDateTime to = LocalDateTime.parse(request.getTo() + "T23:59:59");
-//
-//        // Récupère tous les logs dans la plage
-//        List<AuditLogDto> logs = auditLogService.getAuditLogsByDateRange(from, to);
-//        byte[] pdf = pdfExportService.exportAuditLogsToPdf(logs, "Rapport d'audit", from + " à " + to);
-//
-//        // Si un email est fourni, envoyer par email
-//        if (request.getEmail() != null && !request.getEmail().trim().isEmpty()) {
-//            mailService.sendAuditLogPdf(request.getEmail(), pdf, "Rapport d'audit PDF");
-//        }
-//
-//        // Retourner le PDF pour téléchargement
-//        HttpHeaders headers = new HttpHeaders();
-//        headers.setContentType(MediaType.APPLICATION_PDF);
-//        headers.setContentDispositionFormData("attachment", "audit-logs.pdf");
-//
-//        return ResponseEntity.ok()
-//                .headers(headers)
-//                .body(pdf);
-//    }
+    @PostMapping("/pdf")
+    public ResponseEntity<byte[]> exportAuditLogsPdf(@RequestBody PdfExportRequestDto request)
+            throws IOException, MessagingException {
+
+        // Convertir les strings en LocalDateTime
+        LocalDateTime from = LocalDateTime.parse(request.getFrom() + "T00:00:00");
+        LocalDateTime to = LocalDateTime.parse(request.getTo() + "T23:59:59");
+
+        // Récupère tous les logs dans la plage
+        List<AuditLogDto> logs = auditLogService.getAuditLogsByDateRange(from, to);
+
+        // 🎯 AMÉLIORATION : Formatage propre de la période
+        String periode = pdfExportService.formatPeriodForTitle(from, to);
+
+        byte[] pdf = pdfExportService.exportAuditLogsToPdf(logs, "Rapport d'audit", periode);
+
+        String fileName = pdfExportService.generateSmartFileName(from, to);
+
+        // Si un email est fourni, envoyer par email
+        if (request.getEmail() != null && !request.getEmail().trim().isEmpty()) {
+            String emailSubject = String.format("Rapport d'audit du %s au %s",
+                    from.format(DateTimeFormatter.ofPattern("dd/MM/yyyy")),
+                    to.format(DateTimeFormatter.ofPattern("dd/MM/yyyy")));
+            mailService.sendAuditLogPdf(request.getEmail(), pdf, emailSubject);
+        }
+
+        // Retourner le PDF pour téléchargement
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_PDF);
+        headers.setContentDisposition(ContentDisposition.attachment().filename(fileName).build());
+
+        return ResponseEntity.ok()
+                .headers(headers)
+                .body(pdf);
+    }
+
+
 }

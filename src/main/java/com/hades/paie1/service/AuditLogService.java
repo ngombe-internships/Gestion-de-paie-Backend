@@ -18,6 +18,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 @Service
@@ -110,10 +111,11 @@ public class AuditLogService {
     }
 
 
-//    public List<AuditLogDto> getAuditLogsByDateRange(LocalDateTime from, LocalDateTime to) {
-//        Specification<AuditLog> spec = (root, query, cb) -> cb.between(root.get("dateAction"), from, to);
-//        List<AuditLog> logs = auditLogRepository.findAll(spec, Sort.by(Sort.Direction.DESC, "dateAction"));
-//        return logs.stream().map(this::toDto).toList();
-//    }
+    public List<AuditLogDto> getAuditLogsByDateRange(LocalDateTime from, LocalDateTime to) {
+        Specification<AuditLog> spec = (root, query, cb) -> cb.between(root.get("dateAction"), from, to);
+        List<AuditLog> logs = auditLogRepository.findAll(spec, Sort.by(Sort.Direction.DESC, "dateAction"));
+        return logs.stream().map(this::toDto).toList();
+    }
+
 
 }

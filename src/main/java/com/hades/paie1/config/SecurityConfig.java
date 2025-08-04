@@ -55,7 +55,6 @@ public class SecurityConfig {
                         .requestMatchers("/api/auth/register/employer").authenticated()
                         .requestMatchers("/api/bulletins/**").authenticated()
                         .requestMatchers("/api/employes/**").authenticated()
-
                         .requestMatchers("/api/auth/password-reset-request").permitAll()
                         .requestMatchers("/api/auth/password-reset").permitAll()
                         .requestMatchers("/logos/**").permitAll()
