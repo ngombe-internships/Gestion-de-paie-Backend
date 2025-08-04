@@ -1,20 +1,28 @@
 package com.hades.paie1.controller;
 
 import com.hades.paie1.dto.AuditLogDto;
+import com.hades.paie1.dto.PdfExportRequestDto;
 import com.hades.paie1.model.AuditLog;
 import com.hades.paie1.repository.AuditLogRepository;
 import com.hades.paie1.service.AuditLogService;
+
 import com.hades.paie1.utils.AuditLogSpecification;
+import jakarta.mail.MessagingException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.io.IOException;
+import java.time.LocalDateTime;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/audit-logs")
@@ -22,6 +30,11 @@ public class AuditLogController {
 
     @Autowired
     private AuditLogService auditLogService;
+//    @Autowired
+//    private PdfExportService pdfExportService;
+//    @Autowired
+//    private MailLogService mailService;
+
 
     @GetMapping
     public Page<AuditLogDto> getAuditLogs(
@@ -34,4 +47,32 @@ public class AuditLogController {
     ) {
         return auditLogService.getAuditLogs(username, entityName, entityId, action, page, size);
     }
+
+
+//    @PostMapping("/pdf")
+//    public ResponseEntity<byte[]> exportAuditLogsPdf(@RequestBody PdfExportRequestDto request)
+//            throws IOException, MessagingException {
+//
+//        // Convertir les strings en LocalDateTime
+//        LocalDateTime from = LocalDateTime.parse(request.getFrom() + "T00:00:00");
+//        LocalDateTime to = LocalDateTime.parse(request.getTo() + "T23:59:59");
+//
+//        // Récupère tous les logs dans la plage
+//        List<AuditLogDto> logs = auditLogService.getAuditLogsByDateRange(from, to);
+//        byte[] pdf = pdfExportService.exportAuditLogsToPdf(logs, "Rapport d'audit", from + " à " + to);
+//
+//        // Si un email est fourni, envoyer par email
+//        if (request.getEmail() != null && !request.getEmail().trim().isEmpty()) {
+//            mailService.sendAuditLogPdf(request.getEmail(), pdf, "Rapport d'audit PDF");
+//        }
+//
+//        // Retourner le PDF pour téléchargement
+//        HttpHeaders headers = new HttpHeaders();
+//        headers.setContentType(MediaType.APPLICATION_PDF);
+//        headers.setContentDispositionFormData("attachment", "audit-logs.pdf");
+//
+//        return ResponseEntity.ok()
+//                .headers(headers)
+//                .body(pdf);
+//    }
 }

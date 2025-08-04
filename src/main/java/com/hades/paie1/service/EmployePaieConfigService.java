@@ -165,7 +165,7 @@ public class EmployePaieConfigService {
                 "EmployePaieConfig",
                 createdConfig.getId(),
                 auditLogService.getCurrentUsername(),
-                "Création d'une configuration de paie pour l'employé id=" + employeId
+                "Création d'une configuration de paie pour l'employé id=" + employe.getNom() + "" + employe.getPrenom() + employe.getEntreprise().getNom()
         );
 
         return convertToDto(createdConfig); // Convertir en DTO avant de retourner

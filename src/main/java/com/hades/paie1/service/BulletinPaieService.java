@@ -612,7 +612,7 @@ public class BulletinPaieService {
                 fiche.getId(),
                 auditLogService.getCurrentUsername(),
                 "Génération du bulletin de paie pour l'employé "
-                        + fiche.getEmploye().getPrenom() + " " + fiche.getEmploye().getNom()
+                        + fiche.getEmploye().getPrenom() + " " + fiche.getEmploye().getNom() + "De l'entreprise " +fiche.getEntreprise().getNom()
         );
         return convertToDto(saved);
     }

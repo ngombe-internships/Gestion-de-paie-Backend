@@ -117,7 +117,7 @@ public class EntrepriseService {
                 "Entreprise",
                 entreprise.getId(),
                 auditLogService.getCurrentUsername(),
-                isActive ? "Activation de l'entreprise" : "Désactivation de l'entreprise"
+                isActive ? "Activation de l'entreprise "+entreprise.getNom()  : "Désactivation de l'entreprise " +entreprise.getNom()
         );
     }
 
