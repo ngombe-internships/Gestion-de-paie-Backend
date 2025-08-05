@@ -593,9 +593,10 @@
             <!-- Affichage des gains -->
             <tr th:each="ligne : ${bulletin.lignesPaie}" th:if="${ligne.type != null and ligne.type.name() == 'GAIN'}">
                 <td th:text="${ligne.designation}">DESIGNATION</td>
+
                 <td th:text="${ligne.nombre != null ? #numbers.formatDecimal(ligne.nombre, 1, 2) : ''}">NB</td>
                 <td th:text="${ligne.baseApplique != null ? #numbers.formatDecimal(ligne.baseApplique, 1, 2) : ''}">BASE</td>
-                <td th:text="${ligne.tauxAffiche != null ? #numbers.formatDecimal(ligne.tauxAffiche , 1, 2)  : ''}">TAUX</td>
+                <td th:text="${ligne.tauxAffiche != null ? ligne.tauxAffiche : '--'}">TAUX</td>
                 <td th:text="${#numbers.formatDecimal(ligne.montantFinal, 1, 2)}">GAIN</td>
                 <td></td>
                 <td></td>
@@ -623,7 +624,7 @@
                 <td th:text="${ligne.baseApplique != null ? #numbers.formatDecimal(ligne.baseApplique, 1, 2) : ''}">BASE</td>
 
                 <!-- Taux salarial -->
-                <td th:text="${ligne.tauxAffiche != null ? ligne.tauxAffiche : ''}">TAUX</td>
+                <td th:text="${ligne.tauxAffiche != null ? ligne.tauxAffiche : '--'}">TAUX</td>
 
                 <!-- Gain (vide pour les retenues) -->
                 <td></td>

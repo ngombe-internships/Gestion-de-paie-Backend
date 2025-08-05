@@ -61,9 +61,14 @@ public class PayrollDisplayService {
                 .tauxApplique(ligne.getTauxApplique())
                 .montantFinal(ligne.getMontantFinal())
                 .descriptionDetaillee(ligne.getDescriptionDetaillee())
-                .tauxAffiche(tauxAffiche)
+                .tauxAffiche(ligne.getTauxAffiche()) // <-- UTILISER le champ déjà calculé !
                 .baseApplique(ligne.getBaseApplique())
                 .formuleCalcul(ligne.getFormuleCalcul())
+                .tauxPatronal(ligne.getTauxPatronal())
+                .montantPatronal(ligne.getMontantPatronal())
+                .isMerged(ligne.isMerged())
+                .tauxPatronalAffiche(ligne.getTauxPatronalAffiche())
+                .isBareme(ligne.isBareme())
                 .build();
     }
 

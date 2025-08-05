@@ -142,6 +142,21 @@ public class RetenueCalculator {
 
         TypeElementPaie typeElement = determinerTypeElement(element, code, designation);
 
+
+        if (element.getCategorie() == CategorieElement.SALAIRE_DE_BASE ||
+                "SALAIRE DE BASE".equals(designation) ||
+                "SALAIRE_DE_BASE".equals(code)) {
+            tauxAffiche = "--";
+        } else if (formule == FormuleCalculType.BAREME) {
+            tauxAffiche = "BARÈME";
+        } else if (formule == FormuleCalculType.POURCENTAGE_BASE && tauxApplique != null) {
+            tauxAffiche = String.format("%.2f %%", tauxApplique.multiply(BigDecimal.valueOf(100)));
+        } else if (formule == FormuleCalculType.MONTANT_FIXE) {
+            tauxAffiche = "--";
+        } else {
+            tauxAffiche = "--";
+        }
+        ligne.setTauxAffiche(tauxAffiche);
         ligne.setElementPaie(element);
         ligne.setNombre(BigDecimal.ONE);
         ligne.setTauxApplique(tauxApplique);

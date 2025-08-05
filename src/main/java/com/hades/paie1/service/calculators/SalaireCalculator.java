@@ -76,6 +76,7 @@ public class SalaireCalculator {
             }
         }
 
+
         // Si pas trouvé dans les lignes, utiliser la logique existante
         BigDecimal salaireBase = bulletinPaie.getSalaireBaseInitial();
 
@@ -90,6 +91,29 @@ public class SalaireCalculator {
             }
         }
 
+        // Calculer le nombre d'heures et le taux horaire pour l'affichage
+        BigDecimal heuresNormales = bulletinPaie.getHeuresNormal();
+        BigDecimal tauxHoraire = bulletinPaie.getTauxHoraireInitial();
+
+        // Si les heures normales ne sont pas définies, calculer à partir du contrat
+        if (heuresNormales == null) {
+            Employe employe = bulletinPaie.getEmploye();
+            if (employe != null && employe.getHeuresContractuellesHebdomadaires() != null) {
+                heuresNormales = employe.getHeuresContractuellesHebdomadaires()
+                        .multiply(BigDecimal.valueOf(52))
+                        .divide(BigDecimal.valueOf(12), 2, RoundingMode.HALF_UP);
+                bulletinPaie.setHeuresNormal(heuresNormales);
+            } else {
+                heuresNormales = BigDecimal.valueOf(173.33); // Valeur par défaut (35h * 52 / 12)
+            }
+        }
+
+        // Si le taux horaire n'est pas défini, le calculer
+        if (tauxHoraire == null && heuresNormales.compareTo(BigDecimal.ZERO) > 0) {
+            tauxHoraire = salaireBase.divide(heuresNormales, 4, RoundingMode.HALF_UP);
+            bulletinPaie.setTauxHoraireInitial(tauxHoraire);
+        }
+
         // 🔧 VÉRIFICATION : S'assurer qu'on n'ajoute pas en double
         boolean salaireBaseExiste = bulletinPaie.getLignesPaie().stream()
                 .anyMatch(ligne -> ligne.getElementPaie() != null &&
@@ -102,8 +126,8 @@ public class SalaireCalculator {
                     "Salaire de base", // ← Notation cohérente avec le JSON
                     TypeElementPaie.GAIN,
                     CategorieElement.SALAIRE_DE_BASE,
-                    BigDecimal.ONE,
-                    null,
+                    heuresNormales,
+                    tauxHoraire,
                     salaireBase,
                     salaireBase,
                     salaireBase
@@ -401,6 +425,24 @@ public class SalaireCalculator {
         ligne.setMontantFinal(montantFinal != null ? montantFinal : BigDecimal.ZERO);
         ligne.setBaseApplique(baseApplique != null ? baseApplique : BigDecimal.ZERO);
         ligne.setBulletinPaie(bulletinPaie);
+
+
+        // Ajoute ici le calcul du tauxAffiche selon le type d’élément
+        String tauxAffiche;
+
+        if (categorie == CategorieElement.SALAIRE_DE_BASE) {
+            tauxAffiche = taux != null ? String.format("%.2f", taux) : "--";
+            ligne.setBaseApplique(null);
+        } else if (elementPaie.getFormuleCalcul() == FormuleCalculType.BAREME) {
+            tauxAffiche = "BARÈME";
+        } else if (elementPaie.getFormuleCalcul() == FormuleCalculType.POURCENTAGE_BASE && ligne.getTauxApplique() != null) {
+            tauxAffiche = String.format("%.2f %%", ligne.getTauxApplique().multiply(BigDecimal.valueOf(100)));
+        } else if (elementPaie.getFormuleCalcul() == FormuleCalculType.MONTANT_FIXE) {
+            tauxAffiche = "--";
+        } else {
+            tauxAffiche = "--";
+        }
+        ligne.setTauxAffiche(tauxAffiche);
 
         // Définir les flags selon le type
         if (type != null) {

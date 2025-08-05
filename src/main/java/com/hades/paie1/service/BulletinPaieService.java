@@ -223,7 +223,6 @@ public class BulletinPaieService {
                     BigDecimal heures = fiche.getHeuresNormal() != null ? fiche.getHeuresNormal() : BigDecimal.ZERO;
                     BigDecimal taux = fiche.getTauxHoraireInitial() != null ? fiche.getTauxHoraireInitial() : BigDecimal.ZERO;
                     montant = heures.multiply(taux);
-                    System.out.println("Calcul NOMBRE_BASE_TAUX - Heures: " + heures + ", Taux: " + taux + ", Montant: " + montant);
                     break;
                 case POURCENTAGE_BASE:
                     BigDecimal base = element.isImpacteBaseCnps() && fiche.getBaseCnps() != null
@@ -231,6 +230,20 @@ public class BulletinPaieService {
                             : fiche.getSalaireBrut() != null ? fiche.getSalaireBrut() : BigDecimal.ZERO;
                     montant = base.multiply(valeur);
                     break;
+                case TAUX_DEFAUT_X_MONTANT_DEFAUT:
+                    BigDecimal tauxDefaut = config.getTauxDefaut() != null ? config.getTauxDefaut() : element.getTauxDefaut();
+                    BigDecimal montantDefaut = config.getMontantDefaut() != null ? config.getMontantDefaut() : element.getMontantDefaut();
+                    montant = tauxDefaut.multiply(montantDefaut);
+                    valeur = tauxDefaut;
+                    break;
+                case NOMBRE_X_TAUX_DEFAUT_X_MONTANT_DEFAUT:
+                    BigDecimal nombreDefaut = config.getNombreDefaut() != null ? config.getNombreDefaut() : BigDecimal.ONE;
+                    BigDecimal tauxDefautX = config.getTauxDefaut() != null ? config.getTauxDefaut() : element.getTauxDefaut();
+                    BigDecimal montantDefautX = config.getMontantDefaut() != null ? config.getMontantDefaut() : element.getMontantDefaut();
+                    montant = nombreDefaut.multiply(tauxDefautX).multiply(montantDefautX);
+                    valeur = tauxDefautX;
+                    break;
+               
             }
 
             if (montant.compareTo(BigDecimal.ZERO) > 0) {
@@ -526,19 +539,21 @@ public class BulletinPaieService {
         // Correction ici !
         if (ligne.getElementPaie() != null) {
             FormuleCalculType formule = ligne.getElementPaie().getFormuleCalcul();
+            String designation = ligne.getElementPaie().getDesignation();
+
             if (formule == FormuleCalculType.BAREME) {
                 tauxAffiche = "BARÈME";
-            } else if (formule == FormuleCalculType.MONTANT_FIXE) {
-                tauxAffiche = ""; // Toujours "-" pour montant fixe
+            } else if (formule == FormuleCalculType.MONTANT_FIXE
+                    || designation.equalsIgnoreCase("Salaire de base")
+                    || ligne.getElementPaie().getCategorie() == CategorieElement.SALAIRE_DE_BASE) {
+                // Pour le salaire de base et les montants fixes, ne pas afficher de taux
+                tauxAffiche = "--";
             } else if (ligne.getTauxApplique() != null && ligne.getTauxApplique().compareTo(BigDecimal.ZERO) != 0) {
-                tauxAffiche = ligne.getTauxApplique().multiply(BigDecimal.valueOf(100)).setScale(2, RoundingMode.HALF_UP).toString() + " %";
+                tauxAffiche = ligne.getTauxApplique().multiply(BigDecimal.valueOf(100))
+                        .setScale(2, RoundingMode.HALF_UP).toString() + " %";
             } else {
-                tauxAffiche = "-";
+                tauxAffiche = "--";
             }
-        } else if (ligne.getTauxApplique() != null && ligne.getTauxApplique().compareTo(BigDecimal.ZERO) != 0) {
-            tauxAffiche = ligne.getTauxApplique().multiply(BigDecimal.valueOf(100)).setScale(2, RoundingMode.HALF_UP).toString() + " %";
-        } else {
-            tauxAffiche = "-";
         }
 
         if (ligne.getTemplateElementPaieConfig() != null) {
@@ -553,7 +568,7 @@ public class BulletinPaieService {
                 .tauxApplique(ligne.getTauxApplique())
                 .montantFinal(ligne.getMontantFinal())
                 .descriptionDetaillee(ligne.getDescriptionDetaillee())
-                .tauxAffiche(tauxAffiche)
+                .tauxAffiche(ligne.getTauxAffiche())
                 .baseApplique(ligne.getBaseApplique())
                 .formuleCalcul(ligne.getFormuleCalcul())
                 .build();
