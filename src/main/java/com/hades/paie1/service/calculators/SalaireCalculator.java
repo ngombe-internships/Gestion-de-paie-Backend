@@ -152,66 +152,76 @@ public class SalaireCalculator {
 
         BigDecimal heuresSupRestantes = totalHeuresSup;
 
-        BigDecimal montantTotalSup = BigDecimal.ZERO;
-
-        // HS1 (20% pour les 8 premières heures sup)
-        BigDecimal heuresHS1 = BigDecimal.ZERO;
-        if (heuresSupRestantes.compareTo(BigDecimal.ZERO) > 0) {
-            heuresHS1 = mathUtils.safeMin(heuresSupRestantes, BigDecimal.valueOf(8));
-            // la multiplication en deux étapes comme safeMultiply ne prend que deux arguments
-            BigDecimal montantCalculHS1 = mathUtils.safeMultiply(heuresHS1, tauxHoraire);
-            BigDecimal montantHS1 = mathUtils.safeMultiply(montantCalculHS1, PaieConstants.TAUX_HEURE_SUP1);
-
-            montantTotalSup =montantTotalSup.add(montantHS1);
+        // HS1 : 20% les 8 premières heures
+        BigDecimal heuresHS1 = mathUtils.safeMin(heuresSupRestantes, BigDecimal.valueOf(8));
+        if (heuresHS1.compareTo(BigDecimal.ZERO) > 0) {
+            BigDecimal montantHS1 = heuresHS1.multiply(tauxHoraire).multiply(PaieConstants.TAUX_HEURE_SUP1);
+            addLignePaieForElement(
+                    bulletinPaie,
+                    "Heures Supplémentaires 20%",
+                    TypeElementPaie.GAIN,
+                    CategorieElement.HEURES_SUPPLEMENTAIRES,
+                    heuresHS1,
+                    PaieConstants.TAUX_HEURE_SUP1, // 0.20
+                    tauxHoraire, // base = taux horaire
+                    montantHS1,
+                    tauxHoraire
+            );
             heuresSupRestantes = heuresSupRestantes.subtract(heuresHS1);
         }
 
-        // HS2 (30% pour les 8 heures suivantes)
-        BigDecimal heuresHS2 = BigDecimal.ZERO;
-        if (heuresSupRestantes.compareTo(BigDecimal.ZERO) > 0) {
-            heuresHS2 = mathUtils.safeMin(heuresSupRestantes, BigDecimal.valueOf(8));
-            // Correction: Décomposer la multiplication
-            BigDecimal montantCalculHS2 = mathUtils.safeMultiply(heuresHS2, tauxHoraire);
-            BigDecimal montantHS2 = mathUtils.safeMultiply(montantCalculHS2, PaieConstants.TAUX_HEURE_SUP2);
-
-            montantTotalSup = montantTotalSup.add(montantHS2);
+        // HS2 : 30% les 8 suivantes
+        BigDecimal heuresHS2 = mathUtils.safeMin(heuresSupRestantes, BigDecimal.valueOf(8));
+        if (heuresHS2.compareTo(BigDecimal.ZERO) > 0) {
+            BigDecimal montantHS2 = heuresHS2.multiply(tauxHoraire).multiply(PaieConstants.TAUX_HEURE_SUP2);
+            addLignePaieForElement(
+                    bulletinPaie,
+                    "Heures Supplémentaires 30%",
+                    TypeElementPaie.GAIN,
+                    CategorieElement.HEURES_SUPPLEMENTAIRES,
+                    heuresHS2,
+                    PaieConstants.TAUX_HEURE_SUP2, // 0.30
+                    tauxHoraire,
+                    montantHS2,
+                    tauxHoraire
+            );
             heuresSupRestantes = heuresSupRestantes.subtract(heuresHS2);
         }
 
-        // HS3 (40% pour les 4 heures suivantes, de la 57ème à la 60ème)
-        BigDecimal heuresHS3 = BigDecimal.ZERO;
-        if (heuresSupRestantes.compareTo(BigDecimal.ZERO) > 0) {
-            heuresHS3 = mathUtils.safeMin(heuresSupRestantes, BigDecimal.valueOf(4));
-            // Correction: Décomposer la multiplication
-            BigDecimal montantCalculHS3 = mathUtils.safeMultiply(heuresHS3, tauxHoraire);
-            BigDecimal montantHS3 = mathUtils.safeMultiply(montantCalculHS3, PaieConstants.TAUX_HEURE_SUP3);
-            montantTotalSup = montantTotalSup.add(montantHS3);
+        // HS3 : 40% les 4 suivantes
+        BigDecimal heuresHS3 = mathUtils.safeMin(heuresSupRestantes, BigDecimal.valueOf(4));
+        if (heuresHS3.compareTo(BigDecimal.ZERO) > 0) {
+            BigDecimal montantHS3 = heuresHS3.multiply(tauxHoraire).multiply(PaieConstants.TAUX_HEURE_SUP3);
+            addLignePaieForElement(
+                    bulletinPaie,
+                    "Heures Supplémentaires 40%",
+                    TypeElementPaie.GAIN,
+                    CategorieElement.HEURES_SUPPLEMENTAIRES,
+                    heuresHS3,
+                    PaieConstants.TAUX_HEURE_SUP3, // 0.40
+                    tauxHoraire,
+                    montantHS3,
+                    tauxHoraire
+            );
             heuresSupRestantes = heuresSupRestantes.subtract(heuresHS3);
         }
 
-        // Gérer les heures supplémentaires restantes si elles dépassent les 60 heures (toujours 40%)
+        // HS > 20 : tout le reste à 40%
         if (heuresSupRestantes.compareTo(BigDecimal.ZERO) > 0) {
-            // Correction: Décomposer la multiplication
-            BigDecimal montantCalculHS40Supp = mathUtils.safeMultiply(heuresSupRestantes, tauxHoraire);
-            BigDecimal montantHS40Supp = mathUtils.safeMultiply(montantCalculHS40Supp, PaieConstants.TAUX_HEURE_SUP3);
-
-            montantTotalSup = montantTotalSup.add(montantHS40Supp);
-        }
-        if (montantTotalSup.compareTo(BigDecimal.ZERO) > 0) {
+            BigDecimal montantHS40Supp = heuresSupRestantes.multiply(tauxHoraire).multiply(PaieConstants.TAUX_HEURE_SUP3);
             addLignePaieForElement(
                     bulletinPaie,
-                    "Heures Supplémentaires",
+                    "Heures Supplémentaires 40% (supplémentaires)",
                     TypeElementPaie.GAIN,
                     CategorieElement.HEURES_SUPPLEMENTAIRES,
-                    totalHeuresSup,
-                    null,
-                    null,
-                    montantTotalSup,
-                    null
+                    heuresSupRestantes,
+                    PaieConstants.TAUX_HEURE_SUP3, // 0.40
+                    tauxHoraire,
+                    montantHS40Supp,
+                    tauxHoraire
             );
         }
     }
-
 
     public void calculerHeuresNuit(BulletinPaie bulletinPaie) {
         BigDecimal heuresNuit = bulletinPaie.getHeuresNuit();
