@@ -243,7 +243,7 @@ public class BulletinPaieService {
                     montant = nombreDefaut.multiply(tauxDefautX).multiply(montantDefautX);
                     valeur = tauxDefautX;
                     break;
-               
+
             }
 
             if (montant.compareTo(BigDecimal.ZERO) > 0) {
