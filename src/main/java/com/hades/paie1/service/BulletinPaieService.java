@@ -556,7 +556,7 @@ public class BulletinPaieService {
                     || formule == FormuleCalculType.NOMBRE_X_TAUX_DEFAUT_X_MONTANT_DEFAUT)
                     && ligne.getTauxApplique() != null && ligne.getTauxApplique().compareTo(BigDecimal.ZERO) != 0) {
 
-                // 🔧 CORRECTION : Pour les GAINS avec formules à taux, afficher le taux en pourcentage
+                //  CORRECTION : Pour les GAINS avec formules à taux, afficher le taux en pourcentage
                 if (ligne.getElementPaie().getType() == TypeElementPaie.GAIN &&
                         (formule == FormuleCalculType.TAUX_DEFAUT_X_MONTANT_DEFAUT ||
                                 formule == FormuleCalculType.NOMBRE_X_TAUX_DEFAUT_X_MONTANT_DEFAUT)) {
