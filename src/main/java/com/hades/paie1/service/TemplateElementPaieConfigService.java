@@ -12,6 +12,7 @@ import com.hades.paie1.repository.TemplateElementPaieConfigRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -113,6 +114,9 @@ public class TemplateElementPaieConfigService {
     @Transactional
     public TemplateElementPaieConfigDto createTemplateElementPaieConfig(
             Long bulletinTemplateId, Long elementPaieId, TemplateElementPaieConfigDto configDto) {
+        if (configDto.getTauxDefaut() != null && configDto.getTauxDefaut().compareTo(BigDecimal.ONE) > 0) {
+            configDto.setTauxDefaut(configDto.getTauxDefaut().divide(BigDecimal.valueOf(100)));
+        }
 
         BulletinTemplate bulletinTemplate = bulletinTemplateRepository.findById(bulletinTemplateId)
                 .orElseThrow(() -> new RessourceNotFoundException("BulletinTemplate non trouvé avec id : " + bulletinTemplateId));
@@ -129,6 +133,10 @@ public class TemplateElementPaieConfigService {
 
     @Transactional
     public TemplateElementPaieConfigDto updateTemplateElementPaieConfig(Long id, TemplateElementPaieConfigDto configDto) {
+        if (configDto.getTauxDefaut() != null && configDto.getTauxDefaut().compareTo(BigDecimal.ONE) > 0) {
+            configDto.setTauxDefaut(configDto.getTauxDefaut().divide(BigDecimal.valueOf(100)));
+        }
+
         TemplateElementPaieConfig existingConfig = templateElementPaieConfigRepository.findById(id)
                 .orElseThrow(() -> new RessourceNotFoundException("TemplateElementPaieConfig non trouvé avec id : " + id));
 

@@ -439,19 +439,28 @@ public class SalaireCalculator {
 
         // Ajoute ici le calcul du tauxAffiche selon le type d’élément
         String tauxAffiche;
+        FormuleCalculType formule = elementPaie.getFormuleCalcul();
 
         if (categorie == CategorieElement.SALAIRE_DE_BASE) {
+            // Pour le salaire de base, afficher le taux horaire
             tauxAffiche = taux != null ? String.format("%.2f", taux) : "--";
-            ligne.setBaseApplique(null);
-        } else if (elementPaie.getFormuleCalcul() == FormuleCalculType.BAREME) {
+            ligne.setBaseApplique(null); // Pas de base pour le salaire de base
+        } else if (formule == FormuleCalculType.BAREME) {
             tauxAffiche = "BARÈME";
-        } else if (elementPaie.getFormuleCalcul() == FormuleCalculType.POURCENTAGE_BASE && ligne.getTauxApplique() != null) {
-            tauxAffiche = String.format("%.2f %%", ligne.getTauxApplique().multiply(BigDecimal.valueOf(100)));
-        } else if (elementPaie.getFormuleCalcul() == FormuleCalculType.MONTANT_FIXE) {
+        } else if (formule == FormuleCalculType.MONTANT_FIXE) {
             tauxAffiche = "--";
+        } else if (formule == FormuleCalculType.TAUX_DEFAUT_X_MONTANT_DEFAUT && taux != null && taux.compareTo(BigDecimal.ZERO) > 0) {
+            tauxAffiche = String.format("%.2f %%", taux.multiply(BigDecimal.valueOf(100)));
+        } else if (formule == FormuleCalculType.NOMBRE_X_TAUX_DEFAUT_X_MONTANT_DEFAUT && taux != null && taux.compareTo(BigDecimal.ZERO) > 0) {
+            tauxAffiche = String.format("%.2f %%", taux.multiply(BigDecimal.valueOf(100)));
+        } else if (formule == FormuleCalculType.POURCENTAGE_BASE && taux != null && taux.compareTo(BigDecimal.ZERO) > 0) {
+            tauxAffiche = String.format("%.2f %%", taux.multiply(BigDecimal.valueOf(100)));
+        } else if (formule == FormuleCalculType.NOMBRE_BASE_TAUX && taux != null && taux.compareTo(BigDecimal.ZERO) > 0) {
+            tauxAffiche = String.format("%.2f", taux); // Taux horaire sans %
         } else {
             tauxAffiche = "--";
         }
+
         ligne.setTauxAffiche(tauxAffiche);
 
         // Définir les flags selon le type

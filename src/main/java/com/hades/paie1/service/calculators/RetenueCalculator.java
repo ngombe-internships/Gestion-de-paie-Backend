@@ -24,7 +24,7 @@ public class RetenueCalculator {
 
     //Calcule le montant d'une retenue pour une ligne de bulletin de paie.
 
-    public void calculerMontantRetenue(
+   public void calculerMontantRetenue(
             LigneBulletinPaie ligne,
             ElementPaie element,
             FormuleCalculType formule,
@@ -114,7 +114,9 @@ public class RetenueCalculator {
                     montant = tauxDefaut.multiply(montantDefaut);
                     tauxApplique = tauxDefaut;
                     tauxAffiche = String.format("%.2f %%", tauxDefaut.multiply(BigDecimal.valueOf(100)));
-                    baseUtilisee = null;
+                    baseUtilisee = montantDefaut;
+                    ligne.setNombre(config.getNombreDefaut() != null ? config.getNombreDefaut() : BigDecimal.ONE);
+                    ligne.setBaseApplique(baseUtilisee);
                     break;
 
                 case NOMBRE_X_TAUX_DEFAUT_X_MONTANT_DEFAUT:
@@ -124,8 +126,9 @@ public class RetenueCalculator {
                     montant = nombreX.multiply(tauxDefautX).multiply(montantDefautX);
                     tauxApplique = tauxDefautX;
                     tauxAffiche = String.format("%.2f %%", tauxDefautX.multiply(BigDecimal.valueOf(100)));
-                    baseUtilisee = null;
+                    baseUtilisee = montantDefautX;
                     ligne.setNombre(nombreX);
+                    ligne.setBaseApplique(baseUtilisee);
                     break;
 
                 case BAREME:
@@ -143,23 +146,27 @@ public class RetenueCalculator {
         TypeElementPaie typeElement = determinerTypeElement(element, code, designation);
 
 
-        if (element.getCategorie() == CategorieElement.SALAIRE_DE_BASE ||
-                "SALAIRE DE BASE".equals(designation) ||
-                "SALAIRE_DE_BASE".equals(code)) {
-            tauxAffiche = "--";
-        } else if (formule == FormuleCalculType.BAREME) {
-            tauxAffiche = "BARÈME";
-        } else if (formule == FormuleCalculType.POURCENTAGE_BASE && tauxApplique != null) {
-            tauxAffiche = String.format("%.2f %%", tauxApplique.multiply(BigDecimal.valueOf(100)));
-        } else if (formule == FormuleCalculType.MONTANT_FIXE) {
-            tauxAffiche = "--";
-        } else {
-            tauxAffiche = "--";
-        }
+       if (element.getCategorie() == CategorieElement.SALAIRE_DE_BASE ||
+               "SALAIRE DE BASE".equals(designation) ||
+               "SALAIRE_DE_BASE".equals(code)) {
+           tauxAffiche = "--";
+       } else if (formule == FormuleCalculType.BAREME) {
+           tauxAffiche = "BARÈME";
+       } else if (formule == FormuleCalculType.POURCENTAGE_BASE && tauxApplique != null) {
+           tauxAffiche = String.format("%.2f %%", tauxApplique.multiply(BigDecimal.valueOf(100)));
+       } else if (formule == FormuleCalculType.MONTANT_FIXE) {
+           tauxAffiche = "--";
+       } else if (formule == FormuleCalculType.TAUX_DEFAUT_X_MONTANT_DEFAUT && tauxApplique != null) {
+
+       } else if (formule == FormuleCalculType.NOMBRE_X_TAUX_DEFAUT_X_MONTANT_DEFAUT && tauxApplique != null) {
+
+       } else if (tauxAffiche == null) {
+           tauxAffiche = "--";
+       }
         ligne.setTauxAffiche(tauxAffiche);
         ligne.setElementPaie(element);
-        ligne.setNombre(BigDecimal.ONE);
-        ligne.setTauxApplique(tauxApplique);
+       ligne.setNombre(ligne.getNombre() != null ? ligne.getNombre() : BigDecimal.ONE);
+       ligne.setTauxApplique(tauxApplique);
         ligne.setMontantCalcul(montant);
         ligne.setMontantFinal(montant);
         ligne.setBaseApplique(baseUtilisee);

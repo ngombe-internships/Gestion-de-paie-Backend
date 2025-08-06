@@ -15,6 +15,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -205,19 +206,6 @@ public class BulletinTemplateService {
                 .orElseThrow(() -> new RessourceNotFoundException("BulletinTemplate non trouvé avec id : " + id));
 
         existingTemplate.setNom(updatedTemplateDto.getNom());
-//        // Mettre à jour HeuresConfig
-//        if (updatedTemplateDto.getHeuresConfig() != null) {
-//            BulletinTemplate.HeuresConfig heuresConfigEntity = existingTemplate.getHeuresConfig();
-//            if (heuresConfigEntity == null) {
-//                heuresConfigEntity = new BulletinTemplate.HeuresConfig();
-//                existingTemplate.setHeuresConfig(heuresConfigEntity);
-//            }
-//            heuresConfigEntity.setHeuresNormalesActive(updatedTemplateDto.getHeuresConfig().isHeuresNormalesActive());
-//            heuresConfigEntity.setHeuresSup1Active(updatedTemplateDto.getHeuresConfig().isHeuresSup1Active());
-//            heuresConfigEntity.setTauxSup1(updatedTemplateDto.getHeuresConfig().getTauxSup1());
-//        } else {
-//            existingTemplate.setHeuresConfig(null); // Si le DTO envoie null, supprimez l'intégration
-//        }
 
 
         // Gérer le drapeau isDefault et la relation dans Entreprise
@@ -325,6 +313,9 @@ public class BulletinTemplateService {
     public TemplateElementPaieConfigDto addOrUpdateElementToTemplate(
             Long templateId, TemplateElementPaieConfigDto configDto) {
 
+        if (configDto.getTauxDefaut() != null && configDto.getTauxDefaut().compareTo(BigDecimal.ONE) > 0) {
+            configDto.setTauxDefaut(configDto.getTauxDefaut().divide(BigDecimal.valueOf(100)));
+        }
         BulletinTemplate template = bulletinTemplateRepository.findById(templateId)
                 .orElseThrow(() -> new RessourceNotFoundException("Template non trouvé avec id : " + templateId));
 
@@ -377,6 +368,7 @@ public class BulletinTemplateService {
     }
     @Transactional
     public void removeElementFromTemplate(Long templateId, Long elementPaieId) {
+
         BulletinTemplate template = bulletinTemplateRepository.findById(templateId)
                 .orElseThrow(() -> new RessourceNotFoundException("BulletinTemplate non trouvé avec id : " + templateId));
 

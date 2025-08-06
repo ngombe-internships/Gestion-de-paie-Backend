@@ -215,6 +215,8 @@ public class BulletinPaieService {
             }
             if (valeur == null) valeur = BigDecimal.ZERO;
 
+            BigDecimal nombre = BigDecimal.ONE;
+            BigDecimal baseApplique = null;
             switch (formule) {
                 case MONTANT_FIXE:
                     montant = valeur;
@@ -223,18 +225,22 @@ public class BulletinPaieService {
                     BigDecimal heures = fiche.getHeuresNormal() != null ? fiche.getHeuresNormal() : BigDecimal.ZERO;
                     BigDecimal taux = fiche.getTauxHoraireInitial() != null ? fiche.getTauxHoraireInitial() : BigDecimal.ZERO;
                     montant = heures.multiply(taux);
+                    baseApplique = taux;
                     break;
                 case POURCENTAGE_BASE:
                     BigDecimal base = element.isImpacteBaseCnps() && fiche.getBaseCnps() != null
                             ? fiche.getBaseCnps()
                             : fiche.getSalaireBrut() != null ? fiche.getSalaireBrut() : BigDecimal.ZERO;
                     montant = base.multiply(valeur);
+                    baseApplique = base;
                     break;
                 case TAUX_DEFAUT_X_MONTANT_DEFAUT:
                     BigDecimal tauxDefaut = config.getTauxDefaut() != null ? config.getTauxDefaut() : element.getTauxDefaut();
                     BigDecimal montantDefaut = config.getMontantDefaut() != null ? config.getMontantDefaut() : element.getMontantDefaut();
                     montant = tauxDefaut.multiply(montantDefaut);
                     valeur = tauxDefaut;
+                    nombre = config.getNombreDefaut() != null ? config.getNombreDefaut() : BigDecimal.ONE;
+                    baseApplique = montantDefaut;
                     break;
                 case NOMBRE_X_TAUX_DEFAUT_X_MONTANT_DEFAUT:
                     BigDecimal nombreDefaut = config.getNombreDefaut() != null ? config.getNombreDefaut() : BigDecimal.ONE;
@@ -242,6 +248,8 @@ public class BulletinPaieService {
                     BigDecimal montantDefautX = config.getMontantDefaut() != null ? config.getMontantDefaut() : element.getMontantDefaut();
                     montant = nombreDefaut.multiply(tauxDefautX).multiply(montantDefautX);
                     valeur = tauxDefautX;
+                    nombre = nombreDefaut;
+                    baseApplique = montantDefautX;
                     break;
 
             }
@@ -249,9 +257,8 @@ public class BulletinPaieService {
             if (montant.compareTo(BigDecimal.ZERO) > 0) {
                 LigneBulletinPaie ligne = new LigneBulletinPaie();
                 ligne.setElementPaie(element);
-                ligne.setNombre(formule == FormuleCalculType.NOMBRE_BASE_TAUX ?
-                        fiche.getHeuresNormal() != null ? fiche.getHeuresNormal() : BigDecimal.ONE :
-                        BigDecimal.ONE);
+                ligne.setBaseApplique(baseApplique);
+                ligne.setNombre(nombre);
                 ligne.setTauxApplique(valeur);
                 ligne.setMontantCalcul(montant);
                 ligne.setMontantFinal(montant);
@@ -536,21 +543,31 @@ public class BulletinPaieService {
         Integer affichageOrdre = null;
         String tauxAffiche = null;
 
-        // Correction ici !
         if (ligne.getElementPaie() != null) {
             FormuleCalculType formule = ligne.getElementPaie().getFormuleCalcul();
-            String designation = ligne.getElementPaie().getDesignation();
-
             if (formule == FormuleCalculType.BAREME) {
                 tauxAffiche = "BARÈME";
             } else if (formule == FormuleCalculType.MONTANT_FIXE
-                    || designation.equalsIgnoreCase("Salaire de base")
-                    || ligne.getElementPaie().getCategorie() == CategorieElement.SALAIRE_DE_BASE) {
-                // Pour le salaire de base et les montants fixes, ne pas afficher de taux
+                    || (ligne.getElementPaie().getDesignation().equalsIgnoreCase("Salaire de base")
+                    || ligne.getElementPaie().getCategorie() == CategorieElement.SALAIRE_DE_BASE)) {
                 tauxAffiche = "--";
-            } else if (ligne.getTauxApplique() != null && ligne.getTauxApplique().compareTo(BigDecimal.ZERO) != 0) {
-                tauxAffiche = ligne.getTauxApplique().multiply(BigDecimal.valueOf(100))
-                        .setScale(2, RoundingMode.HALF_UP).toString() + " %";
+            } else if ((formule == FormuleCalculType.POURCENTAGE_BASE
+                    || formule == FormuleCalculType.TAUX_DEFAUT_X_MONTANT_DEFAUT
+                    || formule == FormuleCalculType.NOMBRE_X_TAUX_DEFAUT_X_MONTANT_DEFAUT)
+                    && ligne.getTauxApplique() != null && ligne.getTauxApplique().compareTo(BigDecimal.ZERO) != 0) {
+
+                // 🔧 CORRECTION : Pour les GAINS avec formules à taux, afficher le taux en pourcentage
+                if (ligne.getElementPaie().getType() == TypeElementPaie.GAIN &&
+                        (formule == FormuleCalculType.TAUX_DEFAUT_X_MONTANT_DEFAUT ||
+                                formule == FormuleCalculType.NOMBRE_X_TAUX_DEFAUT_X_MONTANT_DEFAUT)) {
+                    // Pour les gains, le taux est généralement stocké en décimal (ex: 0.5 = 50%)
+                    tauxAffiche = ligne.getTauxApplique().multiply(BigDecimal.valueOf(100))
+                            .setScale(2, RoundingMode.HALF_UP).toString() + " %";
+                } else {
+                    // Pour les autres cas (retenues, cotisations), garder la logique existante
+                    tauxAffiche = ligne.getTauxApplique().multiply(BigDecimal.valueOf(100))
+                            .setScale(2, RoundingMode.HALF_UP).toString() + " %";
+                }
             } else {
                 tauxAffiche = "--";
             }
@@ -559,6 +576,7 @@ public class BulletinPaieService {
         if (ligne.getTemplateElementPaieConfig() != null) {
             affichageOrdre = ligne.getTemplateElementPaieConfig().getAffichageOrdre();
         }
+
         return LignePaieDto.builder()
                 .affichageOrdre(affichageOrdre)
                 .designation(ligne.getElementPaie() != null ? ligne.getElementPaie().getDesignation() : "N/A")
@@ -568,12 +586,16 @@ public class BulletinPaieService {
                 .tauxApplique(ligne.getTauxApplique())
                 .montantFinal(ligne.getMontantFinal())
                 .descriptionDetaillee(ligne.getDescriptionDetaillee())
-                .tauxAffiche(ligne.getTauxAffiche())
+                .tauxAffiche(tauxAffiche) // ✅ UTILISER le taux calculé ici, pas ligne.getTauxAffiche()
                 .baseApplique(ligne.getBaseApplique())
                 .formuleCalcul(ligne.getFormuleCalcul())
+                .tauxPatronal(ligne.getTauxPatronal())
+                .montantPatronal(ligne.getMontantPatronal())
+                .isMerged(ligne.isMerged())
+                .tauxPatronalAffiche(ligne.getTauxPatronalAffiche())
+                .isBareme(ligne.isBareme())
                 .build();
     }
-
 
     public BulletinPaie mapCreateDtoToEntity(BulletinPaieCreateDto dto) {
         Employe employe = employeRepo.findById(dto.getEmployeId())

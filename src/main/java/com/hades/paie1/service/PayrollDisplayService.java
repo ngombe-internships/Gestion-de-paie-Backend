@@ -27,6 +27,24 @@ public class PayrollDisplayService {
         this.templateElementPaieConfigRepository = templateElementPaieConfigRepository;
     }
 
+    private boolean shouldDisplayNombre(LigneBulletinPaie ligne) {
+        if (ligne.getNombre() == null) {
+            return false;
+        }
+
+        FormuleCalculType formule = ligne.getElementPaie() != null ?
+                ligne.getElementPaie().getFormuleCalcul() : null;
+
+        // Afficher le nombre pour ces formules spécifiques
+        if (formule == FormuleCalculType.NOMBRE_X_TAUX_DEFAUT_X_MONTANT_DEFAUT ||
+                formule == FormuleCalculType.NOMBRE_BASE_TAUX) {
+            return true;
+        }
+
+        // Pour les autres formules, afficher seulement si différent de 1
+        return ligne.getNombre().compareTo(BigDecimal.ONE) != 0;
+
+    }
     private LignePaieDto convertLigneBulletinPaieToDto(LigneBulletinPaie ligne) {
         Integer affichageOrdre = null;
         String tauxAffiche = null;
@@ -36,32 +54,49 @@ public class PayrollDisplayService {
             FormuleCalculType formule = ligne.getElementPaie().getFormuleCalcul();
             if (formule == FormuleCalculType.BAREME) {
                 tauxAffiche = "BARÈME";
+            } else if (ligne.getElementPaie().getCategorie() == CategorieElement.SALAIRE_DE_BASE) {
+                // 🔧 CORRECTION : Pour le salaire de base, afficher le taux horaire
+                tauxAffiche = ligne.getTauxApplique() != null ?
+                        String.format("%.2f", ligne.getTauxApplique()) : "--";
             } else if (formule == FormuleCalculType.MONTANT_FIXE) {
-                tauxAffiche = ""; // Toujours "-" pour montant fixe
-            } else if (ligne.getTauxApplique() != null && ligne.getTauxApplique().compareTo(BigDecimal.ZERO) != 0) {
-                tauxAffiche = ligne.getTauxApplique().multiply(BigDecimal.valueOf(100)).setScale(2, RoundingMode.HALF_UP).toString() + " %";
+                tauxAffiche = "--";
+            } else if ((formule == FormuleCalculType.POURCENTAGE_BASE
+                    || formule == FormuleCalculType.TAUX_DEFAUT_X_MONTANT_DEFAUT
+                    || formule == FormuleCalculType.NOMBRE_X_TAUX_DEFAUT_X_MONTANT_DEFAUT)
+                    && ligne.getTauxApplique() != null && ligne.getTauxApplique().compareTo(BigDecimal.ZERO) != 0) {
+
+                // 🔧 CORRECTION : Pour les GAINS avec formules à taux, afficher le taux en pourcentage
+                if (ligne.getElementPaie().getType() == TypeElementPaie.GAIN &&
+                        (formule == FormuleCalculType.TAUX_DEFAUT_X_MONTANT_DEFAUT ||
+                                formule == FormuleCalculType.NOMBRE_X_TAUX_DEFAUT_X_MONTANT_DEFAUT)) {
+                    // Pour les gains, le taux est généralement stocké en décimal (ex: 0.5 = 50%)
+                    tauxAffiche = ligne.getTauxApplique().multiply(BigDecimal.valueOf(100))
+                            .setScale(2, RoundingMode.HALF_UP).toString() + " %";
+                } else {
+                    // Pour les autres cas (retenues, cotisations), garder la logique existante
+                    tauxAffiche = ligne.getTauxApplique().multiply(BigDecimal.valueOf(100))
+                            .setScale(2, RoundingMode.HALF_UP).toString() + " %";
+                }
             } else {
-                tauxAffiche = "";
+                tauxAffiche = "--";
             }
-        } else if (ligne.getTauxApplique() != null && ligne.getTauxApplique().compareTo(BigDecimal.ZERO) != 0) {
-            tauxAffiche = ligne.getTauxApplique().multiply(BigDecimal.valueOf(100)).setScale(2, RoundingMode.HALF_UP).toString() + " %";
-        } else {
-            tauxAffiche = "-";
         }
 
         if (ligne.getTemplateElementPaieConfig() != null) {
             affichageOrdre = ligne.getTemplateElementPaieConfig().getAffichageOrdre();
         }
+
         return LignePaieDto.builder()
                 .affichageOrdre(affichageOrdre)
                 .designation(ligne.getElementPaie() != null ? ligne.getElementPaie().getDesignation() : "N/A")
                 .categorie(ligne.getElementPaie() != null ? ligne.getElementPaie().getCategorie() : null)
                 .type(ligne.getElementPaie() != null ? ligne.getElementPaie().getType() : null)
-                .nombre(ligne.getNombre() != null && ligne.getNombre().compareTo(BigDecimal.ONE) == 0 ? null : ligne.getNombre())
+                // 🔧 CORRECTION : Afficher le nombre pour les formules qui l'utilisent
+                .nombre(shouldDisplayNombre(ligne) ? ligne.getNombre() : null)
                 .tauxApplique(ligne.getTauxApplique())
                 .montantFinal(ligne.getMontantFinal())
                 .descriptionDetaillee(ligne.getDescriptionDetaillee())
-                .tauxAffiche(ligne.getTauxAffiche()) // <-- UTILISER le champ déjà calculé !
+                .tauxAffiche(tauxAffiche) // ✅ UTILISER le taux calculé ici, pas ligne.getTauxAffiche()
                 .baseApplique(ligne.getBaseApplique())
                 .formuleCalcul(ligne.getFormuleCalcul())
                 .tauxPatronal(ligne.getTauxPatronal())

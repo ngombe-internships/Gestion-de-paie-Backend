@@ -67,5 +67,12 @@ public class TemplateElementPaieConfig {
     // D'autres configurations spécifiques au template peuvent être ajoutées ici
     // comme 'estModifiableParEmploye', 'estVisibleSurBulletin', etc.
 
+    public void setTauxDefaut(BigDecimal taux) {
+        if (taux != null && taux.compareTo(BigDecimal.ONE) > 0) {
+            this.tauxDefaut = taux.divide(BigDecimal.valueOf(100));
+        } else {
+            this.tauxDefaut = taux;
+        }
+    }
 
 }
