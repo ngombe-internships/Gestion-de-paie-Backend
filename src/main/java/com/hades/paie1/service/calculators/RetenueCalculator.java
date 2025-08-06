@@ -149,20 +149,31 @@ public class RetenueCalculator {
        if (element.getCategorie() == CategorieElement.SALAIRE_DE_BASE ||
                "SALAIRE DE BASE".equals(designation) ||
                "SALAIRE_DE_BASE".equals(code)) {
-           tauxAffiche = "--";
+           tauxAffiche = tauxApplique != null ? String.format("%.2f", tauxApplique) : "--";
        } else if (formule == FormuleCalculType.BAREME) {
            tauxAffiche = "BARÈME";
-       } else if (formule == FormuleCalculType.POURCENTAGE_BASE && tauxApplique != null) {
+       } else if (formule == FormuleCalculType.POURCENTAGE_BASE && tauxApplique != null && tauxApplique.compareTo(BigDecimal.ZERO) > 0) {
            tauxAffiche = String.format("%.2f %%", tauxApplique.multiply(BigDecimal.valueOf(100)));
        } else if (formule == FormuleCalculType.MONTANT_FIXE) {
            tauxAffiche = "--";
-       } else if (formule == FormuleCalculType.TAUX_DEFAUT_X_MONTANT_DEFAUT && tauxApplique != null) {
-
-       } else if (formule == FormuleCalculType.NOMBRE_X_TAUX_DEFAUT_X_MONTANT_DEFAUT && tauxApplique != null) {
-
-       } else if (tauxAffiche == null) {
+       } else if (formule == FormuleCalculType.TAUX_DEFAUT_X_MONTANT_DEFAUT && tauxApplique != null && tauxApplique.compareTo(BigDecimal.ZERO) > 0) {
+           // FIX: Ajouter l'assignation manquante
+           tauxAffiche = String.format("%.2f %%", tauxApplique.multiply(BigDecimal.valueOf(100)));
+       } else if (formule == FormuleCalculType.NOMBRE_X_TAUX_DEFAUT_X_MONTANT_DEFAUT && tauxApplique != null && tauxApplique.compareTo(BigDecimal.ZERO) > 0) {
+           // FIX: Ajouter l'assignation manquante
+           tauxAffiche = String.format("%.2f %%", tauxApplique.multiply(BigDecimal.valueOf(100)));
+       } else {
            tauxAffiche = "--";
        }
+
+       System.out.println("DEBUG - Element: " + element.getDesignation());
+       System.out.println("DEBUG - Code: " + code);
+       System.out.println("DEBUG - Formule: " + formule);
+       System.out.println("DEBUG - TauxApplique: " + tauxApplique);
+       System.out.println("DEBUG - TauxAffiche calculé: " + tauxAffiche);
+       System.out.println("DEBUG - Montant: " + montant);
+       System.out.println("DEBUG ----------------------------------------");
+
         ligne.setTauxAffiche(tauxAffiche);
         ligne.setElementPaie(element);
        ligne.setNombre(ligne.getNombre() != null ? ligne.getNombre() : BigDecimal.ONE);
