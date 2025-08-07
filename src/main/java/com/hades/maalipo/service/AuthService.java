@@ -39,10 +39,13 @@ public class AuthService {
     private final JwtTokenProvider jwtTokenProvider;
     private final UnifiedFileStorageService unifiedFileStorageService;
     private final BulletinTemplateService bulletinTemplateService;
+    private final EntrepriseParametreRhService entrepriseParametreRhService;
 
     private final PasswordResetTokenRepository passwordResetTokenRepository;
     private final EmailService emailService;
     private final AuditLogService auditLogService;
+
+
 
     @Value("${app.frontend.password-reset-url}")
     private String frontendPasswordResetUrl;
@@ -58,7 +61,8 @@ public class AuthService {
             BulletinTemplateService bulletinTemplateService,
              PasswordResetTokenRepository passwordResetTokenRepository,
             EmailService emailService,
-            AuditLogService auditLogService
+            AuditLogService auditLogService,
+            EntrepriseParametreRhService entrepriseParametreRhService
             ) {
 
 
@@ -73,6 +77,7 @@ public class AuthService {
         this.passwordResetTokenRepository = passwordResetTokenRepository;
         this.emailService = emailService;
         this.auditLogService = auditLogService;
+        this.entrepriseParametreRhService = entrepriseParametreRhService;
     }
 
     /**
@@ -149,6 +154,9 @@ public class AuthService {
             );
             // Création du template par défaut
             bulletinTemplateService.createDefaultTemplateForEntreprise(savedEntreprise);
+
+            //creation des parametre par defaut
+            entrepriseParametreRhService.initDefaultParamsForEntreprise(savedEntreprise.getId());
 
             // Création de l'utilisateur employeur
             User employeurUser = createEmployeurUser(createDto, savedEntreprise);

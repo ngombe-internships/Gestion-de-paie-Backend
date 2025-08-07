@@ -7,6 +7,9 @@ import com.hades.maalipo.enum1.TypeElementPaie;
 import com.hades.maalipo.exception.RessourceNotFoundException;
 import com.hades.maalipo.model.*;
 import com.hades.maalipo.repository.ElementPaieRepository;
+import com.hades.maalipo.service.EntrepriseParametreRhService;
+import com.hades.maalipo.service.EntrepriseService;
+import com.hades.maalipo.utils.EntrepriseUtils;
 import com.hades.maalipo.utils.MathUtils;
 import com.hades.maalipo.utils.PaieConstants;
 import org.springframework.stereotype.Component;
@@ -22,13 +25,14 @@ public class SalaireCalculator {
     private final MathUtils mathUtils;
     private final AncienneteService ancienneteService;
     private final ElementPaieRepository elementPaieRepository;
+    private final EntrepriseParametreRhService paramService;
 
     public SalaireCalculator(MathUtils mathUtils, AncienneteService ancienneteService,
-                             ElementPaieRepository elementPaieRepository) {
+                             ElementPaieRepository elementPaieRepository, EntrepriseParametreRhService paramService) {
         this.mathUtils = mathUtils;
         this.ancienneteService = ancienneteService;
-
         this.elementPaieRepository = elementPaieRepository; // Injection correcte
+        this.paramService = paramService;
     }
 
 
@@ -47,7 +51,7 @@ public class SalaireCalculator {
                     if ("Prime d'Ancienneté".equals(designation)) {
                         newElement.setFormuleCalcul(FormuleCalculType.POURCENTAGE_BASE); // Spécifique pour la prime d'ancienneté
                     } else {
-                       newElement.setFormuleCalcul(TypeElementPaie.GAIN.equals(type) ? FormuleCalculType.MONTANT_FIXE : FormuleCalculType.POURCENTAGE_BASE);
+                        newElement.setFormuleCalcul(TypeElementPaie.GAIN.equals(type) ? FormuleCalculType.MONTANT_FIXE : FormuleCalculType.POURCENTAGE_BASE);
                     }
                     newElement.setCode(designation.toUpperCase().replace(" ", "_"));
 
@@ -142,6 +146,8 @@ public class SalaireCalculator {
         BigDecimal totalHeuresSup = bulletinPaie.getHeuresSup();
         BigDecimal tauxHoraire = bulletinPaie.getTauxHoraireInitial();
 
+        Long entrepriseId = EntrepriseUtils.resolveEntrepriseId(bulletinPaie);
+
         if (totalHeuresSup == null || totalHeuresSup.compareTo(BigDecimal.ZERO) <= 0 ||
                 tauxHoraire == null || tauxHoraire.compareTo(BigDecimal.ZERO) <= 0) {
             return;
@@ -152,14 +158,18 @@ public class SalaireCalculator {
         // HS1 : 20% les 8 premières heures
         BigDecimal heuresHS1 = mathUtils.safeMin(heuresSupRestantes, BigDecimal.valueOf(8));
         if (heuresHS1.compareTo(BigDecimal.ZERO) > 0) {
-            BigDecimal montantHS1 = heuresHS1.multiply(tauxHoraire).multiply(PaieConstants.TAUX_HEURE_SUP1);
+            String tauxHeureSup1Str = paramService.getParamOrDefault(entrepriseId, "TAUX_HEURE_SUP1", PaieConstants.TAUX_HEURE_SUP1.toString());
+            BigDecimal tauxHeureSup1 = new BigDecimal(tauxHeureSup1Str);
+
+            BigDecimal montantHS1 = heuresHS1.multiply(tauxHoraire).multiply(tauxHeureSup1);
+
             addLignePaieForElement(
                     bulletinPaie,
                     "Heures Supplémentaires 20%",
                     TypeElementPaie.GAIN,
                     CategorieElement.HEURES_SUPPLEMENTAIRES,
                     heuresHS1,
-                    PaieConstants.TAUX_HEURE_SUP1, // 0.20
+                    tauxHeureSup1, // 0.20
                     tauxHoraire, // base = taux horaire
                     montantHS1,
                     tauxHoraire
@@ -170,14 +180,17 @@ public class SalaireCalculator {
         // HS2 : 30% les 8 suivantes
         BigDecimal heuresHS2 = mathUtils.safeMin(heuresSupRestantes, BigDecimal.valueOf(8));
         if (heuresHS2.compareTo(BigDecimal.ZERO) > 0) {
-            BigDecimal montantHS2 = heuresHS2.multiply(tauxHoraire).multiply(PaieConstants.TAUX_HEURE_SUP2);
+            String tauxHeureSup2Str = paramService.getParamOrDefault(entrepriseId, "TAUX_HEURE_SUP2", PaieConstants.TAUX_HEURE_SUP2.toString());
+            BigDecimal tauxHeureSup2 = new BigDecimal(tauxHeureSup2Str);
+
+            BigDecimal montantHS2 = heuresHS2.multiply(tauxHoraire).multiply(tauxHeureSup2);
             addLignePaieForElement(
                     bulletinPaie,
                     "Heures Supplémentaires 30%",
                     TypeElementPaie.GAIN,
                     CategorieElement.HEURES_SUPPLEMENTAIRES,
                     heuresHS2,
-                    PaieConstants.TAUX_HEURE_SUP2, // 0.30
+                    tauxHeureSup2, // 0.30
                     tauxHoraire,
                     montantHS2,
                     tauxHoraire
@@ -185,17 +198,21 @@ public class SalaireCalculator {
             heuresSupRestantes = heuresSupRestantes.subtract(heuresHS2);
         }
 
+        String tauxHeureSup3Str = paramService.getParamOrDefault(entrepriseId, "TAUX_HEURE_SUP3", PaieConstants.TAUX_HEURE_SUP3.toString());
+        BigDecimal tauxHeureSup3 = new BigDecimal(tauxHeureSup3Str);
+
         // HS3 : 40% les 4 suivantes
         BigDecimal heuresHS3 = mathUtils.safeMin(heuresSupRestantes, BigDecimal.valueOf(4));
         if (heuresHS3.compareTo(BigDecimal.ZERO) > 0) {
-            BigDecimal montantHS3 = heuresHS3.multiply(tauxHoraire).multiply(PaieConstants.TAUX_HEURE_SUP3);
+
+            BigDecimal montantHS3 = heuresHS3.multiply(tauxHoraire).multiply(tauxHeureSup3);
             addLignePaieForElement(
                     bulletinPaie,
                     "Heures Supplémentaires 40%",
                     TypeElementPaie.GAIN,
                     CategorieElement.HEURES_SUPPLEMENTAIRES,
                     heuresHS3,
-                    PaieConstants.TAUX_HEURE_SUP3, // 0.40
+                    tauxHeureSup3, // 0.40
                     tauxHoraire,
                     montantHS3,
                     tauxHoraire
@@ -205,14 +222,15 @@ public class SalaireCalculator {
 
         // HS > 20 : tout le reste à 40%
         if (heuresSupRestantes.compareTo(BigDecimal.ZERO) > 0) {
-            BigDecimal montantHS40Supp = heuresSupRestantes.multiply(tauxHoraire).multiply(PaieConstants.TAUX_HEURE_SUP3);
+
+            BigDecimal montantHS40Supp = heuresSupRestantes.multiply(tauxHoraire).multiply(tauxHeureSup3);
             addLignePaieForElement(
                     bulletinPaie,
                     "Heures Supplémentaires 40% (supplémentaires)",
                     TypeElementPaie.GAIN,
                     CategorieElement.HEURES_SUPPLEMENTAIRES,
                     heuresSupRestantes,
-                    PaieConstants.TAUX_HEURE_SUP3, // 0.40
+                    tauxHeureSup3, // 0.40
                     tauxHoraire,
                     montantHS40Supp,
                     tauxHoraire
@@ -224,12 +242,20 @@ public class SalaireCalculator {
         BigDecimal heuresNuit = bulletinPaie.getHeuresNuit();
         BigDecimal tauxHoraire = bulletinPaie.getTauxHoraireInitial();
 
+        Long entrepriseId = EntrepriseUtils.resolveEntrepriseId(bulletinPaie);
+
+
         if (heuresNuit == null || heuresNuit.compareTo(BigDecimal.ZERO) <= 0 ||
                 tauxHoraire == null || tauxHoraire.compareTo(BigDecimal.ZERO) <= 0) {
             return;
         }
         BigDecimal montantCalculHeuresNuit = mathUtils.safeMultiply(heuresNuit, tauxHoraire);
-        BigDecimal montantHeuresNuit = mathUtils.safeMultiply(montantCalculHeuresNuit, PaieConstants.TAUX_HEURE_NUIT);
+
+
+        String tauxHeureSNuitStr = paramService.getParamOrDefault(entrepriseId, "TAUX_HEURE_NUIT", PaieConstants.TAUX_HEURE_NUIT.toString());
+        BigDecimal tauxHeureNuit = new BigDecimal(tauxHeureSNuitStr);
+
+        BigDecimal montantHeuresNuit = mathUtils.safeMultiply(montantCalculHeuresNuit, tauxHeureNuit);
         if (montantHeuresNuit.compareTo(BigDecimal.ZERO) > 0) {
             addLignePaieForElement(
                     bulletinPaie,
@@ -237,7 +263,7 @@ public class SalaireCalculator {
                     TypeElementPaie.GAIN,
                     CategorieElement.HEURES_SUPPLEMENTAIRES,
                     heuresNuit,
-                    PaieConstants.TAUX_HEURE_NUIT,
+                    tauxHeureNuit,
                     mathUtils.safeMultiply(heuresNuit, tauxHoraire),
                     montantHeuresNuit,
                     mathUtils.safeMultiply(heuresNuit,tauxHoraire)
@@ -250,13 +276,19 @@ public class SalaireCalculator {
         BigDecimal heuresFerie = bulletinPaie.getHeuresFerie();
         BigDecimal tauxHoraire = bulletinPaie.getTauxHoraireInitial();
 
+        Long entrepriseId = EntrepriseUtils.resolveEntrepriseId(bulletinPaie);
+
         if (heuresFerie == null || heuresFerie.compareTo(BigDecimal.ZERO) <= 0 ||
                 tauxHoraire == null || tauxHoraire.compareTo(BigDecimal.ZERO) <= 0) {
             return;
         }
         // Utilisation de PaieConstants.TAUX_HEURE_FERIE
         BigDecimal montantCalculHeuresFerie = mathUtils.safeMultiply(heuresFerie, tauxHoraire);
-        BigDecimal montantHeuresFerie = mathUtils.safeMultiply(montantCalculHeuresFerie, PaieConstants.TAUX_HEURE_FERIE);
+
+        String tauxHeureSFerieStr = paramService.getParamOrDefault(entrepriseId, "TAUX_HEURE_FERIE", PaieConstants.TAUX_HEURE_FERIE.toString());
+        BigDecimal tauxHeureFerie = new BigDecimal(tauxHeureSFerieStr);
+
+        BigDecimal montantHeuresFerie = mathUtils.safeMultiply(montantCalculHeuresFerie,tauxHeureFerie);
         if (montantHeuresFerie.compareTo(BigDecimal.ZERO) > 0) {
             addLignePaieForElement(
                     bulletinPaie,
@@ -264,7 +296,7 @@ public class SalaireCalculator {
                     TypeElementPaie.GAIN,
                     CategorieElement.HEURES_SUPPLEMENTAIRES, // Ou une nouvelle catégorie si vous voulez distinguer
                     heuresFerie,
-                    PaieConstants.TAUX_HEURE_FERIE,
+                    tauxHeureFerie,
                     mathUtils.safeMultiply(heuresFerie, tauxHoraire), // Montant avant majoration
                     montantHeuresFerie,
                     mathUtils.safeMultiply(heuresFerie, tauxHoraire)
@@ -279,16 +311,23 @@ public class SalaireCalculator {
             return;
         }
 
+        Long entrepriseId = EntrepriseUtils.resolveEntrepriseId(bulletinPaie);
+
         int ancienneteEnAnnees = ancienneteService.calculAncienneteEnAnnees(employe.getDateEmbauche());
 
         BigDecimal tauxPrimeAnciennete = BigDecimal.ZERO;
         if (ancienneteEnAnnees >= 2) {
-            // Taux initial de 4% après 2 ans.
-            tauxPrimeAnciennete = PaieConstants.TAUX_PRIME_ANCIENNETE_INIT;
+            // Taux initial récupéré des paramètres RH ou défaut des constantes
+            String tauxInitStr = paramService.getParamOrDefault(entrepriseId, "TAUX_PRIME_ANCIENNETE_INIT", PaieConstants.TAUX_PRIME_ANCIENNETE_INIT.toString());
+            tauxPrimeAnciennete = new BigDecimal(tauxInitStr);
+
             if (ancienneteEnAnnees > 2) {
+                // Taux supplémentaire récupéré des paramètres RH ou défaut des constantes
+                String tauxSupplStr = paramService.getParamOrDefault(entrepriseId, "TAUX_PRIME_ANCIENNETE_SUPPL", PaieConstants.TAUX_PRIME_ANCIENNETE_SUPPL.toString());
+                BigDecimal tauxSuppl = new BigDecimal(tauxSupplStr);
 
                 tauxPrimeAnciennete = tauxPrimeAnciennete.add(BigDecimal.valueOf(ancienneteEnAnnees - 2)
-                        .multiply(PaieConstants.TAUX_PRIME_ANCIENNETE_SUPPL));
+                        .multiply(tauxSuppl));
             }
         }
 
@@ -335,7 +374,12 @@ public class SalaireCalculator {
             }
         }
 
-        BigDecimal basePlafonnee = mathUtils.safeMin(baseCnps, PaieConstants.PLAFOND_CNPS);
+        Long entrepriseId = EntrepriseUtils.resolveEntrepriseId(fiche);
+        String plafondCnpsStr = paramService.getParamOrDefault(entrepriseId, "PLAFOND_CNPS", PaieConstants.PLAFOND_CNPS.toString());
+        BigDecimal plafondCnps = new BigDecimal(plafondCnpsStr);
+
+
+        BigDecimal basePlafonnee = mathUtils.safeMin(baseCnps, plafondCnps);
         System.out.println("Base CNPS avant plafonnement : " + baseCnps);
         System.out.println("Base CNPS après plafonnement : " + basePlafonnee);
 
