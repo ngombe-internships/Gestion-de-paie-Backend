@@ -9,10 +9,10 @@
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
     <groupId>com.Hades</groupId>
-    <artifactId>Paie1</artifactId>
+    <artifactId>Maalipo</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <name>Paie1</name>
-    <description>Paie1</description>
+    <name>Maalipo</name>
+    <description>Maalipo</description>
     <url/>
     <licenses>
         <license/>

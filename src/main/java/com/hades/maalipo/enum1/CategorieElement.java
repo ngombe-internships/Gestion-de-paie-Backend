@@ -1,0 +1,18 @@
+package com.hades.maalipo.enum1;
+
+public enum CategorieElement {
+
+    SALAIRE_DE_BASE,
+    PRIME,
+    INDEMNITE,
+    AVANTAGE_EN_NATURE,
+    COTISATION_SALARIALE,
+    IMPOT_SUR_REVENU,
+    CHARGE_PATRONALE,
+    AUTRE_GAIN,
+    AUTRE_RETENUE,
+    IMPOT,
+    HEURES_SUPPLEMENTAIRES,
+    COTISATION_PATRONALE,
+    PENSION_VIEILLESSE,
+}
