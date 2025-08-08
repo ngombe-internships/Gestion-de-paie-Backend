@@ -75,17 +75,39 @@ public class EntrepriseParametreRhService {
     public void initDefaultParamsForEntreprise(Long entrepriseId) {
         Entreprise entreprise = entrepriseRepo.findById(entrepriseId).orElseThrow();
         List<EntrepriseParametreRh> defaultParams = List.of(
+                // Constantes Heures
                 buildParam(entreprise, "TAUX_HEURE_SUP1", PaieConstants.TAUX_HEURE_SUP1.toString(), "DECIMAL", "Taux heure supp 1"),
                 buildParam(entreprise, "TAUX_HEURE_SUP2", PaieConstants.TAUX_HEURE_SUP2.toString(), "DECIMAL", "Taux heure supp 2"),
                 buildParam(entreprise, "TAUX_HEURE_SUP3", PaieConstants.TAUX_HEURE_SUP3.toString(), "DECIMAL", "Taux heure supp 3"),
                 buildParam(entreprise, "TAUX_HEURE_NUIT", PaieConstants.TAUX_HEURE_NUIT.toString(), "DECIMAL", "Taux heure nuit"),
                 buildParam(entreprise, "TAUX_HEURE_FERIE", PaieConstants.TAUX_HEURE_FERIE.toString(), "DECIMAL", "Taux heure férié"),
+
+                // Plafonds et seuils
                 buildParam(entreprise, "PLAFOND_CNPS", PaieConstants.PLAFOND_CNPS.toString(), "DECIMAL", "Plafond CNPS"),
                 buildParam(entreprise, "SEUIL_TAXE_COMMUNALE", PaieConstants.SEUIL_TAXE_COMMUNALE.toString(), "DECIMAL", "Seuil taxe communale"),
-                buildParam(entreprise, "JOUR_CONGER", PaieConstants.JOUR_CONGER.toString(), "DECIMAL", "Jour de congé"),
-                buildParam(entreprise, "JOURCONGESBASE", PaieConstants.JOURCONGESBASE.toString(), "DECIMAL", "Base jours congés"),
+
+                // Taux de cotisations sociales - Part salarié
+                buildParam(entreprise, "TAUX_CNPS_VIEILLESSE_SALARIE", PaieConstants.TAUX_CNPS_VIEILLESSE_SALARIE.toString(), "DECIMAL", "Taux CNPS vieillesse salarié"),
+                buildParam(entreprise, "TAUX_CREDIT_FONCIER_SALARIE", PaieConstants.TAUX_CREDIT_FONCIER_SALARIE.toString(), "DECIMAL", "Taux crédit foncier salarié"),
+                buildParam(entreprise, "TAUX_FNE_SALARIE", PaieConstants.TAUX_FNE_SALARIE.toString(), "DECIMAL", "Taux FNE salarié"),
+
+                // Taux de cotisations sociales - Part patronale
+                buildParam(entreprise, "TAUX_CNPS_VIEILLESSE_EMPLOYEUR", PaieConstants.TAUX_CNPS_VIEILLESSE_EMPLOYEUR.toString(), "DECIMAL", "Taux CNPS vieillesse employeur"),
+                buildParam(entreprise, "TAUX_CNPS_ALLOCATIONS_FAMILIALES", PaieConstants.TAUX_CNPS_ALLOCATIONS_FAMILIALES.toString(), "DECIMAL", "Taux CNPS allocations familiales"),
+                buildParam(entreprise, "TAUX_CNPS_ACCIDENTS_TRAVAIL", PaieConstants.TAUX_CNPS_ACCIDENTS_TRAVAIL.toString(), "DECIMAL", "Taux CNPS accidents travail"),
+                buildParam(entreprise, "TAUX_CREDIT_FONCIER_PATRONAL", PaieConstants.TAUX_CREDIT_FONCIER_PATRONAL.toString(), "DECIMAL", "Taux crédit foncier patronal"),
+                buildParam(entreprise, "TAUX_FNE_PATRONAL", PaieConstants.TAUX_FNE_PATRONAL.toString(), "DECIMAL", "Taux FNE patronal"),
+
+                // Taux CAC
+                buildParam(entreprise, "TAUX_CAC", PaieConstants.TAUX_CAC.toString(), "DECIMAL", "Taux CAC (Centimes Additionnels Communaux)"),
+
+                // Congés
+//                buildParam(entreprise, "JOUR_CONGER", PaieConstants.JOUR_CONGER.toString(), "DECIMAL", "Jour de congé"),
+//                buildParam(entreprise, "JOURCONGESBASE", PaieConstants.JOURCONGESBASE.toString(), "DECIMAL", "Base jours congés"),
+
+                // Primes d'ancienneté
                 buildParam(entreprise, "TAUX_PRIME_ANCIENNETE_INIT", PaieConstants.TAUX_PRIME_ANCIENNETE_INIT.toString(), "DECIMAL", "Taux prime ancienneté initial"),
-                buildParam(entreprise, "TAUX_PRIME_ANCIENNETE_SUPPL", PaieConstants.TAUX_PRIME_ANCIENNETE_SUPPL.toString(), "DECIMAL", "Taux prime ancienneté suppl.")
+                buildParam(entreprise, "TAUX_PRIME_ANCIENNETE_SUPPL", PaieConstants.TAUX_PRIME_ANCIENNETE_SUPPL.toString(), "DECIMAL", "Taux prime ancienneté supplémentaire")
         );
         paramRepo.saveAll(defaultParams);
     }

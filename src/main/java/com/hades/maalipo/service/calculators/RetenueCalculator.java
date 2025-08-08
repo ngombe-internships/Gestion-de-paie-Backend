@@ -155,14 +155,27 @@ public class RetenueCalculator {
             tauxAffiche = tauxApplique != null ? String.format("%.2f", tauxApplique) : "--";
         } else if (formule == FormuleCalculType.BAREME) {
             tauxAffiche = "BARÈME";
+        } else if (element.getCategorie() == CategorieElement.HEURES_SUPPLEMENTAIRES && tauxApplique != null) {
+            //Affichage de la majoration pour les heures supplémentaires
+            if (tauxApplique.compareTo(BigDecimal.ONE) > 0) {
+                // Pour les heures sup : afficher seulement la majoration (ex: 1.25 → +25%)
+                BigDecimal majoration = (tauxApplique.subtract(BigDecimal.ONE)).multiply(BigDecimal.valueOf(100));
+                tauxAffiche = String.format("+%.0f%%", majoration);
+            } else if (tauxApplique.compareTo(BigDecimal.ONE) == 0) {
+                // Taux normal (100%)
+                tauxAffiche = "Normal";
+            } else {
+                // Pour les cas où le taux serait < 1 (peu probable)
+                tauxAffiche = String.format("%.2f", tauxApplique);
+            }
         } else if (formule == FormuleCalculType.POURCENTAGE_BASE && tauxApplique != null && tauxApplique.compareTo(BigDecimal.ZERO) > 0) {
-            tauxAffiche = String.format("%.2f %%", tauxApplique.multiply(BigDecimal.valueOf(100)));
+            tauxAffiche = String.format("%.2f%%", tauxApplique.multiply(BigDecimal.valueOf(100)));
         } else if (formule == FormuleCalculType.MONTANT_FIXE) {
             tauxAffiche = "--";
         } else if (formule == FormuleCalculType.TAUX_DEFAUT_X_MONTANT_DEFAUT && tauxApplique != null && tauxApplique.compareTo(BigDecimal.ZERO) > 0) {
-            tauxAffiche = String.format("%.2f %%", tauxApplique.multiply(BigDecimal.valueOf(100)));
+            tauxAffiche = String.format("%.2f%%", tauxApplique.multiply(BigDecimal.valueOf(100)));
         } else if (formule == FormuleCalculType.NOMBRE_X_TAUX_DEFAUT_X_MONTANT_DEFAUT && tauxApplique != null && tauxApplique.compareTo(BigDecimal.ZERO) > 0) {
-            tauxAffiche = String.format("%.2f %%", tauxApplique.multiply(BigDecimal.valueOf(100)));
+            tauxAffiche = String.format("%.2f%%", tauxApplique.multiply(BigDecimal.valueOf(100)));
         } else {
             tauxAffiche = "--";
         }

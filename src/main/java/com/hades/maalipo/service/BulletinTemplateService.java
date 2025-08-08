@@ -15,6 +15,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -420,6 +421,11 @@ public class BulletinTemplateService {
         return dto;
     }
 
+
+    private static final List<String> ELEMENTS_INACTIVE_PAR_DEFAUT = Arrays.asList(
+            "Avance sur salaire"
+    );
+
     // Appelle cette méthode lors de la création d'une entreprise
     @Transactional
     public BulletinTemplate createDefaultTemplateForEntreprise(Entreprise entreprise) {
@@ -437,12 +443,15 @@ public class BulletinTemplateService {
                 .anyMatch(BulletinTemplate::isDefault);
         entrepriseTemplate.setDefault(!hasDefault);
 
-        // Duplication profonde de la config
+        // Duplication profonde de la config avec logique de désactivation
         for (TemplateElementPaieConfig config : defaultTemplate.getElementsConfig()) {
+            // Appliquer la même logique de désactivation que pour le template global
+            boolean isActive = config.isActive() && !ELEMENTS_INACTIVE_PAR_DEFAUT.contains(config.getElementPaie().getDesignation());
+
             TemplateElementPaieConfig newConfig = TemplateElementPaieConfig.builder()
                     .bulletinTemplate(entrepriseTemplate)
                     .elementPaie(config.getElementPaie())
-                    .isActive(config.isActive())
+                    .isActive(isActive) // Utiliser la logique de désactivation
                     .formuleCalculOverride(config.getFormuleCalculOverride())
                     .tauxDefaut(config.getTauxDefaut())
                     .montantDefaut(config.getMontantDefaut())
@@ -453,6 +462,7 @@ public class BulletinTemplateService {
         }
         return bulletinTemplateRepository.save(entrepriseTemplate);
     }
+
 
     public BulletinTemplateDto getDefaultGlobalTemplate() {
         BulletinTemplate defaultTemplate = bulletinTemplateRepository.findAll().stream()
@@ -483,10 +493,13 @@ public class BulletinTemplateService {
         entrepriseTemplate.setDefault(!hasDefault);
 
         for (TemplateElementPaieConfig config : defaultTemplate.getElementsConfig()) {
+            // Appliquer la même logique de désactivation
+            boolean isActive = config.isActive() && !ELEMENTS_INACTIVE_PAR_DEFAUT.contains(config.getElementPaie().getDesignation());
+
             TemplateElementPaieConfig newConfig = TemplateElementPaieConfig.builder()
                     .bulletinTemplate(entrepriseTemplate)
                     .elementPaie(config.getElementPaie())
-                    .isActive(config.isActive())
+                    .isActive(isActive) // Utiliser la logique de désactivation
                     .formuleCalculOverride(config.getFormuleCalculOverride())
                     .tauxDefaut(config.getTauxDefaut())
                     .montantDefaut(config.getMontantDefaut())
@@ -498,4 +511,5 @@ public class BulletinTemplateService {
         BulletinTemplate saved = bulletinTemplateRepository.save(entrepriseTemplate);
         return convertToDto(saved);
     }
+
 }

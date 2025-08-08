@@ -23,6 +23,13 @@ public class ElementPaieInitializer {
     private final ElementPaieRepository elementPaieRepository;
     private static final Logger logger = LoggerFactory.getLogger(ElementPaieInitializer.class);
     private final BulletinTemplateRepository bulletinTemplateRepository;
+
+    // Liste des éléments qui doivent être désactivés par défaut dans le template
+    private static final List<String> ELEMENTS_INACTIVE_PAR_DEFAUT = Arrays.asList(
+            "Avance sur salaire"
+            // Vous pouvez ajouter d'autres éléments ici si nécessaire
+    );
+
     public ElementPaieInitializer(ElementPaieRepository elementPaieRepository,
                                   BulletinTemplateRepository bulletinTemplateRepository) {
         this.elementPaieRepository = elementPaieRepository;
@@ -53,8 +60,8 @@ public class ElementPaieInitializer {
                 "Fonds national de l'emploi",
                 "Pension vieillesse CNPS",
                 "Allocation familiale CNPS",
-                "Accident de travail CNPS"
-
+                "Accident de travail CNPS",
+                "Avance sur salaire"
         );
 
         List<String> existingDesignations = elementPaieRepository.findByDesignationIn(designations)
@@ -218,6 +225,7 @@ public class ElementPaieInitializer {
                     true   // impacteNetAPayer
             );
         }
+
         // === CHARGES PATRONALES ===
         if (!existingDesignations.contains("Crédit foncier patronal")) {
             createElementPaie("Crédit foncier patronal", "205",
@@ -232,6 +240,7 @@ public class ElementPaieInitializer {
                     false  // impacteNetAPayer (charge patronale)
             );
         }
+
         if (!existingDesignations.contains("Pension vieillesse CNPS")) {
             createElementPaie("Pension vieillesse CNPS", "CNPS_VIEILLESSE_PAT",
                     TypeElementPaie.CHARGE_PATRONALE, CategorieElement.COTISATION_PATRONALE,
@@ -260,10 +269,6 @@ public class ElementPaieInitializer {
             );
         }
 
-
-
-
-
         if (!existingDesignations.contains("Allocation familiale CNPS")) {
             createElementPaie("Allocation familiale CNPS", "209",
                     TypeElementPaie.CHARGE_PATRONALE, CategorieElement.COTISATION_PATRONALE,
@@ -291,15 +296,23 @@ public class ElementPaieInitializer {
                     false  // impacteNetAPayer (charge patronale)
             );
         }
+
+        // === RETENUES SPÉCIALES ===
         if (!existingDesignations.contains("Avance sur salaire")) {
             createElementPaie(
                     "Avance sur salaire",
                     "AVANCE_SALAIRE",
                     TypeElementPaie.RETENUE,
-                    CategorieElement.COTISATION_SALARIALE, // ou une catégorie dédiée si tu veux
+                    CategorieElement.COTISATION_SALARIALE, // ou une catégorie dédiée si vous voulez
                     FormuleCalculType.MONTANT_FIXE,
                     null,
-                    false, false, false, false, false, false, true
+                    false,
+                    false,
+                    false,
+                    false,
+                    false,
+                    false,
+                    true
             );
         }
 
@@ -338,13 +351,13 @@ public class ElementPaieInitializer {
     }
 
     private void createDefaultTemplateIfNotExists(){
-
         boolean exists = bulletinTemplateRepository.findAll().stream()
                 .anyMatch(t -> t.isDefault() && t.getEntreprise() == null);
         if (exists) {
             logger.info("Le template par défaut existe déjà.");
             return;
         }
+
         BulletinTemplate defaultTemplate = new BulletinTemplate();
         defaultTemplate.setNom("Template par défaut");
         defaultTemplate.setDefault(true);
@@ -353,10 +366,13 @@ public class ElementPaieInitializer {
         List<ElementPaie> allElements = elementPaieRepository.findAll();
         int ordre = 0;
         for (ElementPaie ep : allElements) {
+            // Vérifier si l'élément doit être désactivé par défaut
+            boolean isActive = !ELEMENTS_INACTIVE_PAR_DEFAUT.contains(ep.getDesignation());
+
             TemplateElementPaieConfig config = TemplateElementPaieConfig.builder()
                     .bulletinTemplate(defaultTemplate)
                     .elementPaie(ep)
-                    .isActive(true)
+                    .isActive(isActive) // Utiliser la logique de désactivation
                     .formuleCalculOverride(ep.getFormuleCalcul())
                     .tauxDefaut(ep.getTauxDefaut())
                     .montantDefaut(ep.getMontantDefaut())
@@ -365,9 +381,8 @@ public class ElementPaieInitializer {
                     .build();
             defaultTemplate.getElementsConfig().add(config);
         }
+
         bulletinTemplateRepository.save(defaultTemplate);
         logger.info("Le template par défaut a été créé avec succès.");
     }
 }
-
-

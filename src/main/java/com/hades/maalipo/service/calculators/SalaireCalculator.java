@@ -49,16 +49,58 @@ public class SalaireCalculator {
                             .formuleCalcul(TypeElementPaie.GAIN.equals(type) ? FormuleCalculType.MONTANT_FIXE : FormuleCalculType.POURCENTAGE_BASE) // Exemple
                             .build();
                     if ("Prime d'Ancienneté".equals(designation)) {
-                        newElement.setFormuleCalcul(FormuleCalculType.POURCENTAGE_BASE); // Spécifique pour la prime d'ancienneté
+                        newElement.setFormuleCalcul(FormuleCalculType.POURCENTAGE_BASE);
+                    } else if (categorie == CategorieElement.HEURES_SUPPLEMENTAIRES) {
+                        //  Pour les heures sup/nuit/férie : NOMBRE_BASE_TAUX
+                        newElement.setFormuleCalcul(FormuleCalculType.NOMBRE_X_TAUX_DEFAUT_X_MONTANT_DEFAUT);
+                    } else if (categorie == CategorieElement.SALAIRE_DE_BASE) {
+                        newElement.setFormuleCalcul(FormuleCalculType.NOMBRE_BASE_TAUX);
+                    } else if (type == TypeElementPaie.GAIN) {
+                        // Pour les autres gains (primes fixes)
+                        newElement.setFormuleCalcul(FormuleCalculType.MONTANT_FIXE);
                     } else {
-                        newElement.setFormuleCalcul(TypeElementPaie.GAIN.equals(type) ? FormuleCalculType.MONTANT_FIXE : FormuleCalculType.POURCENTAGE_BASE);
+                        // Pour les retenues et charges patronales
+                        newElement.setFormuleCalcul(FormuleCalculType.POURCENTAGE_BASE);
                     }
-                    newElement.setCode(designation.toUpperCase().replace(" ", "_"));
+
+                    // Définir les impacts selon le type et la catégorie
+                    setElementImpacts(newElement, type, categorie);
 
 
                     return elementPaieRepository.save(newElement);
                 });
 
+    }
+    private void setElementImpacts(ElementPaie element, TypeElementPaie type, CategorieElement categorie) {
+        // Par défaut, tout à false
+        element.setImpacteSalaireBrut(false);
+        element.setImpacteBaseCnps(false);
+        element.setImpacteBaseIrpp(false);
+        element.setImpacteSalaireBrutImposable(false);
+        element.setImpacteBaseCreditFoncier(false);
+        element.setImpacteBaseAnciennete(false);
+        element.setImpacteNetAPayer(false);
+
+        if (type == TypeElementPaie.GAIN) {
+            // TOUS les gains impactent ces éléments de base
+            element.setImpacteSalaireBrut(true);
+            element.setImpacteNetAPayer(true);
+            element.setImpacteSalaireBrutImposable(true);
+            element.setImpacteBaseCnps(true);
+            element.setImpacteBaseIrpp(true);
+            element.setImpacteBaseCreditFoncier(true);
+
+            // CORRECTION : Seule la Prime d'Ancienneté N'IMPACTE PAS la base ancienneté
+            if (!"Prime d'Ancienneté".equals(element.getDesignation())) {
+                element.setImpacteBaseAnciennete(true);
+            }
+            // Tous les autres gains (salaire de base, heures sup, autres primes) impactent la base ancienneté
+
+        } else if (type == TypeElementPaie.RETENUE) {
+            // Les retenues impactent seulement le net à payer
+            element.setImpacteNetAPayer(true);
+        }
+        // Les charges patronales n'impactent rien par défaut
     }
 
 
@@ -483,25 +525,37 @@ public class SalaireCalculator {
         FormuleCalculType formule = elementPaie.getFormuleCalcul();
 
         if (categorie == CategorieElement.SALAIRE_DE_BASE) {
-            // Pour le salaire de base, afficher le taux horaire
             tauxAffiche = taux != null ? String.format("%.2f", taux) : "--";
             ligne.setBaseApplique(null); // Pas de base pour le salaire de base
-        } else if (formule == FormuleCalculType.BAREME) {
-            tauxAffiche = "BARÈME";
+
         } else if (formule == FormuleCalculType.MONTANT_FIXE) {
             tauxAffiche = "--";
+        } else if (formule == FormuleCalculType.BAREME) {
+            tauxAffiche = "BARÈME";
+        } else if (categorie == CategorieElement.HEURES_SUPPLEMENTAIRES && taux != null) {
+            if (taux.compareTo(BigDecimal.ONE) > 0) {
+                // Pour les heures sup : afficher seulement la majoration (ex: 1.25 → +25%)
+                BigDecimal majoration = (taux.subtract(BigDecimal.ONE)).multiply(BigDecimal.valueOf(100));
+                tauxAffiche = String.format("+%.0f%%", majoration);
+            } else if (taux.compareTo(BigDecimal.ONE) == 0) {
+                // Taux normal (100%)
+                tauxAffiche = "Normal";
+            } else {
+                // Pour les cas où le taux serait < 1 (peu probable)
+                tauxAffiche = String.format("%.2f", taux);
+            }
         } else if (formule == FormuleCalculType.TAUX_DEFAUT_X_MONTANT_DEFAUT && taux != null && taux.compareTo(BigDecimal.ZERO) > 0) {
-            tauxAffiche = String.format("%.2f %%", taux.multiply(BigDecimal.valueOf(100)));
+            tauxAffiche = String.format("%.2f%%", taux.multiply(BigDecimal.valueOf(100)));
         } else if (formule == FormuleCalculType.NOMBRE_X_TAUX_DEFAUT_X_MONTANT_DEFAUT && taux != null && taux.compareTo(BigDecimal.ZERO) > 0) {
-            tauxAffiche = String.format("%.2f %%", taux.multiply(BigDecimal.valueOf(100)));
+
+            tauxAffiche = String.format("%.2f%%", taux.multiply(BigDecimal.valueOf(100)));
         } else if (formule == FormuleCalculType.POURCENTAGE_BASE && taux != null && taux.compareTo(BigDecimal.ZERO) > 0) {
-            tauxAffiche = String.format("%.2f %%", taux.multiply(BigDecimal.valueOf(100)));
+            tauxAffiche = String.format("%.2f%%", taux.multiply(BigDecimal.valueOf(100)));
         } else if (formule == FormuleCalculType.NOMBRE_BASE_TAUX && taux != null && taux.compareTo(BigDecimal.ZERO) > 0) {
             tauxAffiche = String.format("%.2f", taux); // Taux horaire sans %
         } else {
             tauxAffiche = "--";
         }
-
         ligne.setTauxAffiche(tauxAffiche);
 
         // Définir les flags selon le type
