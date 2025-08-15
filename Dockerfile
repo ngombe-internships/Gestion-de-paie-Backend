@@ -22,6 +22,9 @@ EXPOSE $PORT
 # Variables d'environnement pour optimiser la JVM
 ENV JAVA_OPTS="-Xmx512m -Xms256m"
 
+
+ENV LANG=C.UTF-8
+ENV LC_ALL=C.UTF-8
 # Commande pour lancer l'application
 #ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]
 
