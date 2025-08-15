@@ -134,44 +134,75 @@ public class NotificationCongeService {
 
         logger.info("Exécution de la tâche planifiée: rappels des demandes en attente");
 
+        // ✅ NOUVELLE VERSION: Calculer la date limite côté Java
+        int joursAttente = 3;
+        LocalDate dateLimit = LocalDate.now().minusDays(joursAttente);
+
         // Récupérer toutes les demandes en attente depuis plus de 3 jours
-        List<DemandeConge> demandesEnAttente = demandeCongeRepository.findDemandesEnAttenteDepuisJours( StatutDemandeConge.EN_ATTENTE, 3);
+        List<DemandeConge> demandesEnAttente = demandeCongeRepository.findDemandesEnAttenteDepuisJours(
+                StatutDemandeConge.EN_ATTENTE,
+                dateLimit
+        );
+
+        logger.info("Nombre de demandes en attente depuis plus de {} jours: {}", joursAttente, demandesEnAttente.size());
 
         for (DemandeConge demande : demandesEnAttente) {
-            // Récupérer le manager et son email
-            User manager = getManagerEmploye(demande.getEmploye());
-            if (manager == null) continue;
+            try {
+                // Récupérer le manager et son email
+                User manager = getManagerEmploye(demande.getEmploye());
+                if (manager == null) {
+                    logger.warn("Aucun manager trouvé pour l'employé ID: {}", demande.getEmploye().getId());
+                    continue;
+                }
 
-            Entreprise entreprise = demande.getEmploye().getEntreprise();
-            String managerEmail = manager.getUsername(); // Fallback
+                Entreprise entreprise = demande.getEmploye().getEntreprise();
+                String managerEmail = manager.getUsername(); // Fallback
 
-            if (entreprise != null && entreprise.getEmailEntreprise() != null && !entreprise.getEmailEntreprise().isEmpty()) {
-                managerEmail = entreprise.getEmailEntreprise();
+                if (entreprise != null && entreprise.getEmailEntreprise() != null && !entreprise.getEmailEntreprise().isEmpty()) {
+                    managerEmail = entreprise.getEmailEntreprise();
+                }
+
+                // Calculer les jours d'attente réels
+                long joursAttenteReel = ChronoUnit.DAYS.between(demande.getDateDemande(), LocalDate.now());
+
+                String sujet = "RAPPEL: Demande de congé en attente depuis " + joursAttenteReel + " jours";
+                String greeting = "Bonjour " + manager.getUsername() + ",";
+                String message = String.format(
+                        "La demande de congé de %s %s est en attente de votre décision depuis %d jours.\n\n" +
+                                "Détails de la demande:\n" +
+                                "- Type: %s\n" +
+                                "- Période: du %s au %s\n" +
+                                "- Date de demande: %s\n\n" +
+                                "Veuillez vous connecter à l'application pour traiter cette demande dans les plus brefs délais.",
+                        demande.getEmploye().getPrenom(),
+                        demande.getEmploye().getNom(),
+                        joursAttenteReel,
+                        demande.getTypeConge(),
+                        demande.getDateDebut(),
+                        demande.getDateFin(),
+                        demande.getDateDemande()
+                );
+
+                // Utiliser le nouveau service d'email avec template HTML
+                emailService.sendCongeDetailedNotification(
+                        managerEmail,
+                        sujet,
+                        demande,
+                        greeting,
+                        message,
+                        entreprise
+                );
+
+                logger.info("Rappel envoyé au manager (email: {}) pour la demande ID: {} (en attente depuis {} jours)",
+                        managerEmail, demande.getId(), joursAttenteReel);
+
+            } catch (Exception e) {
+                logger.error("Erreur lors de l'envoi du rappel pour la demande ID: {}", demande.getId(), e);
+                // Continue avec la suivante sans interrompre le processus
             }
-
-            long joursAttente = ChronoUnit.DAYS.between(demande.getDateDemande(), LocalDate.now());
-            String sujet = "RAPPEL: Demande de congé en attente depuis " + joursAttente + " jours";
-            String greeting = "Bonjour " + manager.getUsername() + ",";
-            String message = String.format(
-                    "La demande de congé de %s %s est en attente de votre décision depuis %d jours.\n\n" +
-                            "Veuillez vous connecter à l'application pour traiter cette demande dans les plus brefs délais.",
-                    demande.getEmploye().getPrenom(),
-                    demande.getEmploye().getNom(),
-                    joursAttente
-            );
-
-            // Utiliser le nouveau service d'email avec template HTML
-            emailService.sendCongeDetailedNotification(
-                    managerEmail,
-                    sujet,
-                    demande,
-                    greeting,
-                    message,
-                    entreprise
-            );
-
-            logger.info("Rappel envoyé au manager (email: {}) pour la demande ID: {}", managerEmail, demande.getId());
         }
+
+        logger.info("Fin de l'exécution de la tâche planifiée: {} rappels traités", demandesEnAttente.size());
     }
 
     // Envoie un rappel aux employés la veille de leur retour de congé

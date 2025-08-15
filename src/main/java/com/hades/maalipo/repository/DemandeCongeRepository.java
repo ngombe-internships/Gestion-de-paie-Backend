@@ -82,10 +82,9 @@ public interface DemandeCongeRepository extends JpaRepository<DemandeConge, Long
 
 
     @Query("SELECT d FROM DemandeConge d WHERE d.statut = :statut AND " +
-            "DATEDIFF(CURRENT_DATE, d.dateDemande) >= :joursAttente")
+            "d.dateDemande <= :dateLimit")
     List<DemandeConge> findDemandesEnAttenteDepuisJours(@Param("statut") StatutDemandeConge statut,
-                                                        @Param("joursAttente") int joursAttente);
-
+                                                        @Param("dateLimit") LocalDate dateLimit);
 
     @Query("SELECT d FROM DemandeConge d WHERE d.dateFin = :date AND d.statut = :statut")
     List<DemandeConge> findByDateFinAndStatut(@Param("date") LocalDate date, @Param("statut") StatutDemandeConge statut);
