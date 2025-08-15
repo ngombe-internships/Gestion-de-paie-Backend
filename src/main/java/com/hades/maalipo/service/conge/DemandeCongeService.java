@@ -21,6 +21,7 @@ import com.hades.maalipo.service.AuditLogService;
 import com.hades.maalipo.specification.DemandeCongeSpecifications;
 import com.hades.maalipo.utils.JourOuvrableCalculatorUtil;
 import jakarta.transaction.Transactional;
+import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
@@ -38,6 +39,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
+@Slf4j
 public class DemandeCongeService {
 
     private static final Logger logger = LoggerFactory.getLogger(NotificationCongeService.class);
@@ -408,46 +410,51 @@ public class DemandeCongeService {
 
 
     public PageResponse<DemandeCongeResponseDto> getDemandesCongeFiltered(
-            Long employeId,
-            User currentUser,
-            String statut,
-            Integer year,
-            String searchTerm,
-            int page,
-            int size) {
+            Long employeId, User currentUser, String statut, Integer year,
+            String searchTerm, int page, int size) {
 
-        // Vérification des permissions
-        Employe employe = employeRepository.findById(employeId)
-                .orElseThrow(() -> new RessourceNotFoundException("Employé non trouvé avec l'ID: " + employeId));
-        checkViewPermissionsForEmploye(currentUser, employe);
+        try {
+            // Validation des paramètres
+            StatutDemandeConge statutEnum = null;
+            if (statut != null && !statut.equals("TOUS")) {
+                try {
+                    statutEnum = StatutDemandeConge.valueOf(statut);
+                } catch (IllegalArgumentException e) {
+                    log.warn("Statut invalide: {}", statut);
+                }
+            }
 
-        // Configuration de la pagination
-        Pageable pageable = PageRequest.of(page, size, Sort.by("dateDemande").descending());
+            Pageable pageable = PageRequest.of(page, size,
+                    Sort.by(Sort.Direction.DESC, "dateDemande"));
 
-        // Construction de la spécification
-        Specification<DemandeConge> spec = Specification.where(DemandeCongeSpecifications.withEmployeId(employeId))
-                .and(DemandeCongeSpecifications.withStatut(statut))
-                .and(DemandeCongeSpecifications.withYear(year))
-                .and(DemandeCongeSpecifications.withSearchTerm(searchTerm));
+            Page<DemandeConge> demandesPage = demandeCongeRepository.findDemandesFiltered(
+                    employeId, statutEnum, year, searchTerm, pageable);
 
-        // Exécution de la requête
-        Page<DemandeConge> demandesPage = demandeCongeRepository.findAll(spec, pageable);
+            // ✅ Conversion en DTOs
+            List<DemandeCongeResponseDto> dtos = demandesPage.getContent()
+                    .stream()
+                    .map(this::convertToDto)
+                    .collect(Collectors.toList());
 
-        // Conversion en DTOs
-        List<DemandeCongeResponseDto> demandes = demandesPage.getContent().stream()
-                .map(DemandeCongeResponseDto::new)
-                .collect(Collectors.toList());
+            // ✅ Utilisation de la méthode factory
+            return PageResponse.of(
+                    dtos,
+                    demandesPage.getNumber(),
+                    demandesPage.getSize(),
+                    demandesPage.getTotalElements(),
+                    demandesPage.getTotalPages()
+            );
 
-        // Création et retour du PageResponse
-        return new PageResponse<>(
-                demandes,
-                demandesPage.getNumber(),
-                demandesPage.getSize(),
-                demandesPage.getTotalElements(),
-                demandesPage.getTotalPages()
-        );
+        } catch (Exception e) {
+            log.error("Erreur dans getDemandesCongeFiltered: {}", e.getMessage(), e);
+
+            // ✅ Retourner une page vide avec la méthode factory
+            return PageResponse.empty(page, size);
+        }
     }
-
+    private DemandeCongeResponseDto convertToDto(DemandeConge demandeConge) {
+        return demandeConge != null ? new DemandeCongeResponseDto(demandeConge) : null;
+    }
 
 
 

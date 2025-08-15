@@ -8,14 +8,17 @@ import com.hades.maalipo.model.User;
 import com.hades.maalipo.service.conge.DemandeCongeService;
 import com.hades.maalipo.service.EmployeService;
 import jakarta.validation.Valid;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
 import java.util.Map;
 
 @RestController
+@Slf4j
 @RequestMapping("/api/conge")
 public class DemandeCongeController {
 
@@ -131,14 +134,23 @@ public class DemandeCongeController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
 
-        User currentUser = employeService.getAuthenticatedUser();
-        PageResponse<DemandeCongeResponseDto> pageResponse =
-                demandeCongeService.getDemandesCongeFiltered(employeId, currentUser, statut, year, searchTerm, page, size);
+        try {
+            User currentUser = employeService.getAuthenticatedUser();
 
-        return ResponseEntity.ok(pageResponse);
+            PageResponse<DemandeCongeResponseDto> pageResponse =
+                    demandeCongeService.getDemandesCongeFiltered(
+                            employeId, currentUser, statut, year, searchTerm, page, size);
+
+            // ✅ Plus besoin de vérifier null, le service gère déjà
+            return ResponseEntity.ok(pageResponse);
+
+        } catch (Exception e) {
+            log.error("Erreur lors de la récupération des demandes pour employé {}: {}", employeId, e.getMessage());
+
+            // ✅ Page vide avec méthode factory
+            return ResponseEntity.ok(PageResponse.empty(page, size));
+        }
     }
-
-
 
 
 

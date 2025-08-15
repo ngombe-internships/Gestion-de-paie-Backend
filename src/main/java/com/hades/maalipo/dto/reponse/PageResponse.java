@@ -1,6 +1,8 @@
 package com.hades.maalipo.dto.reponse;
 
 import lombok.Data;
+
+import java.util.ArrayList;
 import java.util.List;
 
 @Data
@@ -21,5 +23,13 @@ public class PageResponse<T> {
         this.totalPages = totalPages;
         this.first = pageNumber == 0;
         this.last = pageNumber == totalPages - 1;
+    }
+
+    public static <T> PageResponse<T> empty(int page, int size) {
+        return new PageResponse<>(new ArrayList<>(), page, size, 0L, 0);
+    }
+
+    public static <T> PageResponse<T> of(List<T> content, int page, int size, long totalElements, int totalPages) {
+        return new PageResponse<>(content, page, size, totalElements, totalPages);
     }
 }

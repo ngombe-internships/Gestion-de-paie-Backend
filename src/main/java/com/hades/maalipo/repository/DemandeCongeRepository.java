@@ -4,6 +4,8 @@ import com.hades.maalipo.enum1.StatutDemandeConge;
 import com.hades.maalipo.enum1.TypeConge;
 import com.hades.maalipo.model.DemandeConge;
 import com.hades.maalipo.model.Employe;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
@@ -13,13 +15,31 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
-public interface DemandeCongeRepository extends JpaRepository<DemandeConge, Long >, JpaSpecificationExecutor {
+public interface DemandeCongeRepository extends JpaRepository<DemandeConge, Long>, JpaSpecificationExecutor<DemandeConge> {
 
     List<DemandeConge> findByEmploye(Employe employe);
 
     List<DemandeConge> findByEmployeAndStatutIn(Employe employe, List<StatutDemandeConge> statuts);
 
     List<DemandeConge> findByEmployeAndTypeConge(Employe employe, TypeConge typeConge);
+
+    /**
+     * ✅ NOUVELLE REQUÊTE PRINCIPALE : Filtrage avec pagination (corrigée pour PostgreSQL)
+     */
+    @Query("SELECT d FROM DemandeConge d WHERE d.employe.id = :employeId " +
+            "AND (:statut IS NULL OR d.statut = :statut) " +
+            "AND (:year IS NULL OR EXTRACT(YEAR FROM d.dateDebut) = :year) " +
+            "AND (:searchTerm IS NULL OR :searchTerm = '' OR " +
+            "LOWER(COALESCE(d.raison, '')) LIKE LOWER(CONCAT('%', :searchTerm, '%')) OR " +
+            "LOWER(COALESCE(d.motifRejet, '')) LIKE LOWER(CONCAT('%', :searchTerm, '%'))) " +
+            "ORDER BY d.dateDemande DESC")
+    Page<DemandeConge> findDemandesFiltered(
+            @Param("employeId") Long employeId,
+            @Param("statut") StatutDemandeConge statut,
+            @Param("year") Integer year,
+            @Param("searchTerm") String searchTerm,
+            Pageable pageable
+    );
 
     /**
      * Trouver les demandes par employé, type et période
@@ -47,18 +67,6 @@ public interface DemandeCongeRepository extends JpaRepository<DemandeConge, Long
             @Param("dateFin") LocalDate dateFin
     );
 
-    /**
-     * Compter les demandes par type pour un employé dans l'année
-     */
-    @Query("SELECT COUNT(dc) FROM DemandeConge dc WHERE dc.employe = :employe " +
-            "AND dc.typeConge = :typeConge " +
-            "AND YEAR(dc.dateDebut) = YEAR(:annee)")
-    long countByEmployeAndTypeCongeInYear(
-            @Param("employe") Employe employe,
-            @Param("typeConge") TypeConge typeConge,
-            @Param("annee") LocalDate annee
-    );
-
     @Query("SELECT dc FROM DemandeConge dc WHERE dc.employe.id = :employeId AND dc.typeConge = com.hades.maalipo.enum1.TypeConge.CONGE_MARIAGE AND dc.statut = com.hades.maalipo.enum1.StatutDemandeConge.APPROUVEE")
     Optional<DemandeConge> findMariageLeave(@Param("employeId") Long employeId);
 
@@ -73,13 +81,10 @@ public interface DemandeCongeRepository extends JpaRepository<DemandeConge, Long
                                                     @Param("statut1") StatutDemandeConge statut1,
                                                     @Param("statut2") StatutDemandeConge statut2);
 
-    // Dans DemandeCongeRepository.java, ajouter ces méthodes:
-
     @Query("SELECT d FROM DemandeConge d WHERE d.employe.entreprise.id = :entrepriseId " +
             "AND d.statut = :statut")
     List<DemandeConge> findByEntrepriseAndStatut(@Param("entrepriseId") Long entrepriseId,
                                                  @Param("statut") StatutDemandeConge statut);
-
 
     @Query("SELECT d FROM DemandeConge d WHERE d.statut = :statut AND " +
             "d.dateDemande <= :dateLimit")
@@ -89,8 +94,6 @@ public interface DemandeCongeRepository extends JpaRepository<DemandeConge, Long
     @Query("SELECT d FROM DemandeConge d WHERE d.dateFin = :date AND d.statut = :statut")
     List<DemandeConge> findByDateFinAndStatut(@Param("date") LocalDate date, @Param("statut") StatutDemandeConge statut);
 
-
-    // NOUVELLE REQUÊTE : Trouver les demandes par employé, statut et période
     @Query("SELECT d FROM DemandeConge d WHERE d.employe.id = :employeId " +
             "AND d.dateDebut >= :dateDebut AND d.dateFin <= :dateFin " +
             "ORDER BY d.dateDebut DESC")
@@ -100,8 +103,6 @@ public interface DemandeCongeRepository extends JpaRepository<DemandeConge, Long
             @Param("dateFin") LocalDate dateFin
     );
 
-
-    //NOUVELLE REQUÊTE : Pour l'historique des congés
     @Query("SELECT d FROM DemandeConge d WHERE d.employe = :employe " +
             "AND d.statut = :statut " +
             "AND d.dateDebut >= :dateDebut AND d.dateDebut <= :dateFin")
@@ -111,7 +112,4 @@ public interface DemandeCongeRepository extends JpaRepository<DemandeConge, Long
             @Param("dateDebut") LocalDate dateDebut,
             @Param("dateFin") LocalDate dateFin
     );
-
-
 }
-
