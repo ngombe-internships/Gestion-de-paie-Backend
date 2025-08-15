@@ -135,7 +135,7 @@ public class NotificationCongeService {
         logger.info("Exécution de la tâche planifiée: rappels des demandes en attente");
 
         // Récupérer toutes les demandes en attente depuis plus de 3 jours
-        List<DemandeConge> demandesEnAttente = demandeCongeRepository.findDemandesEnAttenteDepuisJours(3);
+        List<DemandeConge> demandesEnAttente = demandeCongeRepository.findDemandesEnAttenteDepuisJours( StatutDemandeConge.EN_ATTENTE, 3);
 
         for (DemandeConge demande : demandesEnAttente) {
             // Récupérer le manager et son email
