@@ -1,6 +1,6 @@
 package com.hades.maalipo.service;
 
-import com.hades.maalipo.dto.EntrepriseParametreRhDto;
+import com.hades.maalipo.dto.entreprise.EntrepriseParametreRhDto;
 import com.hades.maalipo.model.Entreprise;
 import com.hades.maalipo.model.EntrepriseParametreRh;
 import com.hades.maalipo.repository.EntrepriseParametreRhRepository;

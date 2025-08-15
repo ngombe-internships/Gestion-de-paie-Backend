@@ -1,6 +1,6 @@
 package com.hades.maalipo.controller;
 
-import com.hades.maalipo.dto.TemplateElementPaieConfigDto;
+import com.hades.maalipo.dto.elementpaie.TemplateElementPaieConfigDto;
 import com.hades.maalipo.service.TemplateElementPaieConfigService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

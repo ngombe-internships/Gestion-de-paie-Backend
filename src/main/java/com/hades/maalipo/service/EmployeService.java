@@ -1,7 +1,7 @@
 package com.hades.maalipo.service;
 
-import com.hades.maalipo.dto.EmployeCreateDto;
-import com.hades.maalipo.dto.EmployeResponseDto;
+import com.hades.maalipo.dto.employe.EmployeCreateDto;
+import com.hades.maalipo.dto.employe.EmployeResponseDto;
 import com.hades.maalipo.enum1.Role;
 import com.hades.maalipo.exception.RessourceNotFoundException;
 import com.hades.maalipo.model.Employe;
@@ -73,6 +73,7 @@ public class EmployeService {
                .numeroCnps(dto.getNumeroCnps())
                .niu(dto.getNiu())
                .telephone(dto.getTelephone())
+               .actif(dto.getActif() != null ? dto.getActif() : true)
                .email(dto.getEmail())
                .adresse(dto.getAdresse())
                .dateEmbauche(dto.getDateEmbauche())
@@ -154,7 +155,9 @@ public class EmployeService {
 
        employe.setEntreprise(currentUser.getEntreprise());
 
-       Employe savedEmploye = employeRepo.save(employe);
+       employe.setActif(true);
+
+        Employe savedEmploye = employeRepo.save(employe);
 
        auditLogService.logAction(
                 "CREATE_EMPLOYE",
@@ -467,6 +470,15 @@ public class EmployeService {
 
         employeRepo.save(employe);
     }
+
+    public Employe findEmployeById(Long id) {
+        return employeRepo.findById(id).orElse(null);
+    }
+
+    public List<Employe> findByEntreprise(Entreprise entreprise) {
+        return employeRepo.findByEntreprise(entreprise);
+    }
+
 
 
 }

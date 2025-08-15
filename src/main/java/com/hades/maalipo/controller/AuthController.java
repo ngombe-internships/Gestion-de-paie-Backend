@@ -1,6 +1,9 @@
 package com.hades.maalipo.controller;
 
 import com.hades.maalipo.dto.*;
+import com.hades.maalipo.dto.authen.*;
+import com.hades.maalipo.dto.entreprise.CreateEmployerAndCompanyDto;
+import com.hades.maalipo.dto.reponse.ApiResponse;
 import com.hades.maalipo.exception.RessourceNotFoundException;
 import com.hades.maalipo.service.AuthService;
 import org.springframework.http.HttpStatus;
@@ -110,7 +113,7 @@ public class AuthController {
 
     @PostMapping("/change-password")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<ApiResponse<String>> changePassword(@RequestBody  ChangePasswordDto changePasswordDto){
+    public ResponseEntity<ApiResponse<String>> changePassword(@RequestBody ChangePasswordDto changePasswordDto){
         try {
             authService.changePassword(changePasswordDto);
             return new ResponseEntity<>(

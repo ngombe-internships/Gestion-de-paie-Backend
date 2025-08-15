@@ -1,10 +1,10 @@
 package com.hades.maalipo.service;
 
-import com.hades.maalipo.dto.AuditLogDto;
+import com.hades.maalipo.dto.authen.AuditLogDto;
 import com.hades.maalipo.model.AuditLog;
 import com.hades.maalipo.repository.AuditLogRepository;
 import com.hades.maalipo.repository.EmployeRepository;
-import com.hades.maalipo.utils.AuditLogSpecification;
+import com.hades.maalipo.specification.AuditLogSpecification;
 import com.hades.maalipo.model.User; // À adapter selon ton modèle
 import com.hades.maalipo.repository.UserRepository; // À adapter selon ton modèle
 import org.springframework.beans.factory.annotation.Autowired;
@@ -54,23 +54,22 @@ public class AuditLogService {
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "dateAction"));
 
         String currentUsername = getCurrentUsername();
-
-        // Récupère le user courant pour savoir son rôle/entreprise
         User user = userRepository.findByUsername(currentUsername).orElse(null);
         String role = user != null ? user.getRole().name() : null;
 
         Specification<AuditLog> spec = Specification.where(null);
 
         if ("ADMIN".equals(role)) {
-            // ADMIN voit tout, mais on applique tout de même les filtres utilisateur s'ils sont renseignés
+            // ADMIN voit TOUT (y compris les actions de création)
             spec = Specification.where(AuditLogSpecification.hasUsername(username))
                     .and(AuditLogSpecification.hasEntityName(entityName))
                     .and(AuditLogSpecification.hasEntityId(entityId))
                     .and(AuditLogSpecification.hasAction(action));
+
         } else if ("EMPLOYEUR".equals(role)) {
-            // EMPLOYEUR : logs liés à son entreprise (entityName = Entreprise et entityId = son entreprise)
+            //  EMPLOYEUR voit son entreprise MAIS PAS les actions de création
             Long entrepriseId = (user.getEntreprise() != null) ? user.getEntreprise().getId() : null;
-            List<Long> employeIds = employeRepository.findIdsByEntrepriseId(entrepriseId); // À implémenter
+            List<Long> employeIds = employeRepository.findIdsByEntrepriseId(entrepriseId);
 
             Specification<AuditLog> entrepriseSpec =
                     AuditLogSpecification.hasEntityName("Entreprise")
@@ -84,19 +83,20 @@ public class AuditLogService {
             spec = Specification.where(entrepriseSpec)
                     .or(employeSpec)
                     .or(selfSpec)
+                    .and(AuditLogSpecification.excludeSystemAdminActions()) // ⚠️ AJOUTER cette ligne
                     .and(AuditLogSpecification.hasAction(action));
+
         } else if ("EMPLOYE".equals(role)) {
-            // EMPLOYE : uniquement ses propres logs
+            // EMPLOYE voit ses actions MAIS PAS les actions de création
             spec = AuditLogSpecification.hasUsername(currentUsername)
+                    .and(AuditLogSpecification.excludeSystemAdminActions()) // ⚠️ AJOUTER cette ligne
                     .and(AuditLogSpecification.hasAction(action));
         } else {
-            // Si non authentifié, rien
             return Page.empty();
         }
 
         return auditLogRepository.findAll(spec, pageable).map(this::toDto);
     }
-
     private AuditLogDto toDto(AuditLog log) {
         return AuditLogDto.builder()
                 .id(log.getId())

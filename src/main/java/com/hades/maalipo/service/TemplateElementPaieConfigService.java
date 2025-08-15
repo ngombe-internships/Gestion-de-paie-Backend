@@ -1,7 +1,7 @@
 package com.hades.maalipo.service;
 
-import com.hades.maalipo.dto.ElementPaieDto;
-import com.hades.maalipo.dto.TemplateElementPaieConfigDto;
+import com.hades.maalipo.dto.elementpaie.ElementPaieDto;
+import com.hades.maalipo.dto.elementpaie.TemplateElementPaieConfigDto;
 import com.hades.maalipo.exception.RessourceNotFoundException;
 import com.hades.maalipo.model.BulletinTemplate;
 import com.hades.maalipo.model.ElementPaie;

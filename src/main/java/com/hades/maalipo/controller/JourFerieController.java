@@ -1,11 +1,15 @@
 package com.hades.maalipo.controller;
 
-import com.hades.maalipo.dto.ApiResponse;
+import com.hades.maalipo.dto.reponse.ApiResponse;
+import com.hades.maalipo.dto.conge.JourFerieDto;
+import com.hades.maalipo.dto.conge.JourFerieRequestDto;
+import com.hades.maalipo.dto.conge.JourFerieUpdateDto;
 import com.hades.maalipo.exception.RessourceNotFoundException;
 import com.hades.maalipo.model.JourFerie;
-import com.hades.maalipo.service.JourFerieService;
+import com.hades.maalipo.service.conge.JourFerieService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -18,91 +22,100 @@ public class JourFerieController {
 
     private final JourFerieService jourferieService;
 
-    private JourFerieController(JourFerieService jourferieService){
+    public JourFerieController(JourFerieService jourferieService) {
         this.jourferieService = jourferieService;
     }
 
+    @PreAuthorize("hasAnyRole('EMPLOYE', 'EMPLOYEUR')")
     @GetMapping
-    public ResponseEntity<ApiResponse<JourFerie>> getAllJourFeries(@PathVariable Long id){
-        Optional <JourFerie> jour = jourferieService.getJourFerieById(id);
+    public ResponseEntity<ApiResponse<List<JourFerieDto>>> getAllJourFeries() {
+        List<JourFerieDto> jours = jourferieService.getAllJoursFeriesDto();
 
-        if(jour.isPresent()){
-            ApiResponse<JourFerie> response = new ApiResponse<>(
-                    "Jour ferie trouve",
-                    jour.get(),
-                    HttpStatus.OK
-            );
-            return new ResponseEntity<>(response,HttpStatus.OK);
-        } else{
-            ApiResponse<JourFerie> errorResponse = new ApiResponse<>(
-                    "Jour ferie non trouve avec ID: " +id,
-                    null,
-                    HttpStatus.NO_CONTENT
-            );
-            return new ResponseEntity<>(errorResponse, HttpStatus.NO_CONTENT);
-        }
-
+        ApiResponse<List<JourFerieDto>> response = new ApiResponse<>(
+                "Liste des jours fériés récupérée avec succès",
+                jours,
+                HttpStatus.OK
+        );
+        return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<ApiResponse<List<JourFerie>>> getJourFeriesByid(){
-        List <JourFerie> newjour = jourferieService.getAllJoursFeries();
+    @PreAuthorize("hasAnyRole('EMPLOYE', 'EMPLOYEUR')")
+    public ResponseEntity<ApiResponse<JourFerie>> getJourFerieById(@PathVariable Long id) {
+        Optional<JourFerie> jour = jourferieService.getJourFerieById(id);
 
-        ApiResponse<List<JourFerie>> response = new ApiResponse<>(
-                "Jour ferie ajouter avec succes",
-                newjour,
-                HttpStatus.OK
-        );
-        return new ResponseEntity<>(response,HttpStatus.OK);
+        if (jour.isPresent()) {
+            ApiResponse<JourFerie> response = new ApiResponse<>(
+                    "Jour férié trouvé",
+                    jour.get(),
+                    HttpStatus.OK
+            );
+            return new ResponseEntity<>(response, HttpStatus.OK);
+        } else {
+            ApiResponse<JourFerie> errorResponse = new ApiResponse<>(
+                    "Jour férié non trouvé avec ID: " + id,
+                    null,
+                    HttpStatus.NOT_FOUND
+            );
+            return new ResponseEntity<>(errorResponse, HttpStatus.NOT_FOUND);
+        }
     }
-
-
 
     @PostMapping
-    public ResponseEntity<ApiResponse<JourFerie>> addJourFerie(@RequestBody JourFerie jourFerie ){
+    @PreAuthorize("hasRole('EMPLOYEUR')")
+    public ResponseEntity<ApiResponse<JourFerie>> addJourFerie(@RequestBody JourFerieRequestDto jourFerieDto) {
+        try {
+            JourFerie newjour = jourferieService.addJourFerie(jourFerieDto);
 
-        JourFerie newjour = jourferieService.addJourFerie(jourFerie);
-
-        ApiResponse<JourFerie> response = new ApiResponse<>(
-                "Jour ferie ajouter avec succes",
-                newjour,
-                HttpStatus.CREATED
-        );
-        return new ResponseEntity<>(response,HttpStatus.CREATED);
+            ApiResponse<JourFerie> response = new ApiResponse<>(
+                    "Jour férié ajouté avec succès",
+                    newjour,
+                    HttpStatus.CREATED
+            );
+            return new ResponseEntity<>(response, HttpStatus.CREATED);
+        } catch (Exception e) {
+            ApiResponse<JourFerie> errorResponse = new ApiResponse<>(
+                    "Erreur lors de l'ajout du jour férié: " + e.getMessage(),
+                    null,
+                    HttpStatus.BAD_REQUEST
+            );
+            return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
+        }
     }
 
 
-    @PutMapping
-    public ResponseEntity<ApiResponse<JourFerie>> updateJourFerie(@PathVariable Long id, @RequestBody JourFerie jourFerie ){
+    @PreAuthorize("hasRole('EMPLOYEUR')")
+    @PutMapping("/{id}")
+    public ResponseEntity<ApiResponse<JourFerieUpdateDto>> updateJourFerie(@PathVariable Long id, @RequestBody JourFerie jourFerie) {
+        JourFerieUpdateDto updatedJour = jourferieService.updateJourFerie(id, jourFerie);
 
-        JourFerie newjour = jourferieService.updateJourFerie(id,jourFerie);
-
-        ApiResponse<JourFerie> response = new ApiResponse<>(
-                "Mise a jour du Jour ferie effectuer avec succes",
-                newjour,
-                HttpStatus.NO_CONTENT
+        ApiResponse<JourFerieUpdateDto> response = new ApiResponse<>(
+                "Mise à jour du jour férié effectuée avec succès",
+                updatedJour,
+                HttpStatus.OK
         );
-        return new ResponseEntity<>(response,HttpStatus.NO_CONTENT);
+        return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
-
+    @PreAuthorize("hasRole('EMPLOYEUR')")
     @GetMapping("/date/{date}")
     public ResponseEntity<JourFerie> getJourFerieByDate(@PathVariable String date) {
-        LocalDate localDate = LocalDate.parse(date); //
+        LocalDate localDate = LocalDate.parse(date);
         JourFerie jourFerie = jourferieService.getJoutFerieByDate(localDate)
                 .orElseThrow(() -> new RessourceNotFoundException("Aucun jour férié trouvé pour la date : " + date));
         return ResponseEntity.ok(jourFerie);
     }
 
+    @PreAuthorize("hasRole('EMPLOYEUR')")
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<Void>> deleteJourFerie(@PathVariable Long id) {
         jourferieService.deleteId(id);
 
         ApiResponse<Void> response = new ApiResponse<>(
-                "Jour Ferier supprime avec succes",
+                "Jour férié supprimé avec succès",
                 null,
                 HttpStatus.NO_CONTENT
         );
-        return new ResponseEntity<>(response,HttpStatus.NO_CONTENT); // 204 No Content
+        return new ResponseEntity<>(response, HttpStatus.NO_CONTENT);
     }
 }

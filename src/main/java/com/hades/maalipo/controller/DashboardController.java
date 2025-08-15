@@ -1,6 +1,6 @@
 package com.hades.maalipo.controller;
 
-import com.hades.maalipo.dto.ApiResponse;
+import com.hades.maalipo.dto.reponse.ApiResponse;
 import com.hades.maalipo.service.DashboardService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

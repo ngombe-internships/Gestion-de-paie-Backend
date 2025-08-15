@@ -1,8 +1,8 @@
 package com.hades.maalipo.service.pdf;
 
-import com.hades.maalipo.dto.BulletinPaieResponseDto;
-import com.hades.maalipo.dto.EntrepriseDto;
-import com.hades.maalipo.dto.LignePaieDto;
+import com.hades.maalipo.dto.bulletin.BulletinPaieResponseDto;
+import com.hades.maalipo.dto.entreprise.EntrepriseDto;
+import com.hades.maalipo.dto.bulletin.LignePaieDto;
 import com.openhtmltopdf.pdfboxout.PdfRendererBuilder;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;

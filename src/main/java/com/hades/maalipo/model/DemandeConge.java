@@ -3,6 +3,10 @@ package com.hades.maalipo.model;
 import com.hades.maalipo.enum1.StatutDemandeConge;
 import com.hades.maalipo.enum1.TypeConge;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Future;
+import jakarta.validation.constraints.FutureOrPresent;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -26,9 +30,13 @@ public class DemandeConge {
     @JoinColumn(name = "employe_id", nullable = false)
     private Employe employe;
 
+    @NotNull(message = "La date de début est obligatoire")
+    @FutureOrPresent(message = "La date de début doit être dans le présent ou le futur")
     @Column(name = "date_debut", nullable = false)
     private LocalDate dateDebut;
 
+    @NotNull(message = "La date de fin est obligatoire")
+    @Future(message = "La date de fin doit être dans le futur")
     @Column(name = "date_fin", nullable = false)
     private LocalDate dateFin;
 
@@ -36,6 +44,7 @@ public class DemandeConge {
     @Column(name = "type_conge", nullable = false)
     private TypeConge typeConge;
 
+    @Size(max = 500, message = "La raison ne doit pas dépasser 500 caractères")
     @Column(name = "raison", length = 500)
     private String raison;
 

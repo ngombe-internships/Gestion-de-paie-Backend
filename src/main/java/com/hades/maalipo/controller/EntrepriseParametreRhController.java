@@ -1,6 +1,6 @@
 package com.hades.maalipo.controller;
 
-import com.hades.maalipo.dto.EntrepriseParametreRhDto;
+import com.hades.maalipo.dto.entreprise.EntrepriseParametreRhDto;
 import com.hades.maalipo.service.EntrepriseParametreRhService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;

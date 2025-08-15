@@ -1,8 +1,8 @@
 package com.hades.maalipo.controller;
 
-import com.hades.maalipo.dto.ApiResponse;
-import com.hades.maalipo.dto.EmployeCreateDto;
-import com.hades.maalipo.dto.EmployeResponseDto;
+import com.hades.maalipo.dto.reponse.ApiResponse;
+import com.hades.maalipo.dto.employe.EmployeCreateDto;
+import com.hades.maalipo.dto.employe.EmployeResponseDto;
 import com.hades.maalipo.service.EmployeService;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;

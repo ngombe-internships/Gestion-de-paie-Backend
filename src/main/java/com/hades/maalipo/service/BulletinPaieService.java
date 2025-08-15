@@ -1,6 +1,11 @@
 package com.hades.maalipo.service;
 
-import com.hades.maalipo.dto.*;
+import com.hades.maalipo.dto.bulletin.BulletinPaieCreateDto;
+import com.hades.maalipo.dto.bulletin.BulletinPaieEmployeurDto;
+import com.hades.maalipo.dto.bulletin.BulletinPaieResponseDto;
+import com.hades.maalipo.dto.bulletin.LignePaieDto;
+import com.hades.maalipo.dto.employe.EmployeResponseDto;
+import com.hades.maalipo.dto.entreprise.EntrepriseDto;
 import com.hades.maalipo.enum1.*;
 import com.hades.maalipo.exception.RessourceNotFoundException;
 import com.hades.maalipo.model.*;
@@ -346,7 +351,7 @@ public class BulletinPaieService {
             if (elementsTraites.contains(elementKey)) continue;
             elementsTraites.add(elementKey);
 
-            System.out.println("\n🎯 Traitement CAC (après IRPP): " + element.getCode());
+            System.out.println("\n Traitement CAC (après IRPP): " + element.getCode());
 
             LigneBulletinPaie ligne = new LigneBulletinPaie();
             retenueCalculator.calculerMontantRetenue(ligne, element, config.getFormuleCalculOverride() != null ?
@@ -355,7 +360,7 @@ public class BulletinPaieService {
 
             fiche.addLignePaie(ligne);
             Hibernate.initialize(ligne.getElementPaie()); // PATCH: initialize ligne.elementPaie
-            System.out.println("✅ CAC ajouté: " + ligne.getMontantFinal());
+            System.out.println("CAC ajouté: " + ligne.getMontantFinal());
         }
 
         for (TemplateElementPaieConfig config : template.getElementsConfig()) {
@@ -386,7 +391,7 @@ public class BulletinPaieService {
 
             fiche.addLignePaie(ligne);
             Hibernate.initialize(ligne.getElementPaie()); // PATCH: initialize ligne.elementPaie
-            System.out.println("✅ Ajout ligne RETENUE: " + element.getCode() + ", Montant: " + ligne.getMontantFinal());
+            System.out.println(" Ajout ligne RETENUE: " + element.getCode() + ", Montant: " + ligne.getMontantFinal());
         }
         if (fiche.getAvancesSurSalaires() != null && fiche.getAvancesSurSalaires().compareTo(BigDecimal.ZERO) > 0) {
             LigneBulletinPaie ligneAvance = new LigneBulletinPaie();
@@ -546,6 +551,7 @@ public class BulletinPaieService {
 
         return dto;
     }
+
     private static BigDecimal nvl(BigDecimal val) {
         return val != null ? val : BigDecimal.ZERO;
     }
@@ -921,7 +927,7 @@ public class BulletinPaieService {
 
 
         // Vérifier la transition de statut
-        if (bulletin.getStatusBulletin() == null || !bulletin.getStatusBulletin().toString().trim().equalsIgnoreCase("GÉNÉRÉ")) {
+        if (bulletin.getStatusBulletin() != StatusBulletin.GÉNÉRÉ){
             throw new IllegalStateException("Le bulletin ne peut être validé que s'il est au statut 'Généré'. Statut actuel : " + bulletin.getStatusBulletin());
         }
 
@@ -1098,15 +1104,6 @@ public class BulletinPaieService {
 
 
 
-
-
-
-
-
-
-
-
-
     private BulletinPaieEmployeurDto convertToEmployeurDto(BulletinPaie bulletinPaie) {
         BulletinPaieEmployeurDto dto = new BulletinPaieEmployeurDto();
         dto.setId(bulletinPaie.getId());
@@ -1163,8 +1160,6 @@ public class BulletinPaieService {
     }
 
 
-
-
     @Transactional
     public List<BulletinPaieResponseDto> getBulletinsFotCurrentUser() {
       Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -1197,9 +1192,6 @@ public class BulletinPaieService {
           }
 
     }
-
-
-
 
 
     public BulletinPaieResponseDto updateBulletinPaie (Long id, BulletinPaie updatedBulletinPaie){

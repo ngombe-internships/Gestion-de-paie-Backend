@@ -1,6 +1,10 @@
 package com.hades.maalipo.service;
 
-import com.hades.maalipo.dto.*;
+import com.hades.maalipo.dto.authen.AuthResponseDto;
+import com.hades.maalipo.dto.authen.ChangePasswordDto;
+import com.hades.maalipo.dto.authen.LoginDto;
+import com.hades.maalipo.dto.authen.RegisterDto;
+import com.hades.maalipo.dto.entreprise.CreateEmployerAndCompanyDto;
 import com.hades.maalipo.enum1.Role;
 import com.hades.maalipo.exception.RessourceNotFoundException;
 import com.hades.maalipo.model.*;
@@ -9,6 +13,7 @@ import com.hades.maalipo.repository.EntrepriseRepository;
 import com.hades.maalipo.repository.PasswordResetTokenRepository;
 import com.hades.maalipo.repository.UserRepository;
 import com.hades.maalipo.security.JwtTokenProvider;
+import com.hades.maalipo.service.conge.TypeCongeConfigService;
 import com.hades.maalipo.service.email.EmailService;
 import com.hades.maalipo.service.pdf.UnifiedFileStorageService;
 import org.springframework.beans.factory.annotation.Value;
@@ -44,7 +49,7 @@ public class AuthService {
     private final PasswordResetTokenRepository passwordResetTokenRepository;
     private final EmailService emailService;
     private final AuditLogService auditLogService;
-
+    private final TypeCongeConfigService typeCongeConfigService;
 
 
     @Value("${app.frontend.password-reset-url}")
@@ -62,8 +67,9 @@ public class AuthService {
              PasswordResetTokenRepository passwordResetTokenRepository,
             EmailService emailService,
             AuditLogService auditLogService,
-            EntrepriseParametreRhService entrepriseParametreRhService
-            ) {
+            EntrepriseParametreRhService entrepriseParametreRhService,
+            TypeCongeConfigService typeCongeConfigService
+    ) {
 
 
         this.userRepository = userRepository;
@@ -78,6 +84,8 @@ public class AuthService {
         this.emailService = emailService;
         this.auditLogService = auditLogService;
         this.entrepriseParametreRhService = entrepriseParametreRhService;
+        this.typeCongeConfigService = typeCongeConfigService;
+
     }
 
     /**
@@ -157,7 +165,7 @@ public class AuthService {
 
             //creation des parametre par defaut
             entrepriseParametreRhService.initDefaultParamsForEntreprise(savedEntreprise.getId());
-
+            typeCongeConfigService.initializeDefaultConfigsForEntreprise(savedEntreprise.getId());
             // Création de l'utilisateur employeur
             User employeurUser = createEmployeurUser(createDto, savedEntreprise);
             User savedUser = userRepository.save(employeurUser);
@@ -223,6 +231,7 @@ public class AuthService {
     public void initiatePasswordReset(String email) {
         User user = null;
         String recipientEmail = null;
+        String fullName = "";
 
         // Rechercher par email d'abord
         Optional<Employe> employeOptional = employeRepository.findByEmail(email);
@@ -242,6 +251,10 @@ public class AuthService {
             }
 
         }
+        if (user != null && fullName.isEmpty()) {
+            fullName = user.getUsername(); // Utilisez le nom d'utilisateur comme fallback
+        }
+
         //Vérifier la limitation de taux (3 tentatives par heure)
         LocalDateTime oneHourAgo = LocalDateTime.now().minusHours(1);
         long recentAttempts = passwordResetTokenRepository.countByUserAndCreatedAtAfter(user, oneHourAgo);
@@ -270,7 +283,7 @@ public class AuthService {
         passwordResetTokenRepository.saveAndFlush(resetToken);
 
         String resetLink = frontendPasswordResetUrl + "/" + token;
-        emailService.sendPasswordResetEmail(recipientEmail, resetLink);
+        emailService.sendPasswordResetEmail(recipientEmail, resetLink, fullName);
 
         System.out.println("Token de réinitialisation créé: " + token + " pour l'utilisateur: " + user.getUsername());
     }

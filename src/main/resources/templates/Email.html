@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${emailSubject}">Maalipo - Notification</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f6f9fc;
+            margin: 0;
+            padding: 0;
+            color: #333333;
+        }
+        .container {
+            max-width: 600px;
+            margin: 20px auto;
+            background: #ffffff;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid #e1e4e8;
+        }
+        .header {
+            background-color: #0d6efd;
+            color: #ffffff;
+            padding: 25px;
+            text-align: center;
+        }
+        .logo {
+            max-width: 120px;
+            margin-bottom: 10px;
+        }
+        .company-name {
+            font-size: 22px;
+            font-weight: bold;
+        }
+        .content {
+            padding: 30px;
+            font-size: 15px;
+            line-height: 1.6;
+        }
+        .cta-button {
+            display: inline-block;
+            background-color: #0d6efd;
+            color: white !important;
+            padding: 12px 25px;
+            border-radius: 5px;
+            text-decoration: none;
+            font-weight: bold;
+            margin-top: 20px;
+        }
+        .cta-button:hover {
+            background-color: #0056b3;
+        }
+        .info-box {
+            background-color: #f8f9fa;
+            border-left: 4px solid #0d6efd;
+            padding: 15px;
+            margin: 20px 0;
+            font-size: 14px;
+        }
+        .footer {
+            background-color: #f1f3f5;
+            color: #6c757d;
+            text-align: center;
+            font-size: 13px;
+            padding: 20px;
+        }
+        @media (max-width: 600px) {
+            .content { padding: 20px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+
+    <!-- HEADER -->
+    <div class="header">
+<!--        <img th:if="${logoUrl != null}" th:src="${logoUrl}"-->
+<!--             src="https://via.placeholder.com/120x60?text=Maalipo"-->
+<!--             alt="Maalipo Logo" class="logo">-->
+        <div class="company-name">Maalipo</div>
+    </div>
+
+    <!-- CONTENT -->
+    <div class="content">
+        <p th:text="${greeting}">Bonjour,</p>
+
+        <!-- Email spécifique -->
+        <div th:if="${emailType == 'password-reset'}">
+            <p>Vous avez demandé à réinitialiser votre mot de passe.</p>
+            <div class="info-box">
+                Si vous n'êtes pas à l'origine de cette demande, ignorez cet e-mail.
+            </div>
+            <a th:href="${resetLink}" href="#" class="cta-button">Réinitialiser mon mot de passe</a>
+            <p style="font-size: 12px; color: #888;">Lien valable 1 heure.</p>
+        </div>
+
+        <!-- Congé notification -->
+        <div th:if="${emailType == 'conge-notification'}">
+            <p th:text="${messageContent}">Votre demande de congé a été traitée.</p>
+            <div class="info-box">
+                <strong>Type :</strong> <span th:text="${congeDetails.type}">Congé payé</span><br>
+                <strong>Statut :</strong> <span th:text="${congeDetails.statut}">Approuvé</span><br>
+                <strong>Du :</strong> <span th:text="${congeDetails.dateDebut}">01/02/2025</span>
+                <strong>au :</strong> <span th:text="${congeDetails.dateFin}">05/02/2025</span>
+            </div>
+        </div>
+
+        <!-- Général -->
+        <div th:if="${emailType == 'general'}" th:utext="${messageContent}">
+            Contenu du message...
+        </div>
+
+        <p style="margin-top: 30px; font-size: 13px; color: #666;">
+            Pour toute question, contactez notre support.
+        </p>
+    </div>
+
+    <!-- FOOTER -->
+    <div class="footer">
+        <div th:if="${companyAddress != null}" th:text="${companyAddress}">
+            123 Rue de l'Entreprise, Douala, Cameroun
+        </div>
+        <div th:if="${companyPhone != null}">Tél: <span th:text="${companyPhone}">+237 6XX XXX XXX</span></div>
+        <div th:if="${companyEmail != null}">Email: <span th:text="${companyEmail}">support@maalipo.com</span></div>
+        <p style="margin-top: 10px;">© 2025 Maalipo. Tous droits réservés.</p>
+    </div>
+
+</div>
+
+</body>
+</html>

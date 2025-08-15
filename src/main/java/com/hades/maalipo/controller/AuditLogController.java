@@ -1,7 +1,7 @@
 package com.hades.maalipo.controller;
 
-import com.hades.maalipo.dto.AuditLogDto;
-import com.hades.maalipo.dto.PdfExportRequestDto;
+import com.hades.maalipo.dto.authen.AuditLogDto;
+import com.hades.maalipo.dto.bulletin.PdfExportRequestDto;
 import com.hades.maalipo.service.AuditLogService;
 
 import com.hades.maalipo.service.email.MailLogService;

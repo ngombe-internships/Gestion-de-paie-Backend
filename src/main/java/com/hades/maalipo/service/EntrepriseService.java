@@ -1,8 +1,8 @@
 package com.hades.maalipo.service;
 
-import com.hades.maalipo.dto.EmployeurListDto;
-import com.hades.maalipo.dto.EntrepriseDto;
-import com.hades.maalipo.dto.EntrepriseUpdateDto;
+import com.hades.maalipo.dto.employe.EmployeurListDto;
+import com.hades.maalipo.dto.entreprise.EntrepriseDto;
+import com.hades.maalipo.dto.entreprise.EntrepriseUpdateDto;
 import com.hades.maalipo.exception.RessourceNotFoundException;
 import com.hades.maalipo.model.Entreprise;
 import com.hades.maalipo.repository.EntrepriseRepository;

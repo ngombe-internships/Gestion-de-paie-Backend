@@ -10,7 +10,7 @@ import org.springframework.context.annotation.Profile;
 import java.util.Map;
 
 @Configuration
-@Profile("prod")
+//@Profile("prod")
 public class CloudinaryConfig {
 
     @Value("${cloudinary.cloud_name}")

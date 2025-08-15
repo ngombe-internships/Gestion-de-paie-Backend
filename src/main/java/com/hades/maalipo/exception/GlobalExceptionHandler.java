@@ -1,6 +1,6 @@
 package com.hades.maalipo.exception;
 
-import com.hades.maalipo.dto.ApiResponse;
+import com.hades.maalipo.dto.reponse.ApiResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;

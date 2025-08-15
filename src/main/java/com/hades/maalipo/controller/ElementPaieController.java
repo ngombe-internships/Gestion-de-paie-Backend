@@ -1,6 +1,6 @@
 package com.hades.maalipo.controller;
 
-import com.hades.maalipo.dto.ElementPaieDto;
+import com.hades.maalipo.dto.elementpaie.ElementPaieDto;
 import com.hades.maalipo.model.ElementPaie;
 import com.hades.maalipo.service.ElementPaieService;
 import org.springframework.http.HttpStatus;

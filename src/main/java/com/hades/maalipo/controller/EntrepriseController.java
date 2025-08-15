@@ -1,9 +1,9 @@
 package com.hades.maalipo.controller;
 
-import com.hades.maalipo.dto.ApiResponse;
+import com.hades.maalipo.dto.reponse.ApiResponse;
 
-import com.hades.maalipo.dto.EmployeurListDto;
-import com.hades.maalipo.dto.EntrepriseDto;
+import com.hades.maalipo.dto.employe.EmployeurListDto;
+import com.hades.maalipo.dto.entreprise.EntrepriseDto;
 import com.hades.maalipo.exception.RessourceNotFoundException;
 import com.hades.maalipo.service.EntrepriseService;
 import org.springframework.data.domain.Page;

@@ -31,7 +31,7 @@ public class UnifiedFileStorageService {
                 throw new IOException("CloudinaryService non disponible en production");
             }
             logger.info("Utilisation de Cloudinary pour l'upload");
-            return cloudinaryService.uploadFile(file);
+            return cloudinaryService.uploadLogo(file);
         } else {
             if (localFileStorageService == null) {
                 throw new IOException("FileStorageService non disponible en développement");

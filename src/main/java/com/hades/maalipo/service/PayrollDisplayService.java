@@ -1,6 +1,6 @@
 package com.hades.maalipo.service;
 
-import com.hades.maalipo.dto.LignePaieDto;
+import com.hades.maalipo.dto.bulletin.LignePaieDto;
 import com.hades.maalipo.enum1.CategorieElement;
 import com.hades.maalipo.enum1.FormuleCalculType;
 import com.hades.maalipo.enum1.TypeElementPaie;

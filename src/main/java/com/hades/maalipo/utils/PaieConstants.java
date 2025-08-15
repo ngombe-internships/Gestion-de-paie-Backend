@@ -28,7 +28,7 @@ public class PaieConstants {
 
     // Taux de cotisations sociales - Part patronale CORRIGÉS
     public static final BigDecimal TAUX_CNPS_VIEILLESSE_EMPLOYEUR = new BigDecimal("0.042"); // 4.2%
-    public static final BigDecimal TAUX_CNPS_ALLOCATIONS_FAMILIALES = new BigDecimal("0.037"); // 3.7%
+    public static final BigDecimal TAUX_CNPS_ALLOCATIONS_FAMILIALES = new BigDecimal("0.07"); // 7%
     public static final BigDecimal TAUX_CNPS_ACCIDENTS_TRAVAIL = new BigDecimal("0.025"); // 2.5%
     public static final BigDecimal TAUX_CREDIT_FONCIER_PATRONAL = new BigDecimal("0.015"); // 1.5%
     public static final BigDecimal TAUX_FNE_PATRONAL = new BigDecimal("0.01"); // 1%

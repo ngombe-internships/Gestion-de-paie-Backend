@@ -52,6 +52,10 @@ public class Employe {
     @Column(name = "adresse")
     private String adresse;
 
+    @Builder.Default
+    @Column(name = "actif", nullable = false, columnDefinition = "BOOLEAN DEFAULT TRUE")
+    private boolean actif = true;
+
 
 
     @Column(name = "poste")

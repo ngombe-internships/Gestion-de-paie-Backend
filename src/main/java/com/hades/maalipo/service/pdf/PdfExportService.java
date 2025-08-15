@@ -1,6 +1,6 @@
 package com.hades.maalipo.service.pdf;
 
-import com.hades.maalipo.dto.AuditLogDto;
+import com.hades.maalipo.dto.authen.AuditLogDto;
 import org.apache.pdfbox.pdmodel.*;
 import org.apache.pdfbox.pdmodel.common.PDRectangle;
 import org.apache.pdfbox.pdmodel.font.PDType1Font;

@@ -1,7 +1,7 @@
 package com.hades.maalipo.service.email;
 
 
-import com.hades.maalipo.dto.AuditLogDto;
+import com.hades.maalipo.dto.authen.AuditLogDto;
 import com.hades.maalipo.service.AuditLogService;
 import com.hades.maalipo.service.pdf.PdfExportService;
 import jakarta.mail.MessagingException;

@@ -39,4 +39,7 @@ public interface EmployeRepository extends JpaRepository<Employe , Long > , JpaS
 
     Page<Employe> findByEntrepriseOrderById(Entreprise entreprise, Pageable pageable);
 
-}
+
+    // Compter les employés actifs dans une entreprise
+    @Query("SELECT COUNT(e) FROM Employe e WHERE e.entreprise.id = :entrepriseId AND e.actif = :actif")
+    int countByEntrepriseIdAndActif(@Param("entrepriseId") Long entrepriseId, @Param("actif") boolean actif);   }

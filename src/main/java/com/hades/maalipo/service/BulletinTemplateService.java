@@ -1,6 +1,9 @@
 package com.hades.maalipo.service;
 
-import com.hades.maalipo.dto.*; // Assurez-vous que tous les DTOs nécessaires sont importés
+import com.hades.maalipo.dto.bulletin.BulletinTemplateDto;
+import com.hades.maalipo.dto.elementpaie.ElementPaieDto;
+import com.hades.maalipo.dto.elementpaie.TemplateElementPaieConfigDto;
+import com.hades.maalipo.dto.entreprise.EntrepriseDto;
 import com.hades.maalipo.exception.RessourceNotFoundException;
 import com.hades.maalipo.model.BulletinTemplate;
 import com.hades.maalipo.model.ElementPaie;

@@ -1,6 +1,6 @@
 package com.hades.maalipo.controller;
 
-import com.hades.maalipo.dto.EmployePaieConfigDto;
+import com.hades.maalipo.dto.employe.EmployePaieConfigDto;
 import com.hades.maalipo.model.EmployePaieConfig;
 import com.hades.maalipo.service.EmployePaieConfigService;
 import org.springframework.data.domain.Page;

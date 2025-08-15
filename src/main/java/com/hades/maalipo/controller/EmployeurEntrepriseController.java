@@ -1,9 +1,9 @@
 // src/main/java/com/hades/paie1/controller/EmployeurEntrepriseController.java
 package com.hades.maalipo.controller;
 
-import com.hades.maalipo.dto.ApiResponse;
-import com.hades.maalipo.dto.EntrepriseDto;
-import com.hades.maalipo.dto.EntrepriseUpdateDto; // Importez le DTO de mise à jour pour l'employeur
+import com.hades.maalipo.dto.reponse.ApiResponse;
+import com.hades.maalipo.dto.entreprise.EntrepriseDto;
+import com.hades.maalipo.dto.entreprise.EntrepriseUpdateDto; // Importez le DTO de mise à jour pour l'employeur
 import com.hades.maalipo.enum1.Role;
 import com.hades.maalipo.exception.RessourceNotFoundException;
 import com.hades.maalipo.model.User;

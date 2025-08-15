@@ -1,9 +1,9 @@
 package com.hades.maalipo.controller;
 
-import com.hades.maalipo.dto.ApiResponse;
-import com.hades.maalipo.dto.BulletinPaieCreateDto;
-import com.hades.maalipo.dto.BulletinPaieEmployeurDto;
-import com.hades.maalipo.dto.BulletinPaieResponseDto;
+import com.hades.maalipo.dto.reponse.ApiResponse;
+import com.hades.maalipo.dto.bulletin.BulletinPaieCreateDto;
+import com.hades.maalipo.dto.bulletin.BulletinPaieEmployeurDto;
+import com.hades.maalipo.dto.bulletin.BulletinPaieResponseDto;
 import com.hades.maalipo.enum1.StatusBulletin;
 import com.hades.maalipo.model.BulletinPaie;
 import com.hades.maalipo.repository.BulletinPaieRepo;

@@ -1,10 +1,11 @@
 package com.hades.maalipo.controller;
 
-import com.hades.maalipo.dto.ApiResponse;
-import com.hades.maalipo.dto.DemandeCongeCreateDto;
-import com.hades.maalipo.dto.DemandeCongeResponseDto;
+import com.hades.maalipo.dto.reponse.ApiResponse;
+import com.hades.maalipo.dto.conge.DemandeCongeCreateDto;
+import com.hades.maalipo.dto.conge.DemandeCongeResponseDto;
+import com.hades.maalipo.dto.reponse.PageResponse;
 import com.hades.maalipo.model.User;
-import com.hades.maalipo.service.DemandeCongeService;
+import com.hades.maalipo.service.conge.DemandeCongeService;
 import com.hades.maalipo.service.EmployeService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -12,7 +13,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -22,10 +22,14 @@ public class DemandeCongeController {
     private final DemandeCongeService demandeCongeService;
     private final EmployeService employeService;
 
+
     public DemandeCongeController(DemandeCongeService demandeCongeService, EmployeService employeService) {
         this.demandeCongeService = demandeCongeService;
         this.employeService = employeService;
     }
+
+
+
 
     @PostMapping
     @PreAuthorize("hasAnyRole('EMPLOYE', 'EMPLOYEUR')")
@@ -41,20 +45,24 @@ public class DemandeCongeController {
                 HttpStatus.CREATED), HttpStatus.CREATED);
     }
 
+
+
+
+
     // Récupérer toutes les demandes de congé d'un employé
-    @GetMapping("/employe/{employeId}")
-    @PreAuthorize("hasAnyRole('EMPLOYE', 'EMPLOYEUR', 'ADMIN')")
-    public ResponseEntity<ApiResponse<List<DemandeCongeResponseDto>>> getDemandesCongeByEmploye(
-            @PathVariable Long employeId) {
-
-        User currentUser = employeService.getAuthenticatedUser();
-        List<DemandeCongeResponseDto> demandes = demandeCongeService.getDemandesCongeByEmploye(employeId, currentUser);
-
-        return ResponseEntity.ok(new ApiResponse<>(
-                "Demandes de congé récupérées avec succès",
-                demandes,
-                HttpStatus.OK));
-    }
+//    @GetMapping("/employe/{employeId}")
+//    @PreAuthorize("hasAnyRole('EMPLOYE', 'EMPLOYEUR', 'ADMIN')")
+//    public ResponseEntity<ApiResponse<List<DemandeCongeResponseDto>>> getDemandesCongeByEmploye(
+//            @PathVariable Long employeId) {
+//
+//        User currentUser = employeService.getAuthenticatedUser();
+//        List<DemandeCongeResponseDto> demandes = demandeCongeService.getDemandesCongeByEmploye(employeId, currentUser);
+//
+//        return ResponseEntity.ok(new ApiResponse<>(
+//                "Demandes de congé récupérées avec succès",
+//                demandes,
+//                HttpStatus.OK));
+//    }
 
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('EMPLOYE', 'EMPLOYEUR', 'ADMIN')")
@@ -112,4 +120,26 @@ public class DemandeCongeController {
                 cancelledDemande,
                 HttpStatus.OK));
     }
+
+    @GetMapping("/employe/{employeId}")
+    @PreAuthorize("hasAnyRole('EMPLOYE', 'EMPLOYEUR', 'ADMIN')")
+    public ResponseEntity<PageResponse<DemandeCongeResponseDto>> getDemandesCongeByEmploye(
+            @PathVariable Long employeId,
+            @RequestParam(required = false) String statut,
+            @RequestParam(required = false) Integer year,
+            @RequestParam(required = false) String searchTerm,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+
+        User currentUser = employeService.getAuthenticatedUser();
+        PageResponse<DemandeCongeResponseDto> pageResponse =
+                demandeCongeService.getDemandesCongeFiltered(employeId, currentUser, statut, year, searchTerm, page, size);
+
+        return ResponseEntity.ok(pageResponse);
+    }
+
+
+
+
+
 }
