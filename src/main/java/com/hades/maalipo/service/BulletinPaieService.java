@@ -13,7 +13,9 @@ import com.hades.maalipo.repository.*;
 import com.hades.maalipo.service.calculators.CotisationCalculator;
 import com.hades.maalipo.service.calculators.RetenueCalculator;
 import com.hades.maalipo.service.calculators.SalaireCalculator;
+import com.hades.maalipo.service.email.EmailService;
 import jakarta.transaction.Transactional;
+import lombok.extern.slf4j.Slf4j;
 import org.hibernate.Hibernate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,6 +36,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
+@Slf4j
 public class BulletinPaieService {
 
     public final  BulletinPaieRepo bulletinRepo;
@@ -55,7 +58,9 @@ public class BulletinPaieService {
 
     private final RetenueCalculator retenueCalculator;
     private final AuditLogService auditLogService;
-    private static final Logger logger = LoggerFactory.getLogger(BulletinPaieService.class);
+    private final NotificationService notificationService;
+    private final EmailService emailService;
+
 
     public BulletinPaieService (
             CotisationCalculator cotisationCalculator,
@@ -71,7 +76,9 @@ public class BulletinPaieService {
             ElementPaieRepository elementPaieRepository,
             PayrollDisplayService payrollDisplayService,
             RetenueCalculator retenueCalculator,
-            AuditLogService auditLogService
+            AuditLogService auditLogService,
+            NotificationService notificationService,
+            EmailService emailService
 
 
     ){
@@ -89,6 +96,8 @@ public class BulletinPaieService {
        this.payrollDisplayService = payrollDisplayService;
        this.retenueCalculator = retenueCalculator;
        this.auditLogService = auditLogService;
+       this.notificationService = notificationService;
+       this.emailService = emailService;
     }
 
 
@@ -957,6 +966,43 @@ public class BulletinPaieService {
         bulletin.setStatusBulletin(StatusBulletin.ENVOYÉ);
 //        bulletin.setDatePaiement(LocalDate.now()); // Définir la date de paiement lors de l'envoi
         BulletinPaie savedBulletin = bulletinRepo.save(bulletin);
+
+        // ✅ Notifications (notification système + email)
+        if (bulletin.getEmploye() != null && bulletin.getEmploye().getUser() != null) {
+            String employeName = bulletin.getEmploye().getPrenom() + " " + bulletin.getEmploye().getNom();
+            String periode = bulletin.getMois() + " " + bulletin.getAnnee();
+            String montantNet = bulletin.getSalaireNetAPayer().toString();
+            String entrepriseName = bulletin.getEntreprise().getNom();
+
+            // 1. Notification système
+            notificationService.creerNotificationBulletinPaie(
+                    bulletin.getEmploye().getUser().getId(),
+                    employeName,
+                    periode,
+                    montantNet,
+                    bulletin.getId()
+            );
+
+            // 2. Email de notification
+            if (bulletin.getEmploye().getEmail() != null) {
+                String bulletinUrl = "https://maalipo.ngombe.org/dashboard/bulletins/" + bulletin.getId();
+
+                emailService.sendBulletinPaieNotification(
+                        bulletin.getEmploye().getEmail(),
+                        employeName,
+                        periode,
+                        montantNet,
+                        entrepriseName,
+                        bulletinUrl,
+                        bulletin.getEntreprise()
+                );
+            }
+
+            log.info("Notifications envoyées pour le bulletin {} de l'employé {}", bulletin.getId(), employeName);
+        }
+
+
+
         return convertToDto(savedBulletin);
     }
 

@@ -2,12 +2,10 @@ package com.hades.maalipo.service.conge;
 
 import com.hades.maalipo.enum1.Role;
 import com.hades.maalipo.enum1.StatutDemandeConge;
-import com.hades.maalipo.model.DemandeConge;
-import com.hades.maalipo.model.Employe;
-import com.hades.maalipo.model.Entreprise;
-import com.hades.maalipo.model.User;
+import com.hades.maalipo.model.*;
 import com.hades.maalipo.repository.DemandeCongeRepository;
 import com.hades.maalipo.repository.UserRepository;
+import com.hades.maalipo.service.NotificationService;
 import com.hades.maalipo.service.email.EmailService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,15 +25,18 @@ public class NotificationCongeService {
     private final EmailService emailService;
     private final DemandeCongeRepository demandeCongeRepository;
     private final UserRepository userRepository;
+    private final NotificationService notificationService;
 
     @Autowired
     public NotificationCongeService(
             EmailService emailService,
             DemandeCongeRepository demandeCongeRepository,
-            UserRepository userRepository) {
+            UserRepository userRepository,
+            NotificationService notificationService ) {
         this.emailService = emailService;
         this.demandeCongeRepository = demandeCongeRepository;
         this.userRepository = userRepository;
+        this.notificationService  = notificationService;
     }
 
     @Value("${app.notifications.enabled:true}")
@@ -82,6 +83,19 @@ public class NotificationCongeService {
                 entreprise
         );
 
+        notificationService.creerNotification(
+                manager.getId(),
+                "Nouvelle demande de congé",
+                String.format("%s %s a soumis une demande de congé du %s au %s",
+                        demande.getEmploye().getPrenom(),
+                        demande.getEmploye().getNom(),
+                        demande.getDateDebut(),
+                        demande.getDateFin()),
+                Notification.TypeNotification.DEMANDE_CONGE_SOUMISE,
+                demande.getId(),
+                "DEMANDE_CONGE"
+        );
+
         logger.info("Notification de soumission envoyée à l'employeur: {}", managerEmail);
     }
 
@@ -124,9 +138,38 @@ public class NotificationCongeService {
                 entreprise
         );
 
+        // Notification en base + temps réel
+        User employeUser = userRepository.findByUsername(emailEmploye).orElse(null);
+        if (employeUser != null) {
+            Notification.TypeNotification type = demande.getStatut() == StatutDemandeConge.APPROUVEE
+                    ? Notification.TypeNotification.DEMANDE_CONGE_APPROUVEE
+                    : Notification.TypeNotification.DEMANDE_CONGE_REJETEE;
+
+            String titre = demande.getStatut() == StatutDemandeConge.APPROUVEE
+                    ? "Demande de congé approuvée"
+                    : "Demande de congé rejetée";
+
+            String message1 = "Votre demande de congé a été " +
+                    (demande.getStatut() == StatutDemandeConge.APPROUVEE ? "approuvée" : "rejetée");
+
+            if (demande.getStatut() == StatutDemandeConge.REJETEE && demande.getMotifRejet() != null) {
+                message1 += ". Motif : " + demande.getMotifRejet();
+            }
+
+            notificationService.creerNotification(
+                    employeUser.getId(), // ✅ Utiliser l'utilisateur trouvé
+                    titre,
+                    message1,
+                    type,
+                    demande.getId(),
+                    "DEMANDE_CONGE"
+            );
+        } else {
+            logger.warn("Aucun utilisateur trouvé avec l'email: {}", emailEmploye);
+        }
+
         logger.info("Notification de décision envoyée à l'employé: {}", emailEmploye);
     }
-
     // Envoie un rappel aux managers pour les demandes en attente depuis trop longtemps
     @Scheduled(cron = "0 0 9 * * *") // Tous les jours à 9h
     public void envoyerRappelsDemandesEnAttente() {
@@ -206,7 +249,6 @@ public class NotificationCongeService {
     }
 
     // Envoie un rappel aux employés la veille de leur retour de congé
-
     @Scheduled(cron = "0 0 16 * * *") // Tous les jours à 16h
     public void envoyerRappelsRetourCongé() {
         if (!notificationsEnabled) return;
