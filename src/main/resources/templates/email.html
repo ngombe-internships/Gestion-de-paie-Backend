@@ -4,11 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-    <meta name="format-detection" content="telephone=no">
-    <meta name="format-detection" content="date=no">
-    <meta name="format-detection" content="address=no">
-    <meta name="format-detection" content="email=no">
-
     <title th:text="${emailSubject}">Maalipo - Notification</title>
     <style>
         body {
@@ -17,8 +12,6 @@
             margin: 0;
             padding: 0;
             color: #333333;
-            -webkit-font-smoothing: antialiased;
-            -moz-osx-font-smoothing: grayscale;
         }
         .container {
             max-width: 600px;
@@ -34,10 +27,6 @@
             color: #ffffff;
             padding: 25px;
             text-align: center;
-        }
-        .logo {
-            max-width: 120px;
-            margin-bottom: 10px;
         }
         .company-name {
             font-size: 22px;
@@ -57,16 +46,9 @@
             text-decoration: none;
             font-weight: bold;
             margin-top: 20px;
-            transition: background-color 0.2s ease;
-        }
-        .cta-button:hover {
-            background-color: #0056b3;
         }
         .cta-button.success {
             background-color: #198754;
-        }
-        .cta-button.success:hover {
-            background-color: #146c43;
         }
         .info-box {
             background-color: #f8f9fa;
@@ -98,54 +80,45 @@
             padding: 20px;
         }
         .text-center { text-align: center; }
-        .text-muted { color: #6c757d; }
-        .mb-3 { margin-bottom: 1rem; }
-
-        @media (max-width: 600px) {
-            .content { padding: 20px; }
-            .container { margin: 10px; }
-            .montant-highlight { font-size: 20px; }
-        }
+        .text-success { color: #198754; }
+        .text-danger { color: #dc3545; }
+        .text-warning { color: #ffc107; }
     </style>
 </head>
 <body>
 
 <div class="container">
-
     <!-- HEADER -->
     <div class="header">
-        <div th:if="${logoUrl != null and logoUrl != ''}">
-            <img th:src="${logoUrl}" alt="Logo Maalipo" class="logo">
-        </div>
-        <div class="company-name" th:text="${companyName ?: 'Maalipo'}">Maalipo</div>
+        <div class="company-name">Maalipo</div>
     </div>
 
     <!-- CONTENT -->
     <div class="content">
-        <p th:text="${greeting}">Bonjour,</p>
+        <p th:text="${greeting ?: 'Bonjour,'}">Bonjour,</p>
 
-        <!-- ✅ NOUVEAU : Email de bulletin de paie -->
+        <!-- Email de bulletin de paie -->
         <div th:if="${emailType == 'bulletin-paie'}">
             <h2 style="color: #198754; margin-bottom: 20px;">📄 Bulletin de paie disponible</h2>
 
-            <p th:utext="${messageContent}">Votre bulletin de paie est maintenant disponible.</p>
+            <p th:utext="${messageContent ?: 'Votre bulletin de paie est maintenant disponible.'}"></p>
 
             <div class="bulletin-box">
-                <h3 style="margin-top: 0; color: #198754;">💼 Récapitulatif</h3>
+                <h3 style="margin-top: 0; color: #198754;">💼 Recapitulatif</h3>
                 <table style="width: 100%; margin: 15px 0;">
                     <tr>
-                        <td style="text-align: left; padding: 8px 0;"><strong>Période :</strong></td>
-                        <td style="text-align: right; padding: 8px 0;" th:text="${periode}">Janvier 2025</td>
+                        <td style="text-align: left; padding: 8px 0;"><strong>Periode :</strong></td>
+                        <td style="text-align: right; padding: 8px 0;" th:text="${periode ?: 'N/A'}">Janvier 2025</td>
                     </tr>
                     <tr>
                         <td style="text-align: left; padding: 8px 0;"><strong>Entreprise :</strong></td>
-                        <td style="text-align: right; padding: 8px 0;" th:text="${entrepriseName ?: companyName}">Mon Entreprise</td>
+                        <td style="text-align: right; padding: 8px 0;" th:text="${entrepriseName ?: 'N/A'}">Mon Entreprise</td>
                     </tr>
                 </table>
 
                 <div style="border-top: 2px solid #198754; padding-top: 15px; margin-top: 15px;">
-                    <div style="font-size: 16px; margin-bottom: 5px;">💰 <strong>Salaire net à payer</strong></div>
-                    <div class="montant-highlight" th:text="${montantNet + ' FCFA'}">50,000 FCFA</div>
+                    <div style="font-size: 16px; margin-bottom: 5px;">💰 <strong>Salaire net a payer</strong></div>
+                    <div class="montant-highlight" th:text="${montantNet ? (montantNet + ' FCFA') : '0 FCFA'}">50,000 FCFA</div>
                 </div>
             </div>
 
@@ -153,96 +126,68 @@
                 <h4 style="margin-top: 0; color: #198754;">📋 Actions disponibles</h4>
                 <ul style="margin: 10px 0; padding-left: 20px;">
                     <li>Consulter votre bulletin en ligne</li>
-                    <li>Télécharger au format PDF</li>
+                    <li>Telecharger au format PDF</li>
                     <li>Imprimer une copie</li>
-                    <li>Conserver dans vos archives personnelles</li>
                 </ul>
             </div>
 
             <div class="text-center">
-                <a th:href="${bulletinUrl ?: systemUrl}" href="#" class="cta-button success">
+                <a th:href="${bulletinUrl ?: systemUrl ?: '#'}" href="#" class="cta-button success">
                     📄 Consulter mon bulletin
                 </a>
             </div>
-
-            <p class="text-muted" style="font-size: 13px; margin-top: 25px; text-align: center;">
-                <strong>💡 Conseil :</strong> Nous vous recommandons de télécharger et conserver une copie de vos bulletins pour vos archives personnelles.
-            </p>
         </div>
 
-        <!-- Email de réinitialisation -->
+        <!-- Email de reinitialisation -->
         <div th:if="${emailType == 'password-reset'}">
-            <h2 style="color: #0d6efd; margin-bottom: 20px;">🔑 Réinitialisation de mot de passe</h2>
-            <p>Vous avez demandé à réinitialiser votre mot de passe pour votre compte Maalipo.</p>
+            <h2 style="color: #0d6efd; margin-bottom: 20px;">🔑 Reinitialisation de mot de passe</h2>
+            <p>Vous avez demande a reinitialiser votre mot de passe pour votre compte Maalipo.</p>
 
             <div class="info-box">
                 <strong>⚠️ Important :</strong><br>
-                • Si vous n'êtes pas à l'origine de cette demande, ignorez cet e-mail<br>
-                • Ce lien est valable pendant <strong>1 heure</strong><br>
-                • Pour votre sécurité, ne partagez jamais ce lien
+                • Si vous n'etes pas a l'origine de cette demande, ignorez cet e-mail<br>
+                • Ce lien est valable pendant <strong>1 heure</strong>
             </div>
 
             <div class="text-center">
-                <a th:href="${resetLink}" href="#" class="cta-button">
-                    🔑 Réinitialiser mon mot de passe
+                <a th:href="${resetLink ?: '#'}" href="#" class="cta-button">
+                    🔑 Reinitialiser mon mot de passe
                 </a>
             </div>
-
-            <p class="text-muted" style="font-size: 12px; margin-top: 15px;">
-                Si le bouton ne fonctionne pas, copiez ce lien dans votre navigateur :<br>
-                <span th:text="${resetLink}" style="word-break: break-all;">#</span>
-            </p>
         </div>
 
-        <!-- Notification de congé -->
+        <!-- Notification de conge -->
         <div th:if="${emailType == 'conge-notification'}">
-            <h2 style="color: #0d6efd; margin-bottom: 20px;">📅 Notification de congé</h2>
-            <p th:text="${messageContent}">Votre demande de congé a été traitée.</p>
+            <h2 style="color: #0d6efd; margin-bottom: 20px;">📅 Notification de conge</h2>
+            <p th:text="${messageContent ?: 'Votre demande de conge a ete traitee.'}">Votre demande de conge a ete traitee.</p>
 
-            <div class="info-box">
-                <h4 style="margin-top: 0; color: #0d6efd;">📅 Détails du congé</h4>
+            <div class="info-box" th:if="${congeDetails}">
+                <h4 style="margin-top: 0; color: #0d6efd;">📅 Details du conge</h4>
                 <table style="width: 100%; border-collapse: collapse;">
-                    <tr>
+                    <tr th:if="${congeDetails.type}">
                         <td style="padding: 5px 0; font-weight: bold; width: 30%;">Type :</td>
-                        <td th:text="${congeDetails?.type}">Congé payé</td>
+                        <td th:text="${congeDetails.type}">Conge paye</td>
                     </tr>
-                    <tr>
+                    <tr th:if="${congeDetails.statut}">
                         <td style="padding: 5px 0; font-weight: bold;">Statut :</td>
-                        <td>
-                            <span th:text="${congeDetails?.statut}"
-                                  th:class="${congeDetails?.statut == 'APPROUVE'} ? 'text-success' : (${congeDetails?.statut == 'REJETE'} ? 'text-danger' : 'text-warning')">
-                                Approuvé
-                            </span>
-                        </td>
+                        <td th:text="${congeDetails.statut}">Approuve</td>
                     </tr>
-                    <tr>
-                        <td style="padding: 5px 0; font-weight: bold;">Période :</td>
+                    <tr th:if="${congeDetails.dateDebut and congeDetails.dateFin}">
+                        <td style="padding: 5px 0; font-weight: bold;">Periode :</td>
                         <td>
-                            Du <span th:text="${congeDetails?.dateDebut}">01/02/2025</span>
-                            au <span th:text="${congeDetails?.dateFin}">05/02/2025</span>
+                            Du <span th:text="${congeDetails.dateDebut}">01/02/2025</span>
+                            au <span th:text="${congeDetails.dateFin}">05/02/2025</span>
                         </td>
                     </tr>
                 </table>
             </div>
-
-            <div class="text-center">
-                <a th:href="${systemUrl}" href="#" class="cta-button">
-                    📋 Voir dans mon espace
-                </a>
-            </div>
         </div>
 
-        <!-- Notification générale -->
-        <div th:if="${emailType == 'general'}">
-            <h2 style="color: #0d6efd; margin-bottom: 20px;" th:text="${emailSubject}">Notification</h2>
-            <div th:utext="${messageContent}">
+        <!-- Notification generale -->
+        <div th:if="${emailType == 'general' or emailType == null}">
+            <h2 style="color: #0d6efd; margin-bottom: 20px;" th:text="${emailSubject ?: 'Notification'}">Notification</h2>
+            <div th:utext="${messageContent ?: 'Contenu du message...'}">
                 Contenu du message...
-            </div>
-
-            <div class="text-center" th:if="${systemUrl}">
-                <a th:href="${systemUrl}" href="#" class="cta-button">
-                    🏠 Accéder à Maalipo
-                </a>
             </div>
         </div>
 
@@ -250,7 +195,7 @@
         <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #e1e4e8;">
             <p style="font-size: 13px; color: #666; margin: 0;">
                 <strong>Besoin d'aide ?</strong><br>
-                Contactez notre équipe support ou consultez notre documentation en ligne.
+                Contactez notre equipe support.
             </p>
         </div>
     </div>
@@ -258,25 +203,22 @@
     <!-- FOOTER -->
     <div class="footer">
         <div th:if="${companyAddress or companyPhone or companyEmail}" style="margin-bottom: 15px;">
-            <div th:if="${companyAddress}" th:text="${companyAddress}">
-                123 Rue de l'Entreprise, Douala, Cameroun
-            </div>
+            <div th:if="${companyAddress}" th:text="${companyAddress}"></div>
             <div th:if="${companyPhone}">
-                📞 <span th:text="${companyPhone}">+237 6XX XXX XXX</span>
+                📞 <span th:text="${companyPhone}"></span>
             </div>
             <div th:if="${companyEmail}">
-                ✉️ <span th:text="${companyEmail}">support@maalipo.com</span>
+                ✉️ <span th:text="${companyEmail}"></span>
             </div>
         </div>
 
         <div style="border-top: 1px solid #ddd; padding-top: 15px;">
-            <p style="margin: 5px 0;">© 2025 Maalipo. Tous droits réservés.</p>
+            <p style="margin: 5px 0;">© 2025 Maalipo. Tous droits reserves.</p>
             <p style="margin: 5px 0; font-size: 11px;">
-                Cet email a été envoyé automatiquement. Merci de ne pas répondre à cette adresse.
+                Cet email a ete envoye automatiquement.
             </p>
         </div>
     </div>
-
 </div>
 
 </body>
