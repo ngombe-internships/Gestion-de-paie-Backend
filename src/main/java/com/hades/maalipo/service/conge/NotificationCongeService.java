@@ -170,6 +170,7 @@ public class NotificationCongeService {
 
         logger.info("Notification de décision envoyée à l'employé: {}", emailEmploye);
     }
+
     // Envoie un rappel aux managers pour les demandes en attente depuis trop longtemps
     @Scheduled(cron = "0 0 9 * * *") // Tous les jours à 9h
     public void envoyerRappelsDemandesEnAttente() {

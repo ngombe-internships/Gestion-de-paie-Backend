@@ -95,30 +95,30 @@
 
     <!-- CONTENT -->
     <div class="content">
-        <p th:text="${greeting ?: 'Bonjour,'}">Bonjour,</p>
+        <p th:text="${greeting != null ? greeting : 'Bonjour,'}">Bonjour,</p>
 
         <!-- Email de bulletin de paie -->
         <div th:if="${emailType == 'bulletin-paie'}">
             <h2 style="color: #198754; margin-bottom: 20px;">📄 Bulletin de paie disponible</h2>
 
-            <p th:utext="${messageContent ?: 'Votre bulletin de paie est maintenant disponible.'}"></p>
+            <p th:utext="${messageContent != null ? messageContent : 'Votre bulletin de paie est maintenant disponible.'}"></p>
 
             <div class="bulletin-box">
                 <h3 style="margin-top: 0; color: #198754;">💼 Récapitulatif</h3>
                 <table style="width: 100%; margin: 15px 0;">
                     <tr>
                         <td style="text-align: left; padding: 8px 0;"><strong>Période :</strong></td>
-                        <td style="text-align: right; padding: 8px 0;" th:text="${periode ?: 'N/A'}">Janvier 2025</td>
+                        <td style="text-align: right; padding: 8px 0;" th:text="${periode != null ? periode : 'N/A'}">Janvier 2025</td>
                     </tr>
                     <tr>
                         <td style="text-align: left; padding: 8px 0;"><strong>Entreprise :</strong></td>
-                        <td style="text-align: right; padding: 8px 0;" th:text="${entrepriseName ?: 'N/A'}">Mon Entreprise</td>
+                        <td style="text-align: right; padding: 8px 0;" th:text="${entrepriseName != null ? entrepriseName : 'N/A'}">Mon Entreprise</td>
                     </tr>
                 </table>
 
                 <div style="border-top: 2px solid #198754; padding-top: 15px; margin-top: 15px;">
                     <div style="font-size: 16px; margin-bottom: 5px;">💰 <strong>Salaire net à payer</strong></div>
-                    <div class="montant-highlight" th:text="${montantNet ? (montantNet + ' FCFA') : '0 FCFA'}">50,000 FCFA</div>
+                    <div class="montant-highlight" th:text="${montantNet != null ? montantNet + ' FCFA' : '0 FCFA'}">50,000 FCFA</div>
                 </div>
             </div>
 
@@ -132,7 +132,7 @@
             </div>
 
             <div class="text-center">
-                <a th:href="${bulletinUrl ?: systemUrl ?: '#'}" href="#" class="cta-button success">
+                <a th:href="${bulletinUrl != null ? bulletinUrl : (systemUrl != null ? systemUrl : '#')}" href="#" class="cta-button success">
                     📄 Consulter mon bulletin
                 </a>
             </div>
@@ -150,7 +150,7 @@
             </div>
 
             <div class="text-center">
-                <a th:href="${resetLink ?: '#'}" href="#" class="cta-button">
+                <a th:href="${resetLink != null ? resetLink : '#'}" href="#" class="cta-button">
                     🔒 Réinitialiser mon mot de passe
                 </a>
             </div>
@@ -159,20 +159,20 @@
         <!-- Notification de congé -->
         <div th:if="${emailType == 'conge-notification'}">
             <h2 style="color: #0d6efd; margin-bottom: 20px;">📅 Notification de congé</h2>
-            <p th:text="${messageContent ?: 'Votre demande de congé a été traitée.'}">Votre demande de congé a été traitée.</p>
+            <p th:text="${messageContent != null ? messageContent : 'Votre demande de congé a été traitée.'}">Votre demande de congé a été traitée.</p>
 
-            <div class="info-box" th:if="${congeDetails}">
+            <div class="info-box" th:if="${congeDetails != null}">
                 <h4 style="margin-top: 0; color: #0d6efd;">📅 Détails du congé</h4>
                 <table style="width: 100%; border-collapse: collapse;">
-                    <tr th:if="${congeDetails.type}">
+                    <tr th:if="${congeDetails.type != null}">
                         <td style="padding: 5px 0; font-weight: bold; width: 30%;">Type :</td>
                         <td th:text="${congeDetails.type}">Congé payé</td>
                     </tr>
-                    <tr th:if="${congeDetails.statut}">
+                    <tr th:if="${congeDetails.statut != null}">
                         <td style="padding: 5px 0; font-weight: bold;">Statut :</td>
                         <td th:text="${congeDetails.statut}">Approuvé</td>
                     </tr>
-                    <tr th:if="${congeDetails.dateDebut and congeDetails.dateFin}">
+                    <tr th:if="${congeDetails.dateDebut != null and congeDetails.dateFin != null}">
                         <td style="padding: 5px 0; font-weight: bold;">Période :</td>
                         <td>
                             Du <span th:text="${congeDetails.dateDebut}">01/02/2025</span>
@@ -185,8 +185,8 @@
 
         <!-- Notification générale -->
         <div th:if="${emailType == 'general' or emailType == null}">
-            <h2 style="color: #0d6efd; margin-bottom: 20px;" th:text="${emailSubject ?: 'Notification'}">Notification</h2>
-            <div th:utext="${messageContent ?: 'Contenu du message...'}">
+            <h2 style="color: #0d6efd; margin-bottom: 20px;" th:text="${emailSubject != null ? emailSubject : 'Notification'}">Notification</h2>
+            <div th:utext="${messageContent != null ? messageContent : 'Contenu du message...'}">
                 Contenu du message...
             </div>
         </div>
@@ -202,12 +202,12 @@
 
     <!-- FOOTER -->
     <div class="footer">
-        <div th:if="${companyAddress or companyPhone or companyEmail}" style="margin-bottom: 15px;">
-            <div th:if="${companyAddress}" th:text="${companyAddress}"></div>
-            <div th:if="${companyPhone}">
+        <div th:if="${companyAddress != null or companyPhone != null or companyEmail != null}" style="margin-bottom: 15px;">
+            <div th:if="${companyAddress != null}" th:text="${companyAddress}"></div>
+            <div th:if="${companyPhone != null}">
                 📞 <span th:text="${companyPhone}"></span>
             </div>
-            <div th:if="${companyEmail}">
+            <div th:if="${companyEmail != null}">
                 ✉️ <span th:text="${companyEmail}"></span>
             </div>
         </div>

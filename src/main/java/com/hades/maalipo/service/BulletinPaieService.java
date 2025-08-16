@@ -983,20 +983,7 @@ public class BulletinPaieService {
                     bulletin.getId()
             );
 
-            // 2. Email de notification
-            if (bulletin.getEmploye().getEmail() != null) {
-                String bulletinUrl = "https://maalipo.ngombe.org/dashboard/bulletins/" + bulletin.getId();
 
-                emailService.sendBulletinPaieNotification(
-                        bulletin.getEmploye().getEmail(),
-                        employeName,
-                        periode,
-                        montantNet,
-                        entrepriseName,
-                        bulletinUrl,
-                        bulletin.getEntreprise()
-                );
-            }
 
             log.info("Notifications envoyées pour le bulletin {} de l'employé {}", bulletin.getId(), employeName);
         }
