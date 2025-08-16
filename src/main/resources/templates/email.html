@@ -7,82 +7,142 @@
     <title th:text="${emailSubject}">Maalipo - Notification</title>
     <style>
         body {
-            font-family: Arial, sans-serif;
-            background-color: #f6f9fc;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f8f9fa;
             margin: 0;
             padding: 0;
             color: #333333;
+            line-height: 1.6;
         }
         .container {
-            max-width: 600px;
-            margin: 20px auto;
+            max-width: 650px;
+            margin: 30px auto;
             background: #ffffff;
-            border-radius: 8px;
+            border-radius: 12px;
             overflow: hidden;
-            border: 1px solid #e1e4e8;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            border: 1px solid #e9ecef;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
         }
         .header {
-            background-color: #0d6efd;
+            background: linear-gradient(135deg, #0d6efd 0%, #0056b3 100%);
             color: #ffffff;
-            padding: 25px;
+            padding: 30px;
             text-align: center;
+            position: relative;
+        }
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="50" cy="50" r="1" fill="rgba(255,255,255,0.1)"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>');
         }
         .company-name {
-            font-size: 22px;
-            font-weight: bold;
+            font-size: 28px;
+            font-weight: 700;
+            position: relative;
+            z-index: 1;
         }
         .content {
-            padding: 30px;
-            font-size: 15px;
-            line-height: 1.6;
+            padding: 35px;
+            font-size: 16px;
+            line-height: 1.7;
         }
         .cta-button {
             display: inline-block;
-            background-color: #0d6efd;
+            background: linear-gradient(135deg, #0d6efd 0%, #0056b3 100%);
             color: white !important;
-            padding: 12px 25px;
-            border-radius: 5px;
+            padding: 14px 30px;
+            border-radius: 8px;
             text-decoration: none;
-            font-weight: bold;
-            margin-top: 20px;
+            font-weight: 600;
+            margin-top: 25px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(13, 110, 253, 0.3);
         }
         .cta-button.success {
-            background-color: #198754;
+            background: linear-gradient(135deg, #198754 0%, #157347 100%);
+            box-shadow: 0 4px 12px rgba(25, 135, 84, 0.3);
         }
         .info-box {
             background-color: #f8f9fa;
             border-left: 4px solid #0d6efd;
-            padding: 15px;
-            margin: 20px 0;
-            font-size: 14px;
-            border-radius: 0 4px 4px 0;
-        }
-        .bulletin-box {
-            background-color: #e8f5e8;
-            border-left: 4px solid #198754;
             padding: 20px;
             margin: 25px 0;
+            font-size: 15px;
             border-radius: 0 8px 8px 0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        .bulletin-box {
+            background: linear-gradient(135deg, #e8f5e8 0%, #f0f8f0 100%);
+            border-left: 5px solid #198754;
+            padding: 25px;
+            margin: 30px 0;
+            border-radius: 0 12px 12px 0;
             text-align: center;
+            box-shadow: 0 4px 15px rgba(25, 135, 84, 0.1);
         }
         .montant-highlight {
-            font-size: 24px;
-            font-weight: bold;
+            font-size: 32px;
+            font-weight: 700;
             color: #198754;
-            margin: 10px 0;
+            margin: 15px 0;
+            text-shadow: 0 2px 4px rgba(25, 135, 84, 0.1);
+        }
+        .date-envoi {
+            background: linear-gradient(135deg, #e3f2fd 0%, #f1f8ff 100%);
+            border: 1px solid #0d6efd;
+            border-radius: 8px;
+            padding: 12px;
+            margin: 20px 0;
+            text-align: center;
+            font-size: 14px;
+            color: #0d6efd;
+            font-weight: 600;
         }
         .footer {
-            background-color: #f1f3f5;
+            background-color: #f8f9fa;
             color: #6c757d;
             text-align: center;
-            font-size: 13px;
-            padding: 20px;
+            font-size: 14px;
+            padding: 25px;
+            border-top: 1px solid #e9ecef;
+        }
+        .details-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            background: #ffffff;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        .details-table td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #f1f3f5;
+        }
+        .details-table tr:last-child td {
+            border-bottom: none;
         }
         .text-center { text-align: center; }
         .text-success { color: #198754; }
         .text-danger { color: #dc3545; }
         .text-warning { color: #ffc107; }
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            font-size: 12px;
+            font-weight: 600;
+            border-radius: 20px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .badge-success {
+            background-color: #d1e7dd;
+            color: #0a3622;
+        }
     </style>
 </head>
 <body>
@@ -91,62 +151,93 @@
     <!-- HEADER -->
     <div class="header">
         <div class="company-name">Maalipo</div>
+        <div style="font-size: 14px; margin-top: 8px; opacity: 0.9;">
+            Système de gestion des ressources humaines
+        </div>
     </div>
 
     <!-- CONTENT -->
     <div class="content">
         <p th:text="${greeting != null ? greeting : 'Bonjour,'}">Bonjour,</p>
 
+        <!-- Date d'envoi du message -->
+        <div class="date-envoi">
+            📅 <strong>Message envoyé le</strong>
+            <span th:text="${#dates.format(#dates.createNow(), 'dd/MM/yyyy à HH:mm')}">16/08/2025 à 18:10</span>
+        </div>
+
         <!-- Email de bulletin de paie -->
         <div th:if="${emailType == 'bulletin-paie'}">
-            <h2 style="color: #198754; margin-bottom: 20px;">📄 Bulletin de paie disponible</h2>
+            <h2 style="color: #198754; margin-bottom: 25px; font-weight: 600;">
+                📄 Bulletin de paie disponible
+            </h2>
 
             <p th:utext="${messageContent != null ? messageContent : 'Votre bulletin de paie est maintenant disponible.'}"></p>
 
             <div class="bulletin-box">
-                <h3 style="margin-top: 0; color: #198754;">💼 Récapitulatif</h3>
-                <table style="width: 100%; margin: 15px 0;">
+                <h3 style="margin-top: 0; color: #198754; font-weight: 600;">
+                    💼 Récapitulatif de paie
+                </h3>
+
+                <table class="details-table">
                     <tr>
-                        <td style="text-align: left; padding: 8px 0;"><strong>Période :</strong></td>
-                        <td style="text-align: right; padding: 8px 0;" th:text="${periode != null ? periode : 'N/A'}">Janvier 2025</td>
+                        <td style="text-align: left; font-weight: 600; color: #495057;">📊 Période :</td>
+                        <td style="text-align: right;" th:text="${periode != null ? periode : 'N/A'}">Janvier 2025</td>
                     </tr>
                     <tr>
-                        <td style="text-align: left; padding: 8px 0;"><strong>Entreprise :</strong></td>
-                        <td style="text-align: right; padding: 8px 0;" th:text="${entrepriseName != null ? entrepriseName : 'N/A'}">Mon Entreprise</td>
+                        <td style="text-align: left; font-weight: 600; color: #495057;">🏢 Entreprise :</td>
+                        <td style="text-align: right;" th:text="${entrepriseName != null ? entrepriseName : 'N/A'}">Mon Entreprise</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: left; font-weight: 600; color: #495057;">📋 Statut :</td>
+                        <td style="text-align: right;">
+                            <span class="badge badge-success">✓ Envoyé</span>
+                        </td>
                     </tr>
                 </table>
 
-                <div style="border-top: 2px solid #198754; padding-top: 15px; margin-top: 15px;">
-                    <div style="font-size: 16px; margin-bottom: 5px;">💰 <strong>Salaire net à payer</strong></div>
-                    <div class="montant-highlight" th:text="${montantNet != null ? montantNet + ' FCFA' : '0 FCFA'}">50,000 FCFA</div>
+                <div style="border-top: 3px solid #198754; padding-top: 20px; margin-top: 20px;">
+                    <div style="font-size: 18px; margin-bottom: 8px; color: #495057;">
+                         <strong>Salaire net à payer</strong>
+                    </div>
+                    <div class="montant-highlight" th:text="${montantNet != null ? montantNet + ' FCFA' : '0 FCFA'}">
+                        50,000 FCFA
+                    </div>
                 </div>
             </div>
 
-            <div class="info-box" style="border-left-color: #198754; background-color: #f0f8f0;">
-                <h4 style="margin-top: 0; color: #198754;">📋 Actions disponibles</h4>
-                <ul style="margin: 10px 0; padding-left: 20px;">
-                    <li>Consulter votre bulletin en ligne</li>
-                    <li>Télécharger au format PDF</li>
-                    <li>Imprimer une copie</li>
+            <div class="info-box" style="border-left-color: #198754; background: linear-gradient(135deg, #f0f8f0 0%, #e8f5e8 100%);">
+                <h4 style="margin-top: 0; color: #198754; font-weight: 600;">
+                     Actions disponibles
+                </h4>
+                <ul style="margin: 15px 0; padding-left: 25px; line-height: 2;">
+                    <li> Consulter votre bulletin en ligne</li>
+                    <li> Télécharger au format PDF</li>
+                    <li> Imprimer une copie</li>
+                    <li> Accéder depuis votre mobile</li>
                 </ul>
             </div>
 
-            <div class="text-center">
-                <a th:href="${bulletinUrl != null ? bulletinUrl : (systemUrl != null ? systemUrl : '#')}" href="#" class="cta-button success">
-                    📄 Consulter mon bulletin
-                </a>
-            </div>
+<!--            <div class="text-center">-->
+<!--                <a th:href="${bulletinUrl != null ? bulletinUrl : (systemUrl != null ? systemUrl : '#')}"-->
+<!--                   href="#" class="cta-button success">-->
+<!--                    📄 Consulter mon bulletin-->
+<!--                </a>-->
+<!--            </div>-->
         </div>
 
         <!-- Email de réinitialisation -->
         <div th:if="${emailType == 'password-reset'}">
-            <h2 style="color: #0d6efd; margin-bottom: 20px;">🔒 Réinitialisation de mot de passe</h2>
+            <h2 style="color: #0d6efd; margin-bottom: 25px; font-weight: 600;">
+                🔒 Réinitialisation de mot de passe
+            </h2>
             <p>Vous avez demandé à réinitialiser votre mot de passe pour votre compte Maalipo.</p>
 
-            <div class="info-box">
+            <div class="info-box" style="border-left-color: #ffc107; background: linear-gradient(135deg, #fff8e1 0%, #fffbf0 100%);">
                 <strong>⚠️ Important :</strong><br>
                 • Si vous n'êtes pas à l'origine de cette demande, ignorez cet e-mail<br>
-                • Ce lien est valable pendant <strong>1 heure</strong>
+                • Ce lien est valable pendant <strong>1 heure</strong><br>
+                • Ne partagez jamais ce lien avec personne
             </div>
 
             <div class="text-center">
@@ -158,25 +249,29 @@
 
         <!-- Notification de congé -->
         <div th:if="${emailType == 'conge-notification'}">
-            <h2 style="color: #0d6efd; margin-bottom: 20px;">📅 Notification de congé</h2>
-            <p th:text="${messageContent != null ? messageContent : 'Votre demande de congé a été traitée.'}">Votre demande de congé a été traitée.</p>
+            <h2 style="color: #0d6efd; margin-bottom: 25px; font-weight: 600;">
+                 Notification de congé
+            </h2>
+            <p th:text="${messageContent != null ? messageContent : 'Votre demande de congé a été traitée.'}">
+                Votre demande de congé a été traitée.
+            </p>
 
             <div class="info-box" th:if="${congeDetails != null}">
-                <h4 style="margin-top: 0; color: #0d6efd;">📅 Détails du congé</h4>
-                <table style="width: 100%; border-collapse: collapse;">
+                <h4 style="margin-top: 0; color: #0d6efd; font-weight: 600;"> Détails du congé</h4>
+                <table class="details-table">
                     <tr th:if="${congeDetails.type != null}">
-                        <td style="padding: 5px 0; font-weight: bold; width: 30%;">Type :</td>
+                        <td style="font-weight: 600; color: #495057; width: 35%;"> Type :</td>
                         <td th:text="${congeDetails.type}">Congé payé</td>
                     </tr>
                     <tr th:if="${congeDetails.statut != null}">
-                        <td style="padding: 5px 0; font-weight: bold;">Statut :</td>
+                        <td style="font-weight: 600; color: #495057;"> Statut :</td>
                         <td th:text="${congeDetails.statut}">Approuvé</td>
                     </tr>
                     <tr th:if="${congeDetails.dateDebut != null and congeDetails.dateFin != null}">
-                        <td style="padding: 5px 0; font-weight: bold;">Période :</td>
+                        <td style="font-weight: 600; color: #495057;"> Période :</td>
                         <td>
-                            Du <span th:text="${congeDetails.dateDebut}">01/02/2025</span>
-                            au <span th:text="${congeDetails.dateFin}">05/02/2025</span>
+                            Du <strong th:text="${congeDetails.dateDebut}">01/02/2025</strong>
+                            au <strong th:text="${congeDetails.dateFin}">05/02/2025</strong>
                         </td>
                     </tr>
                 </table>
@@ -185,37 +280,47 @@
 
         <!-- Notification générale -->
         <div th:if="${emailType == 'general' or emailType == null}">
-            <h2 style="color: #0d6efd; margin-bottom: 20px;" th:text="${emailSubject != null ? emailSubject : 'Notification'}">Notification</h2>
+            <h2 style="color: #0d6efd; margin-bottom: 25px; font-weight: 600;"
+                th:text="${emailSubject != null ? emailSubject : 'Notification'}">Notification</h2>
             <div th:utext="${messageContent != null ? messageContent : 'Contenu du message...'}">
                 Contenu du message...
             </div>
         </div>
 
         <!-- Section d'aide -->
-        <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #e1e4e8;">
-            <p style="font-size: 13px; color: #666; margin: 0;">
-                <strong>Besoin d'aide ?</strong><br>
-                Contactez notre équipe support.
-            </p>
+        <div style="margin-top: 40px; padding-top: 25px; border-top: 2px solid #e9ecef;">
+            <div style="background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%); padding: 20px; border-radius: 8px; text-align: center;">
+                <p style="font-size: 15px; color: #495057; margin: 0; font-weight: 600;">
+                    ❓ <strong>Besoin d'aide ?</strong>
+                </p>
+                <p style="font-size: 14px; color: #6c757d; margin: 8px 0 0 0;">
+                    Notre équipe support est là pour vous accompagner
+                </p>
+            </div>
         </div>
     </div>
 
     <!-- FOOTER -->
     <div class="footer">
-        <div th:if="${companyAddress != null or companyPhone != null or companyEmail != null}" style="margin-bottom: 15px;">
-            <div th:if="${companyAddress != null}" th:text="${companyAddress}"></div>
-            <div th:if="${companyPhone != null}">
+        <div th:if="${companyAddress != null or companyPhone != null or companyEmail != null}"
+             style="margin-bottom: 20px; padding: 15px; background: #ffffff; border-radius: 8px;">
+            <div style="font-weight: 600; color: #495057; margin-bottom: 10px;">📍 Informations de contact</div>
+            <div th:if="${companyAddress != null}" style="margin: 5px 0;" th:text="${companyAddress}"></div>
+            <div th:if="${companyPhone != null}" style="margin: 5px 0;">
                 📞 <span th:text="${companyPhone}"></span>
             </div>
-            <div th:if="${companyEmail != null}">
+            <div th:if="${companyEmail != null}" style="margin: 5px 0;">
                 ✉️ <span th:text="${companyEmail}"></span>
             </div>
         </div>
 
-        <div style="border-top: 1px solid #ddd; padding-top: 15px;">
-            <p style="margin: 5px 0;">© 2025 Maalipo. Tous droits réservés.</p>
-            <p style="margin: 5px 0; font-size: 11px;">
-                Cet email a été envoyé automatiquement.
+        <div style="border-top: 1px solid #dee2e6; padding-top: 20px;">
+            <p style="margin: 8px 0; font-weight: 600;">© 2025 Maalipo. Tous droits réservés.</p>
+            <p style="margin: 8px 0; font-size: 13px;">
+                Cet email a été envoyé automatiquement par le système Maalipo.
+            </p>
+            <p style="margin: 8px 0; font-size: 12px; color: #adb5bd;">
+                📧 Ne pas répondre à cet email - Il s'agit d'un envoi automatique
             </p>
         </div>
     </div>

@@ -983,6 +983,21 @@ public class BulletinPaieService {
                     bulletin.getId()
             );
 
+            try {
+                emailService.sendBulletinPaieEmail(
+                        bulletin.getEmploye().getEmail(),
+                        employeName,
+                        periode,
+                        montantNet,
+                        entrepriseName,
+                        bulletin.getEntreprise()
+                );
+                log.info("Email de bulletin de paie envoyé à {}", bulletin.getEmploye().getEmail());
+            } catch (Exception e) {
+                log.error("Erreur lors de l'envoi de l'email de bulletin de paie: {}", e.getMessage(), e);
+                // Ne pas bloquer le processus en cas d'erreur d'email
+            }
+
 
 
             log.info("Notifications envoyées pour le bulletin {} de l'employé {}", bulletin.getId(), employeName);

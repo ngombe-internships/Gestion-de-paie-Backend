@@ -206,4 +206,56 @@ public class EmailService {
     }
 
 
+    public void sendBulletinPaieEmail(String to, String employeName, String periode,
+                                      String montantNet, String entrepriseName, Entreprise entreprise) {
+        if (!emailEnabled) {
+            return;
+        }
+
+        try {
+            MimeMessage message = emailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true);
+
+            helper.setFrom(fromEmail);
+            helper.setTo(to);
+            helper.setSubject("📄 Votre bulletin de paie - " + periode);
+
+            // Préparation du contexte pour le template
+            Context context = new Context(Locale.FRENCH);
+            context.setVariable("emailSubject", "📄 Votre bulletin de paie est disponible");
+            context.setVariable("greeting", "Bonjour " + employeName + ",");
+            context.setVariable("emailType", "bulletin-paie");
+
+            // Message personnalisé
+            String messageContent = String.format(
+                    "Votre bulletin de paie pour la période <strong>%s</strong> est maintenant disponible dans votre espace personnel.<br><br>" +
+                            "Vous pouvez dès maintenant le consulter, le télécharger et l'imprimer depuis votre tableau de bord.",
+                    periode
+            );
+            context.setVariable("messageContent", messageContent);
+
+            // Détails du bulletin
+            context.setVariable("periode", periode);
+            context.setVariable("montantNet", montantNet);
+            context.setVariable("entrepriseName", entrepriseName);
+            context.setVariable("logoUrl", "https://via.placeholder.com/120x60?text=Maalipo");
+
+            // Informations de l'entreprise
+            if (entreprise != null) {
+                context.setVariable("companyAddress", entreprise.getAdresseEntreprise());
+                context.setVariable("companyPhone", entreprise.getTelephoneEntreprise());
+                context.setVariable("companyEmail", entreprise.getEmailEntreprise());
+            }
+
+            // Génération du contenu HTML à partir du template
+            String htmlContent = templateEngine.process("email", context);
+            helper.setText(htmlContent, true);
+
+            emailSender.send(message);
+        } catch (MessagingException e) {
+            e.printStackTrace();
+        }
+    }
+
+
 }

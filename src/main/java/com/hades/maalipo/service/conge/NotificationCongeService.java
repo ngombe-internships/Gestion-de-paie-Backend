@@ -139,7 +139,7 @@ public class NotificationCongeService {
         );
 
         // Notification en base + temps réel
-        User employeUser = userRepository.findByUsername(emailEmploye).orElse(null);
+        User employeUser = employe.getUser(); // Relation directe !
         if (employeUser != null) {
             Notification.TypeNotification type = demande.getStatut() == StatutDemandeConge.APPROUVEE
                     ? Notification.TypeNotification.DEMANDE_CONGE_APPROUVEE

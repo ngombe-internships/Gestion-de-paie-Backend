@@ -121,11 +121,11 @@ public class NotificationService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("Utilisateur non trouvé"));
 
-        String titre = "📄 Nouveau bulletin de paie disponible";
+        String titre = "Nouveau bulletin de paie disponible";
         String message = String.format(
                 "Bonjour %s,\n\n" +
                         "Votre bulletin de paie pour la période %s est maintenant disponible dans votre espace personnel.\n\n" +
-                        "💰 Salaire net à payer : %s FCFA\n\n" +
+                        " Salaire net à payer : %s FCFA\n\n" +
                         "Vous pouvez dès maintenant le consulter, le télécharger et l'imprimer depuis votre tableau de bord.",
                 employeName, periode, montantNet
         );
