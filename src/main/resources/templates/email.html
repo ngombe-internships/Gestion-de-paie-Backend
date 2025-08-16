@@ -104,10 +104,10 @@
             <p th:utext="${messageContent ?: 'Votre bulletin de paie est maintenant disponible.'}"></p>
 
             <div class="bulletin-box">
-                <h3 style="margin-top: 0; color: #198754;">💼 Recapitulatif</h3>
+                <h3 style="margin-top: 0; color: #198754;">💼 Récapitulatif</h3>
                 <table style="width: 100%; margin: 15px 0;">
                     <tr>
-                        <td style="text-align: left; padding: 8px 0;"><strong>Periode :</strong></td>
+                        <td style="text-align: left; padding: 8px 0;"><strong>Période :</strong></td>
                         <td style="text-align: right; padding: 8px 0;" th:text="${periode ?: 'N/A'}">Janvier 2025</td>
                     </tr>
                     <tr>
@@ -117,7 +117,7 @@
                 </table>
 
                 <div style="border-top: 2px solid #198754; padding-top: 15px; margin-top: 15px;">
-                    <div style="font-size: 16px; margin-bottom: 5px;">💰 <strong>Salaire net a payer</strong></div>
+                    <div style="font-size: 16px; margin-bottom: 5px;">💰 <strong>Salaire net à payer</strong></div>
                     <div class="montant-highlight" th:text="${montantNet ? (montantNet + ' FCFA') : '0 FCFA'}">50,000 FCFA</div>
                 </div>
             </div>
@@ -126,7 +126,7 @@
                 <h4 style="margin-top: 0; color: #198754;">📋 Actions disponibles</h4>
                 <ul style="margin: 10px 0; padding-left: 20px;">
                     <li>Consulter votre bulletin en ligne</li>
-                    <li>Telecharger au format PDF</li>
+                    <li>Télécharger au format PDF</li>
                     <li>Imprimer une copie</li>
                 </ul>
             </div>
@@ -138,42 +138,42 @@
             </div>
         </div>
 
-        <!-- Email de reinitialisation -->
+        <!-- Email de réinitialisation -->
         <div th:if="${emailType == 'password-reset'}">
-            <h2 style="color: #0d6efd; margin-bottom: 20px;">🔑 Reinitialisation de mot de passe</h2>
-            <p>Vous avez demande a reinitialiser votre mot de passe pour votre compte Maalipo.</p>
+            <h2 style="color: #0d6efd; margin-bottom: 20px;">🔒 Réinitialisation de mot de passe</h2>
+            <p>Vous avez demandé à réinitialiser votre mot de passe pour votre compte Maalipo.</p>
 
             <div class="info-box">
                 <strong>⚠️ Important :</strong><br>
-                • Si vous n'etes pas a l'origine de cette demande, ignorez cet e-mail<br>
+                • Si vous n'êtes pas à l'origine de cette demande, ignorez cet e-mail<br>
                 • Ce lien est valable pendant <strong>1 heure</strong>
             </div>
 
             <div class="text-center">
                 <a th:href="${resetLink ?: '#'}" href="#" class="cta-button">
-                    🔑 Reinitialiser mon mot de passe
+                    🔒 Réinitialiser mon mot de passe
                 </a>
             </div>
         </div>
 
-        <!-- Notification de conge -->
+        <!-- Notification de congé -->
         <div th:if="${emailType == 'conge-notification'}">
-            <h2 style="color: #0d6efd; margin-bottom: 20px;">📅 Notification de conge</h2>
-            <p th:text="${messageContent ?: 'Votre demande de conge a ete traitee.'}">Votre demande de conge a ete traitee.</p>
+            <h2 style="color: #0d6efd; margin-bottom: 20px;">📅 Notification de congé</h2>
+            <p th:text="${messageContent ?: 'Votre demande de congé a été traitée.'}">Votre demande de congé a été traitée.</p>
 
             <div class="info-box" th:if="${congeDetails}">
-                <h4 style="margin-top: 0; color: #0d6efd;">📅 Details du conge</h4>
+                <h4 style="margin-top: 0; color: #0d6efd;">📅 Détails du congé</h4>
                 <table style="width: 100%; border-collapse: collapse;">
                     <tr th:if="${congeDetails.type}">
                         <td style="padding: 5px 0; font-weight: bold; width: 30%;">Type :</td>
-                        <td th:text="${congeDetails.type}">Conge paye</td>
+                        <td th:text="${congeDetails.type}">Congé payé</td>
                     </tr>
                     <tr th:if="${congeDetails.statut}">
                         <td style="padding: 5px 0; font-weight: bold;">Statut :</td>
-                        <td th:text="${congeDetails.statut}">Approuve</td>
+                        <td th:text="${congeDetails.statut}">Approuvé</td>
                     </tr>
                     <tr th:if="${congeDetails.dateDebut and congeDetails.dateFin}">
-                        <td style="padding: 5px 0; font-weight: bold;">Periode :</td>
+                        <td style="padding: 5px 0; font-weight: bold;">Période :</td>
                         <td>
                             Du <span th:text="${congeDetails.dateDebut}">01/02/2025</span>
                             au <span th:text="${congeDetails.dateFin}">05/02/2025</span>
@@ -183,7 +183,7 @@
             </div>
         </div>
 
-        <!-- Notification generale -->
+        <!-- Notification générale -->
         <div th:if="${emailType == 'general' or emailType == null}">
             <h2 style="color: #0d6efd; margin-bottom: 20px;" th:text="${emailSubject ?: 'Notification'}">Notification</h2>
             <div th:utext="${messageContent ?: 'Contenu du message...'}">
@@ -195,7 +195,7 @@
         <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #e1e4e8;">
             <p style="font-size: 13px; color: #666; margin: 0;">
                 <strong>Besoin d'aide ?</strong><br>
-                Contactez notre equipe support.
+                Contactez notre équipe support.
             </p>
         </div>
     </div>
@@ -213,9 +213,9 @@
         </div>
 
         <div style="border-top: 1px solid #ddd; padding-top: 15px;">
-            <p style="margin: 5px 0;">© 2025 Maalipo. Tous droits reserves.</p>
+            <p style="margin: 5px 0;">© 2025 Maalipo. Tous droits réservés.</p>
             <p style="margin: 5px 0; font-size: 11px;">
-                Cet email a ete envoye automatiquement.
+                Cet email a été envoyé automatiquement.
             </p>
         </div>
     </div>
