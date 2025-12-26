@@ -73,30 +73,40 @@ public class NotificationCongeService {
 
         String greeting = "Bonjour " + manager.getUsername() + ",";
 
-        // Utiliser le nouveau service d'email avec template HTML
-        emailService.sendCongeDetailedNotification(
-                managerEmail,
-                sujet,
-                demande,
-                greeting,
-                message,
-                entreprise
-        );
+        // ✅ CORRECTION : Try-Catch pour empêcher le rollback en cas d'erreur email
+        try {
+            // Utiliser le nouveau service d'email avec template HTML
+            emailService.sendCongeDetailedNotification(
+                    managerEmail,
+                    sujet,
+                    demande,
+                    greeting,
+                    message,
+                    entreprise
+            );
+            logger.info("Email de soumission envoyé à l'employeur: {}", managerEmail);
+        } catch (Exception e) {
+            logger.error("⚠️ ÉCHEC envoi email soumission (mais la demande est sauvegardée) : {}", e.getMessage());
+            // On continue sans lancer d'exception
+        }
 
-        notificationService.creerNotification(
-                manager.getId(),
-                "Nouvelle demande de congé",
-                String.format("%s %s a soumis une demande de congé du %s au %s",
-                        demande.getEmploye().getPrenom(),
-                        demande.getEmploye().getNom(),
-                        demande.getDateDebut(),
-                        demande.getDateFin()),
-                Notification.TypeNotification.DEMANDE_CONGE_SOUMISE,
-                demande.getId(),
-                "DEMANDE_CONGE"
-        );
-
-        logger.info("Notification de soumission envoyée à l'employeur: {}", managerEmail);
+        // Notification interne (Base de données / WebSocket)
+        try {
+            notificationService.creerNotification(
+                    manager.getId(),
+                    "Nouvelle demande de congé",
+                    String.format("%s %s a soumis une demande de congé du %s au %s",
+                            demande.getEmploye().getPrenom(),
+                            demande.getEmploye().getNom(),
+                            demande.getDateDebut(),
+                            demande.getDateFin()),
+                    Notification.TypeNotification.DEMANDE_CONGE_SOUMISE,
+                    demande.getId(),
+                    "DEMANDE_CONGE"
+            );
+        } catch (Exception e) {
+            logger.error("Erreur création notification interne: {}", e.getMessage());
+        }
     }
 
     // Notifie l'employé de la décision concernant sa demande de congé
@@ -107,8 +117,8 @@ public class NotificationCongeService {
         String emailEmploye = employe.getEmail();
 
         if (emailEmploye == null || emailEmploye.isEmpty()) {
-            logger.warn("Impossible d'envoyer la notification:  email de l'employé non disponible");
-            return;
+            logger.warn("Impossible d'envoyer la notification: email de l'employé non disponible");
+            // On continue quand même pour la notification interne
         }
 
         Entreprise entreprise = employe.getEntreprise();
@@ -118,39 +128,36 @@ public class NotificationCongeService {
 
         if (demande.getStatut() == StatutDemandeConge.APPROUVEE) {
             sujet = "Votre demande de congé a été APPROUVÉE";
-            message = "Votre demande de congé a été approuvée.  Vous pouvez consulter les détails ci-dessous.";
+            message = "Votre demande de congé a été approuvée. Vous pouvez consulter les détails ci-dessous.";
         } else if (demande.getStatut() == StatutDemandeConge.REJETEE) {
             sujet = "Votre demande de congé a été REJETÉE";
             message = "Votre demande de congé a été rejetée." +
-                    (demande.getMotifRejet() != null ? " Motif :  " + demande.getMotifRejet() : "");
+                    (demande.getMotifRejet() != null ? " Motif : " + demande.getMotifRejet() : "");
         } else {
             return;
         }
 
-        // Envoi email
-        try {
-            emailService.sendCongeDetailedNotification(
-                    emailEmploye,
-                    sujet,
-                    demande,
-                    greeting,
-                    message,
-                    entreprise
-            );
-        } catch (Exception e) {
-            logger.error("Erreur envoi email:  {}", e.getMessage());
+        // ✅ CORRECTION : Try-Catch pour l'email
+        if (emailEmploye != null && !emailEmploye.isEmpty()) {
+            try {
+                emailService.sendCongeDetailedNotification(
+                        emailEmploye,
+                        sujet,
+                        demande,
+                        greeting,
+                        message,
+                        entreprise
+                );
+                logger.info("Email de décision envoyé à l'employé: {}", emailEmploye);
+            } catch (Exception e) {
+                logger.error("⚠️ ÉCHEC envoi email décision : {}", e.getMessage());
+            }
         }
 
-        // ✅ NOTIFICATION EN BASE - CORRECTION
-        // Chercher l'utilisateur par l'email de l'employé OU via la relation directe
-        // Notification en base + temps réel
-        User employeUser = employe.getUser(); // Relation directe
-
-// ✅ Si la relation directe est null, chercher par email
+        // Notification en base
+        User employeUser = employe.getUser();
         if (employeUser == null && emailEmploye != null) {
             employeUser = userRepository.findByUsername(emailEmploye).orElse(null);
-            logger.info("Recherche User par email {} :  {}", emailEmploye,
-                    employeUser != null ? "TROUVÉ" : "NON TROUVÉ");
         }
 
         if (employeUser != null) {
@@ -167,7 +174,7 @@ public class NotificationCongeService {
                     (demande.getStatut() == StatutDemandeConge.APPROUVEE ? "approuvée" : "rejetée");
 
             if (demande.getStatut() == StatutDemandeConge.REJETEE && demande.getMotifRejet() != null) {
-                notifMessage += ". Motif :  " + demande.getMotifRejet();
+                notifMessage += ". Motif : " + demande.getMotifRejet();
             }
 
             try {
@@ -179,17 +186,11 @@ public class NotificationCongeService {
                         demande.getId(),
                         "DEMANDE_CONGE"
                 );
-                logger.info("✅ Notification créée pour utilisateur ID: {}", employeUser.getId());
             } catch (Exception e) {
-                logger.error("❌ Erreur création notification: {}", e.getMessage(), e);
+                logger.error("❌ Erreur création notification interne: {}", e.getMessage());
             }
-        } else {
-            logger.warn("⚠️ Aucun utilisateur trouvé pour l'employé ID: {} (email: {})",
-                    employe.getId(), emailEmploye);
         }
     }
-
-
 
     // Envoie un rappel aux managers pour les demandes en attente depuis trop longtemps
     @Scheduled(cron = "0 0 9 * * *") // Tous les jours à 9h
@@ -198,11 +199,9 @@ public class NotificationCongeService {
 
         logger.info("Exécution de la tâche planifiée: rappels des demandes en attente");
 
-        // ✅ NOUVELLE VERSION: Calculer la date limite côté Java
         int joursAttente = 3;
         LocalDate dateLimit = LocalDate.now().minusDays(joursAttente);
 
-        // Récupérer toutes les demandes en attente depuis plus de 3 jours
         List<DemandeConge> demandesEnAttente = demandeCongeRepository.findDemandesEnAttenteDepuisJours(
                 StatutDemandeConge.EN_ATTENTE,
                 dateLimit
@@ -212,21 +211,16 @@ public class NotificationCongeService {
 
         for (DemandeConge demande : demandesEnAttente) {
             try {
-                // Récupérer le manager et son email
                 User manager = getManagerEmploye(demande.getEmploye());
-                if (manager == null) {
-                    logger.warn("Aucun manager trouvé pour l'employé ID: {}", demande.getEmploye().getId());
-                    continue;
-                }
+                if (manager == null) continue;
 
                 Entreprise entreprise = demande.getEmploye().getEntreprise();
-                String managerEmail = manager.getUsername(); // Fallback
+                String managerEmail = manager.getUsername();
 
                 if (entreprise != null && entreprise.getEmailEntreprise() != null && !entreprise.getEmailEntreprise().isEmpty()) {
                     managerEmail = entreprise.getEmailEntreprise();
                 }
 
-                // Calculer les jours d'attente réels
                 long joursAttenteReel = ChronoUnit.DAYS.between(demande.getDateDemande(), LocalDate.now());
 
                 String sujet = "RAPPEL: Demande de congé en attente depuis " + joursAttenteReel + " jours";
@@ -247,26 +241,25 @@ public class NotificationCongeService {
                         demande.getDateDemande()
                 );
 
-                // Utiliser le nouveau service d'email avec template HTML
-                emailService.sendCongeDetailedNotification(
-                        managerEmail,
-                        sujet,
-                        demande,
-                        greeting,
-                        message,
-                        entreprise
-                );
-
-                logger.info("Rappel envoyé au manager (email: {}) pour la demande ID: {} (en attente depuis {} jours)",
-                        managerEmail, demande.getId(), joursAttenteReel);
+                // ✅ CORRECTION : Try-Catch pour chaque rappel individuel
+                try {
+                    emailService.sendCongeDetailedNotification(
+                            managerEmail,
+                            sujet,
+                            demande,
+                            greeting,
+                            message,
+                            entreprise
+                    );
+                    logger.info("Rappel envoyé au manager (email: {})", managerEmail);
+                } catch (Exception e) {
+                    logger.error("Erreur envoi rappel email: {}", e.getMessage());
+                }
 
             } catch (Exception e) {
-                logger.error("Erreur lors de l'envoi du rappel pour la demande ID: {}", demande.getId(), e);
-                // Continue avec la suivante sans interrompre le processus
+                logger.error("Erreur lors du traitement du rappel pour la demande ID: {}", demande.getId(), e);
             }
         }
-
-        logger.info("Fin de l'exécution de la tâche planifiée: {} rappels traités", demandesEnAttente.size());
     }
 
     // Envoie un rappel aux employés la veille de leur retour de congé
@@ -276,7 +269,6 @@ public class NotificationCongeService {
 
         logger.info("Exécution de la tâche planifiée: rappels de retour de congé");
 
-        // Récupérer tous les congés qui se terminent demain
         LocalDate demain = LocalDate.now().plusDays(1);
         List<DemandeConge> congesFinissantDemain = demandeCongeRepository.findByDateFinAndStatut(
                 demain, StatutDemandeConge.APPROUVEE);
@@ -298,17 +290,20 @@ public class NotificationCongeService {
                     demain.plusDays(1)
             );
 
-            // Utiliser le nouveau service d'email avec template HTML
-            emailService.sendCongeDetailedNotification(
-                    emailEmploye,
-                    sujet,
-                    demande,
-                    greeting,
-                    message,
-                    entreprise
-            );
-
-            logger.info("Rappel de retour envoyé à l'employé: {}", emailEmploye);
+            // ✅ CORRECTION : Try-Catch pour l'email
+            try {
+                emailService.sendCongeDetailedNotification(
+                        emailEmploye,
+                        sujet,
+                        demande,
+                        greeting,
+                        message,
+                        entreprise
+                );
+                logger.info("Rappel de retour envoyé à l'employé: {}", emailEmploye);
+            } catch (Exception e) {
+                logger.error("Erreur envoi rappel retour: {}", e.getMessage());
+            }
         }
     }
 
@@ -336,17 +331,20 @@ public class NotificationCongeService {
                     demande.getDateApprobationRejet()
             );
 
-            // Utiliser le nouveau service d'email avec template HTML
-            emailService.sendCongeDetailedNotification(
-                    emailEmploye,
-                    sujet,
-                    demande,
-                    greeting,
-                    message,
-                    entreprise
-            );
-
-            logger.info("Notification d'annulation envoyée à l'employé: {}", emailEmploye);
+            // ✅ CORRECTION : Try-Catch
+            try {
+                emailService.sendCongeDetailedNotification(
+                        emailEmploye,
+                        sujet,
+                        demande,
+                        greeting,
+                        message,
+                        entreprise
+                );
+                logger.info("Notification d'annulation envoyée à l'employé: {}", emailEmploye);
+            } catch (Exception e) {
+                logger.error("Erreur envoi email annulation employé: {}", e.getMessage());
+            }
         }
 
         // Si l'annulation est faite par l'employé, notifier l'employeur
@@ -369,32 +367,31 @@ public class NotificationCongeService {
                     demande.getDateFin()
             );
 
-            // Utiliser le nouveau service d'email avec template HTML
-            emailService.sendCongeDetailedNotification(
-                    managerEmail,
-                    sujet,
-                    demande,
-                    greeting,
-                    message,
-                    entreprise
-            );
-
-            logger.info("Notification d'annulation envoyée à l'employeur: {}", managerEmail);
+            // ✅ CORRECTION : Try-Catch
+            try {
+                emailService.sendCongeDetailedNotification(
+                        managerEmail,
+                        sujet,
+                        demande,
+                        greeting,
+                        message,
+                        entreprise
+                );
+                logger.info("Notification d'annulation envoyée à l'employeur: {}", managerEmail);
+            } catch (Exception e) {
+                logger.error("Erreur envoi email annulation employeur: {}", e.getMessage());
+            }
         }
     }
 
-
-    //Récupère le manager d'un employé (l'employeur de son entreprise)
     private User getManagerEmploye(Employe employe) {
         if (employe == null || employe.getEntreprise() == null) {
             return null;
         }
-
         Long entrepriseId = employe.getEntreprise().getId();
         return userRepository.findFirstEmployeurByEntrepriseId(entrepriseId);
     }
 
-    // Récupère le nom complet de l'approbateur/réjecteur
     private String getNomApprouveur(User approuveur) {
         if (approuveur.getRole() == Role.EMPLOYEUR) {
             if (approuveur.getEntreprise() != null) {
@@ -406,7 +403,6 @@ public class NotificationCongeService {
         } else if (approuveur.getEmploye() != null) {
             return approuveur.getEmploye().getPrenom() + " " + approuveur.getEmploye().getNom();
         }
-
         return approuveur.getUsername();
     }
 }

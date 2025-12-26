@@ -2,7 +2,6 @@ package com.hades.maalipo.service.conge;
 
 import com.hades.maalipo.dto.conge.DemandeCongeCreateDto;
 import com.hades.maalipo.dto.conge.DemandeCongeResponseDto;
-import com.hades.maalipo.dto.reponse.ApiResponse;
 import com.hades.maalipo.dto.reponse.PageResponse;
 import com.hades.maalipo.enum1.Role;
 import com.hades.maalipo.enum1.StatutDemandeConge;
@@ -18,7 +17,6 @@ import com.hades.maalipo.repository.EmployeRepository;
 import com.hades.maalipo.repository.EntrepriseRepository;
 import com.hades.maalipo.repository.UserRepository;
 import com.hades.maalipo.service.AuditLogService;
-import com.hades.maalipo.specification.DemandeCongeSpecifications;
 import com.hades.maalipo.utils.JourOuvrableCalculatorUtil;
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
@@ -28,8 +26,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
-import org.springframework.data.jpa.domain.Specification;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 
@@ -42,8 +38,7 @@ import java.util.stream.Collectors;
 @Slf4j
 public class DemandeCongeService {
 
-    private static final Logger logger = LoggerFactory.getLogger(NotificationCongeService.class);
-
+    private static final Logger logger = LoggerFactory.getLogger(DemandeCongeService.class);
 
     private final DemandeCongeRepository demandeCongeRepository;
     private final EmployeRepository employeRepository;
@@ -109,6 +104,7 @@ public class DemandeCongeService {
         demande.setStatut(StatutDemandeConge.EN_ATTENTE);
         demande.setDateDemande(LocalDate.now());
 
+        // ✅ Sauvegarde en base de données AVANT tout envoi d'email
         DemandeConge savedDemande = demandeCongeRepository.save(demande);
 
         auditLogService.logAction(
@@ -124,12 +120,14 @@ public class DemandeCongeService {
                         employe.getNom())
         );
 
+        // ✅ DOUBLE SÉCURITÉ : Try-Catch ici aussi
         try {
-            // Envoi de notification de soumission (ne pas bloquer le workflow en cas d'erreur)
             notificationService.notifierSoumissionDemande(savedDemande);
         } catch (Exception e) {
-            logger.error("Erreur lors de l'envoi de la notification de soumission: {}", e.getMessage(), e);
+            logger.error("⚠️ ERREUR NON BLOQUANTE notification soumission: {}", e.getMessage());
+            // On ne relance PAS l'exception pour que la transaction DB reste validée
         }
+
         return DemandeCongeMapper.toResponseDto(savedDemande);
     }
 
@@ -142,7 +140,6 @@ public class DemandeCongeService {
 
         List<DemandeConge> demandes = demandeCongeRepository.findByEmploye(employe);
 
-        // Convertir la liste d'entités en liste de DTOs
         return demandes.stream()
                 .map(DemandeCongeResponseDto::new)
                 .collect(Collectors.toList());
@@ -153,7 +150,6 @@ public class DemandeCongeService {
         if (currentUser.getRole() == Role.EMPLOYE && !currentUser.getEmploye().getId().equals(employe.getId())) {
             throw new AccessDeniedException("Vous n'êtes pas autorisé à soumettre une demande de congé pour un autre employé.");
         }
-        // TODO: Ajoutez d'autres vérifications si nécessaire
     }
 
 
@@ -167,8 +163,6 @@ public class DemandeCongeService {
         }
 
         checkViewPermissionsForEmploye(currentUser, targetEmploye);
-
-        // Retourner un DTO de réponse
         return new DemandeCongeResponseDto(demandeConge);
     }
 
@@ -177,7 +171,6 @@ public class DemandeCongeService {
         DemandeConge demandeConge = demandeCongeRepository.findById(demandeId)
                 .orElseThrow(() -> new RessourceNotFoundException("Demande de congé non trouvée avec l'ID: " + demandeId));
 
-        // Vérifier le statut de la demande
         if (demandeConge.getStatut() != StatutDemandeConge.EN_ATTENTE) {
             throw new IllegalArgumentException("La demande de congé n'est pas en attente d'approbation.");
         }
@@ -185,10 +178,8 @@ public class DemandeCongeService {
         User approuvePar = userRepository.findById(approuveeParUserId)
                 .orElseThrow(() -> new RessourceNotFoundException("Utilisateur d'approbation non trouvé avec l'ID: " + approuveeParUserId));
 
-        // Vérification des autorisations
         checkActionPermissions(approuvePar, demandeConge);
 
-        // Vérifier si l'utilisateur est employeur
         if (!(approuvePar.getRole() == Role.EMPLOYEUR)) {
             throw new SecurityException("L'utilisateur n'a pas les permissions requises pour approuver les congés.");
         }
@@ -197,7 +188,6 @@ public class DemandeCongeService {
         demandeConge.setDateApprobationRejet(LocalDate.now());
         demandeConge.setApprouveePar(approuvePar);
 
-        // Décompter les jours
         Employe employe = demandeConge.getEmploye();
         long joursOuvrablesApprouves = calculateWorkingDays(
                 demandeConge.getDateDebut(),
@@ -207,9 +197,7 @@ public class DemandeCongeService {
 
         if (demandeConge.getTypeConge() == TypeConge.CONGE_PAYE) {
             if (employe.getSoldeJoursConge() == null || employe.getSoldeJoursConge().compareTo(BigDecimal.valueOf(joursOuvrablesApprouves)) < 0) {
-                throw new IllegalStateException("Erreur interne: Solde de congés insuffisant lors de l'approbation. Solde: " +
-                        (employe.getSoldeJoursConge() != null ? employe.getSoldeJoursConge() : BigDecimal.ZERO) +
-                        ", Jours à déduire: " + joursOuvrablesApprouves);
+                throw new IllegalStateException("Erreur interne: Solde de congés insuffisant lors de l'approbation.");
             }
             employe.setSoldeJoursConge(employe.getSoldeJoursConge().subtract(BigDecimal.valueOf(joursOuvrablesApprouves)));
             employeRepository.save(employe);
@@ -221,21 +209,19 @@ public class DemandeCongeService {
                 "DemandeConge",
                 savedDemande.getId(),
                 approuvePar.getUsername(),
-                String.format("Demande approuvée: %s du %s au %s pour %s %s",
+                String.format("Demande approuvée: %s du %s au %s",
                         savedDemande.getTypeConge(),
                         savedDemande.getDateDebut(),
-                        savedDemande.getDateFin(),
-                        savedDemande.getEmploye().getPrenom(),
-                        savedDemande.getEmploye().getNom())
+                        savedDemande.getDateFin())
         );
 
+        // ✅ DOUBLE SÉCURITÉ : Try-Catch
         try {
-            // Notification d'approbation
             notificationService.notifierDecisionEmploye(savedDemande);
         } catch (Exception e) {
-            logger.error("Erreur lors de l'envoi de la notification d'approbation: {}", e.getMessage(), e);
+            logger.error("⚠️ ERREUR NON BLOQUANTE notification approbation: {}", e.getMessage());
         }
-        // Retourner un DTO de réponse
+
         return new DemandeCongeResponseDto(savedDemande);
     }
 
@@ -251,10 +237,8 @@ public class DemandeCongeService {
         User approuveePar = userRepository.findById(approuveeParUserId)
                 .orElseThrow(() -> new RessourceNotFoundException("Utilisateur de rejet non trouvé avec l'ID: " + approuveeParUserId));
 
-        // Vérification des autorisations
         checkActionPermissions(approuveePar, demandeConge);
 
-        // Vérifier si l'utilisateur a le rôle employeur
         if (!(approuveePar.getRole() == Role.EMPLOYEUR)) {
             throw new SecurityException("L'utilisateur n'a pas les permissions requises pour rejeter les congés.");
         }
@@ -271,22 +255,18 @@ public class DemandeCongeService {
                 "DemandeConge",
                 savedDemande.getId(),
                 approuveePar.getUsername(),
-                String.format("Demande rejetée: %s du %s au %s pour %s %s. Motif: %s",
+                String.format("Demande rejetée: %s. Motif: %s",
                         savedDemande.getTypeConge(),
-                        savedDemande.getDateDebut(),
-                        savedDemande.getDateFin(),
-                        savedDemande.getEmploye().getPrenom(),
-                        savedDemande.getEmploye().getNom(),
                         motifRejet)
         );
 
+        // ✅ DOUBLE SÉCURITÉ : Try-Catch
         try {
-            // Notification de rejet
             notificationService.notifierDecisionEmploye(savedDemande);
         } catch (Exception e) {
-            logger.error("Erreur lors de l'envoi de la notification de rejet: {}", e.getMessage(), e);
+            logger.error("⚠️ ERREUR NON BLOQUANTE notification rejet: {}", e.getMessage());
         }
-        // Retourner un DTO de réponse
+
         return new DemandeCongeResponseDto(savedDemande);
     }
 
@@ -298,14 +278,10 @@ public class DemandeCongeService {
         DemandeConge demande = demandeCongeRepository.findById(demandeId)
                 .orElseThrow(() -> new RessourceNotFoundException("Demande de congé non trouvée"));
 
-        // Vérifier que l'utilisateur est autorisé à annuler cette demande
         boolean isAuthorized = false;
-
-        // Si c'est un employé, vérifier qu'il est propriétaire de la demande
         if (user.getRole() == Role.EMPLOYE && user.getEmploye() != null) {
             isAuthorized = user.getEmploye().getId().equals(demande.getEmploye().getId());
         }
-        // Si c'est un employeur, vérifier qu'il appartient à la même entreprise
         else if (user.getRole() == Role.EMPLOYEUR && user.getEntreprise() != null) {
             isAuthorized = user.getEntreprise().getId().equals(demande.getEmploye().getEntreprise().getId());
         }
@@ -314,8 +290,7 @@ public class DemandeCongeService {
             throw new AccessDeniedException("Vous n'êtes pas autorisé à annuler cette demande de congé");
         }
 
-        // Logique d'annulation...
-        StatutDemandeConge oldStatut = demande.getStatut(); // Sauvegarder l'ancien statut
+        StatutDemandeConge oldStatut = demande.getStatut();
         demande.setStatut(StatutDemandeConge.ANNULEE);
         demande.setApprouveePar(user);
         demande.setDateApprobationRejet(LocalDate.now());
@@ -326,22 +301,14 @@ public class DemandeCongeService {
                 "DemandeConge",
                 savedDemande.getId(),
                 user.getUsername(),
-                String.format("Demande annulée: %s du %s au %s pour %s %s",
-                        savedDemande.getTypeConge(),
-                        savedDemande.getDateDebut(),
-                        savedDemande.getDateFin(),
-                        savedDemande.getEmploye().getPrenom(),
-                        savedDemande.getEmploye().getNom())
+                String.format("Demande annulée: %s", savedDemande.getTypeConge())
         );
 
-        // Si la demande était approuvée, restaurer le solde de congés
         if (oldStatut == StatutDemandeConge.APPROUVEE && demande.getTypeConge() == TypeConge.CONGE_PAYE) {
             Employe employe = demande.getEmploye();
-
-            // Utiliser le nombre de jours ouvrables contractuels de l'employé
             int joursOuvrablesContractuels = employe.getJoursOuvrablesContractuelsHebdomadaires() != null
                     ? employe.getJoursOuvrablesContractuelsHebdomadaires()
-                    : 5; // 5 jours par défaut si non spécifié
+                    : 5;
 
             long joursOuvrables = calculerJoursOuvrables(
                     demande.getDateDebut(),
@@ -352,11 +319,11 @@ public class DemandeCongeService {
             soldeCongeService.restaurerSoldeApresAnnulation(employe, joursOuvrables);
         }
 
-        // Envoyer notifications...
+        // ✅ DOUBLE SÉCURITÉ : Try-Catch
         try {
             notificationService.notifierAnnulationConge(demande);
         } catch (Exception e) {
-            logger.error("Erreur lors de l'envoi de la notification d'annulation: {}", e.getMessage(), e);
+            logger.error("⚠️ ERREUR NON BLOQUANTE notification annulation: {}", e.getMessage());
         }
 
         return new DemandeCongeResponseDto(savedDemande);
@@ -372,7 +339,6 @@ public class DemandeCongeService {
             throw new IllegalArgumentException("L'utilisateur agissant n'est pas associé à une entreprise.");
         }
 
-        // Vérifier si l'utilisateur appartient à l'entreprise
         if (!actingUser.getEntreprise().getId().equals(employeDemande.getEntreprise().getId())) {
             throw new SecurityException("L'utilisateur n'est pas autorisé à agir sur des demandes pour cette entreprise.");
         }
@@ -384,17 +350,14 @@ public class DemandeCongeService {
         }
 
         if (currentUser.getRole() == Role.EMPLOYE) {
-            // Un employé ne peut voir que ses propres demandes
             if (currentUser.getEmploye() == null || !currentUser.getEmploye().getId().equals(targetEmploye.getId())) {
                 throw new AccessDeniedException("Un employé ne peut voir que ses propres demandes de congé.");
             }
         } else if (currentUser.getRole() == Role.EMPLOYEUR) {
-            // Un employeur peut voir les demandes des employés de sa propre entreprise
             if (currentUser.getEntreprise() == null || !currentUser.getEntreprise().getId().equals(targetEmploye.getEntreprise().getId())) {
                 throw new AccessDeniedException("L'employeur n'est pas autorisé à voir les demandes de cette entreprise.");
             }
         } else if (currentUser.getRole() != Role.ADMIN) {
-            // Seuls les ADMINs ont un accès universel
             throw new AccessDeniedException("Accès refusé. L'utilisateur n'a pas les permissions requises pour voir ces demandes.");
         }
     }
@@ -403,18 +366,15 @@ public class DemandeCongeService {
         return jourOuvrableCalculator.calculateWorkingDays(startDate, endDate, employe);
     }
 
-
     private long calculerJoursOuvrables(LocalDate dateDebut, LocalDate dateFin, Long entrepriseId, int joursOuvrablesHebdomadaires) {
         return jourOuvrableCalculator.calculateWorkingDays(dateDebut, dateFin, entrepriseId, joursOuvrablesHebdomadaires);
     }
-
 
     public PageResponse<DemandeCongeResponseDto> getDemandesCongeFiltered(
             Long employeId, User currentUser, String statut, Integer year,
             String searchTerm, int page, int size) {
 
         try {
-            // Validation des paramètres
             StatutDemandeConge statutEnum = null;
             if (statut != null && !statut.equals("TOUS")) {
                 try {
@@ -424,19 +384,16 @@ public class DemandeCongeService {
                 }
             }
 
-            Pageable pageable = PageRequest.of(page, size,
-                    Sort.by(Sort.Direction.DESC, "dateDemande"));
+            Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "dateDemande"));
 
             Page<DemandeConge> demandesPage = demandeCongeRepository.findDemandesFiltered(
                     employeId, statutEnum, year, searchTerm, pageable);
 
-            // ✅ Conversion en DTOs
             List<DemandeCongeResponseDto> dtos = demandesPage.getContent()
                     .stream()
                     .map(this::convertToDto)
                     .collect(Collectors.toList());
 
-            // ✅ Utilisation de la méthode factory
             return PageResponse.of(
                     dtos,
                     demandesPage.getNumber(),
@@ -447,15 +404,11 @@ public class DemandeCongeService {
 
         } catch (Exception e) {
             log.error("Erreur dans getDemandesCongeFiltered: {}", e.getMessage(), e);
-
-            // ✅ Retourner une page vide avec la méthode factory
             return PageResponse.empty(page, size);
         }
     }
+
     private DemandeCongeResponseDto convertToDto(DemandeConge demandeConge) {
         return demandeConge != null ? new DemandeCongeResponseDto(demandeConge) : null;
     }
-
-
-
 }
