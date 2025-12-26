@@ -24,15 +24,15 @@ public interface DemandeCongeRepository extends JpaRepository<DemandeConge, Long
     List<DemandeConge> findByEmployeAndTypeConge(Employe employe, TypeConge typeConge);
 
     /**
-     * ✅ NOUVELLE REQUÊTE PRINCIPALE : Filtrage avec pagination (corrigée pour PostgreSQL)
+     * Filtrage sur dateDemande (date de soumission) au lieu de dateDebut
      */
     @Query("SELECT d FROM DemandeConge d WHERE d.employe.id = :employeId " +
             "AND (:statut IS NULL OR d.statut = :statut) " +
-            "AND (:year IS NULL OR EXTRACT(YEAR FROM d.dateDebut) = :year) " +
-            "AND (:searchTerm IS NULL OR :searchTerm = '' OR " +
-            "LOWER(COALESCE(d.raison, '')) LIKE LOWER(CONCAT('%', :searchTerm, '%')) OR " +
-            "LOWER(COALESCE(d.motifRejet, '')) LIKE LOWER(CONCAT('%', :searchTerm, '%'))) " +
-            "ORDER BY d.dateDemande DESC")
+            "AND (:year IS NULL OR EXTRACT(YEAR FROM d.dateDemande) = :year) " +  // ✅ Changé ici
+            "AND (:searchTerm IS NULL OR : searchTerm = '' OR " +
+            "LOWER(COALESCE(d. raison, '')) LIKE LOWER(CONCAT('%', :searchTerm, '%')) OR " +
+            "LOWER(COALESCE(d. motifRejet, '')) LIKE LOWER(CONCAT('%', :searchTerm, '%'))) " +
+            "ORDER BY d. dateDemande DESC")
     Page<DemandeConge> findDemandesFiltered(
             @Param("employeId") Long employeId,
             @Param("statut") StatutDemandeConge statut,
