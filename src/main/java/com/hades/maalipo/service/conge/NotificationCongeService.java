@@ -107,7 +107,7 @@ public class NotificationCongeService {
         String emailEmploye = employe.getEmail();
 
         if (emailEmploye == null || emailEmploye.isEmpty()) {
-            logger.warn("Impossible d'envoyer la notification: email de l'employé non disponible");
+            logger.warn("Impossible d'envoyer la notification:  email de l'employé non disponible");
             return;
         }
 
@@ -118,28 +118,41 @@ public class NotificationCongeService {
 
         if (demande.getStatut() == StatutDemandeConge.APPROUVEE) {
             sujet = "Votre demande de congé a été APPROUVÉE";
-            message = "Votre demande de congé a été approuvée. Vous pouvez consulter les détails ci-dessous.";
+            message = "Votre demande de congé a été approuvée.  Vous pouvez consulter les détails ci-dessous.";
         } else if (demande.getStatut() == StatutDemandeConge.REJETEE) {
             sujet = "Votre demande de congé a été REJETÉE";
             message = "Votre demande de congé a été rejetée." +
-                    (demande.getMotifRejet() != null ? " Motif : " + demande.getMotifRejet() : "");
+                    (demande.getMotifRejet() != null ? " Motif :  " + demande.getMotifRejet() : "");
         } else {
-            // Pas de notification pour les autres statuts
             return;
         }
 
-        // Utiliser le nouveau service d'email avec template HTML
-        emailService.sendCongeDetailedNotification(
-                emailEmploye,
-                sujet,
-                demande,
-                greeting,
-                message,
-                entreprise
-        );
+        // Envoi email
+        try {
+            emailService.sendCongeDetailedNotification(
+                    emailEmploye,
+                    sujet,
+                    demande,
+                    greeting,
+                    message,
+                    entreprise
+            );
+        } catch (Exception e) {
+            logger.error("Erreur envoi email:  {}", e.getMessage());
+        }
 
+        // ✅ NOTIFICATION EN BASE - CORRECTION
+        // Chercher l'utilisateur par l'email de l'employé OU via la relation directe
         // Notification en base + temps réel
-        User employeUser = employe.getUser(); // Relation directe !
+        User employeUser = employe.getUser(); // Relation directe
+
+// ✅ Si la relation directe est null, chercher par email
+        if (employeUser == null && emailEmploye != null) {
+            employeUser = userRepository.findByUsername(emailEmploye).orElse(null);
+            logger.info("Recherche User par email {} :  {}", emailEmploye,
+                    employeUser != null ? "TROUVÉ" : "NON TROUVÉ");
+        }
+
         if (employeUser != null) {
             Notification.TypeNotification type = demande.getStatut() == StatutDemandeConge.APPROUVEE
                     ? Notification.TypeNotification.DEMANDE_CONGE_APPROUVEE
@@ -149,27 +162,34 @@ public class NotificationCongeService {
                     ? "Demande de congé approuvée"
                     : "Demande de congé rejetée";
 
-            String message1 = "Votre demande de congé a été " +
+            String notifMessage = "Votre demande de congé du " + demande.getDateDebut() +
+                    " au " + demande.getDateFin() + " a été " +
                     (demande.getStatut() == StatutDemandeConge.APPROUVEE ? "approuvée" : "rejetée");
 
             if (demande.getStatut() == StatutDemandeConge.REJETEE && demande.getMotifRejet() != null) {
-                message1 += ". Motif : " + demande.getMotifRejet();
+                notifMessage += ". Motif :  " + demande.getMotifRejet();
             }
 
-            notificationService.creerNotification(
-                    employeUser.getId(), // ✅ Utiliser l'utilisateur trouvé
-                    titre,
-                    message1,
-                    type,
-                    demande.getId(),
-                    "DEMANDE_CONGE"
-            );
+            try {
+                notificationService.creerNotification(
+                        employeUser.getId(),
+                        titre,
+                        notifMessage,
+                        type,
+                        demande.getId(),
+                        "DEMANDE_CONGE"
+                );
+                logger.info("✅ Notification créée pour utilisateur ID: {}", employeUser.getId());
+            } catch (Exception e) {
+                logger.error("❌ Erreur création notification: {}", e.getMessage(), e);
+            }
         } else {
-            logger.warn("Aucun utilisateur trouvé avec l'email: {}", emailEmploye);
+            logger.warn("⚠️ Aucun utilisateur trouvé pour l'employé ID: {} (email: {})",
+                    employe.getId(), emailEmploye);
         }
-
-        logger.info("Notification de décision envoyée à l'employé: {}", emailEmploye);
     }
+
+
 
     // Envoie un rappel aux managers pour les demandes en attente depuis trop longtemps
     @Scheduled(cron = "0 0 9 * * *") // Tous les jours à 9h

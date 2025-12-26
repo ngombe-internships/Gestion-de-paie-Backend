@@ -66,8 +66,13 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(Arrays.asList("https://gestion-paie-frontend.vercel.app",
-                "http://localhost:4200"));
+        configuration.setAllowedOrigins(Arrays.asList(
+                "https://gestion-paie-frontend.vercel.app",
+                "http://localhost:4200",
+                "https://www.maalipo.com",
+                "https://maalipo.com"
+
+        ));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT","DELETE","PATCH" ,"OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type"));
         configuration.setAllowCredentials(true);
