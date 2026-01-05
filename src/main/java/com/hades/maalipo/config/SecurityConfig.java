@@ -1,22 +1,21 @@
-package com.hades.maalipo.config;
+package com. hades.maalipo.config;
 
 import com.hades.maalipo.security.JwtAuthentificationFilter;
-import org.springframework.context.annotation.Bean;
+import org.springframework. context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.web.SecurityFilterChain;
+import org. springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.crypto. bcrypt.BCryptPasswordEncoder;
+import org.springframework.security. crypto.password.PasswordEncoder;
+import org.springframework.security. web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
-import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.springframework.web.cors. UrlBasedCorsConfigurationSource;
 
 import java.util.Arrays;
 
@@ -31,21 +30,22 @@ public class SecurityConfig {
         this.jwtAuthentificationFilter = jwtAuthentificationFilter;
     }
 
-
     @Bean
     public static PasswordEncoder passwordEncoder(){
         return new BCryptPasswordEncoder();
     }
+
     @Bean
-    public AuthenticationManager authenticationManager(AuthenticationConfiguration authenticationConfiguration) throws  Exception{
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration authenticationConfiguration) throws Exception{
         return authenticationConfiguration.getAuthenticationManager();
     }
+
     @Bean
-    public SecurityFilterChain securityFilterChain (HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .csrf(csrf -> csrf.disable())
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-                .authorizeHttpRequests( authorize -> authorize
+                .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers("/api/auth/login").permitAll()
                         .requestMatchers("/api/auth/register/employee").authenticated()
                         .requestMatchers("/api/auth/register/employer").authenticated()
@@ -55,9 +55,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/auth/password-reset").permitAll()
                         .requestMatchers("/logos/**").permitAll()
                         .anyRequest().authenticated()
-
                 )
-          .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
         http.addFilterBefore(jwtAuthentificationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
@@ -66,15 +65,25 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(Arrays.asList(
+
+        configuration.setAllowedOriginPatterns(Arrays.asList(
                 "https://gestion-paie-frontend.vercel.app",
                 "http://localhost:4200",
                 "https://www.maalipo.com",
-                "https://maalipo.com"
-
+                "https://maalipo.com",
+                "https://*.maalipo.com"
         ));
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT","DELETE","PATCH" ,"OPTIONS"));
-        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type"));
+
+        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
+
+        // ⭐ Maintenant "*" fonctionne avec allowCredentials grâce à setAllowedOriginPatterns
+        configuration.setAllowedHeaders(Arrays.asList("*"));
+
+        configuration.setExposedHeaders(Arrays.asList(
+                "Authorization",
+                "Content-Type"
+        ));
+
         configuration.setAllowCredentials(true);
         configuration.setMaxAge(3600L);
 
@@ -82,32 +91,4 @@ public class SecurityConfig {
         source.registerCorsConfiguration("/**", configuration);
         return source;
     }
-
-
-
-
-//    @Bean
-//    public UserDetailsService userDetailsService() {
-//        PasswordEncoder encoder = passwordEncoder();
-//
-//        UserDetails adminUser = User.builder()
-//                .username("admin")
-//                .password(encoder.encode("adminpass"))
-//                .roles("ADMIN")
-//                .build();
-//
-//        UserDetails employeUser = User.builder()
-//                .username("1")
-//                .password(encoder.encode("test"))
-//                .roles("EMPLOYE")
-//                .build();
-//        UserDetails employeUser2 = User.builder()
-//                .username("2")
-//                .password (encoder.encode("test2"))
-//                .roles("EMPLOYE")
-//                .build();
-//
-//        return new InMemoryUserDetailsManager(adminUser, employeUser,employeUser2);
-//    }
-
 }
